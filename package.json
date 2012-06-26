@@ -1,0 +1,12 @@
+{
+  "name": "hedwig",
+  "version": "0.0.1",
+  "description": "Sends messages for lifeswap",
+  "dependencies": {
+    "nano": "*",
+    "coffee-script": "*",
+    "underscore": "*",
+    "debug": "*",
+    "nodemailer": "*"
+  }
+}
