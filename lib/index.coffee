@@ -31,6 +31,7 @@ mailOptions =
 feed = db.follow(since: 'now')
 feed.on 'change', (change) ->
   debug 'fetching document'
+  # TODO use a couch filter
   db.get change.id, (err,swapDoc) ->
     if err
       debug "Error fetching document: #{JSON.stringify(err)}"
