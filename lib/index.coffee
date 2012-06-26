@@ -30,17 +30,25 @@ mailOptions =
 
 feed = db.follow(since: 'now')
 feed.on 'change', (change) ->
-  debug change.id
-
-  # set email info
-  mailOptions.text = "Approve/Deny new Swap here: http://lifeswap.co/admin/swaps/#{change.id}"
-
-  debug "sending email with for swap with id: #{change.id}"
-  smtpTransport.sendMail mailOptions, (err,res) ->
+  debug 'fetching document'
+  # TODO use a couch filter
+  db.get change.id, (err,swapDoc) ->
     if err
-      debug "ERROR: #{JSON.stringify(err)}"
+      debug "Error fetching document: #{JSON.stringify(err)}"
     else
-      debug "mail successfully sent: #{JSON.stringify(res)}"
+      debug "fetch results: #{JSON.stringify(swapDoc)}"
+      if swapDoc.type != 'swap'
+        debug 'doc.type != swap so dropping'
+      else
+        # set email info
+        mailOptions.text = "Approve/Deny new Swap here: http://lifeswap.co/admin/swaps/#{change.id}"
+
+        debug "sending email with for swap with id: #{change.id}"
+        smtpTransport.sendMail mailOptions, (err,res) ->
+          if err
+            debug "ERROR: #{JSON.stringify(err)}"
+          else
+            debug "mail successfully sent: #{JSON.stringify(res)}"
 
 
 feed.follow()
