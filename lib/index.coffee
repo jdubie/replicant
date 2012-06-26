@@ -1,6 +1,7 @@
 debug = require('debug')('lifeswap:hedwig:index')
 nodemailer = require('nodemailer')
 
+# TODO make non-admin
 debug 'creating database connection'
 user = 'hedwig'
 if process.env.PROD
@@ -29,26 +30,22 @@ mailOptions =
 
 
 feed = db.follow(since: 'now')
-feed.on 'change', (change) ->
-  debug 'fetching document'
-  # TODO use a couch filter
-  db.get change.id, (err,swapDoc) ->
-    if err
-      debug "Error fetching document: #{JSON.stringify(err)}"
-    else
-      debug "fetch results: #{JSON.stringify(swapDoc)}"
-      if swapDoc.type != 'swap'
-        debug 'doc.type != swap so dropping'
-      else
-        # set email info
-        mailOptions.text = "Approve/Deny new Swap here: http://lifeswap.co/admin/swaps/#{change.id}"
 
-        debug "sending email with for swap with id: #{change.id}"
-        smtpTransport.sendMail mailOptions, (err,res) ->
-          if err
-            debug "ERROR: #{JSON.stringify(err)}"
-          else
-            debug "mail successfully sent: #{JSON.stringify(res)}"
+feed.filter = (doc, req) ->
+  if doc.type == 'swap'
+    return true
+  return false
+
+feed.on 'change', (change) ->
+  # set email info
+  mailOptions.text = "Approve/Deny new Swap here: http://lifeswap.co/admin/swaps/#{change.id}"
+
+  debug "sending email with for swap with id: #{change.id}"
+  smtpTransport.sendMail mailOptions, (err,res) ->
+    if err
+      debug "ERROR: #{JSON.stringify(err)}"
+    else
+      debug "mail successfully sent: #{JSON.stringify(res)}"
 
 
 feed.follow()
@@ -58,4 +55,5 @@ debug 'starting hedwig'
 process.on 'SIGINT', () ->
   debug 'shutting down SMTP connection'
   smtpTransport.close()
+  # TODO close db connection
   process.exit()
