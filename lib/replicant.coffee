@@ -6,6 +6,12 @@ replicant = {}
 replicant.signup = (userId,callback) ->
   nano.db.create(userId,callback)
 
+replicant.swapEvent = ({swapId,userId}, callback) ->
+  db = nano.db.use('lifeswap')
+
+  callback()
+
+
 module.exports = replicant
 
 # shut down SMTP connection

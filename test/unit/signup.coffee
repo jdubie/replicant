@@ -4,12 +4,12 @@ nano = require('nano')('http://tester:tester@localhost:5985')
 
 describe 'POST /signup', () ->
 
-  userId = 'testUser'
+  userId = 'testuser'
 
   before (ready) ->
     signup userId, (err,res) ->
       should.not.exist(err)
-      res.should.equal(true)
+      res.should.have.property('ok', true)
       ready()
 
   after (finished) ->
@@ -23,3 +23,4 @@ describe 'POST /signup', () ->
     
   # @todo assert existence of user data document
   # @todo assert replication of user data document
+  # @todo handle failures, retries?
