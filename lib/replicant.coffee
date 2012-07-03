@@ -7,9 +7,6 @@ async = require('async')
 
 replicant = {}
 
-replicant.getHello = () ->
-  return 'helro, world'
-
 replicant.signup = ({userId},callback) ->
   nano.db.create(userId,callback)
 

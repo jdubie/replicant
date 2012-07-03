@@ -11,7 +11,6 @@ describe 'func #signup', () ->
   app = null
 
   before (ready) ->
-    # @todo setup webserver
     app = require('../../app.coffee')
     nano.auth user, password, (err, body, headers) ->
       should.not.exist(err)
