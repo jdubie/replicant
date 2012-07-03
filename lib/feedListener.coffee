@@ -1,6 +1,3 @@
-debug = require('debug')('lifeswap:hedwig:index')
-nodemailer = require('nodemailer')
-
 # TODO make non-admin
 debug 'creating database connection'
 user = 'hedwig'
@@ -36,6 +33,7 @@ feed.filter = (doc, req) ->
     return true
   return false
 
+# @todo retry three times on error/failure
 feed.on 'change', (change) ->
   # set email info
   mailOptions.text = "Approve/Deny new Swap here: http://lifeswap.co/admin/swaps/#{change.id}"
@@ -49,11 +47,4 @@ feed.on 'change', (change) ->
 
 
 feed.follow()
-debug 'starting hedwig'
-
-# shut down SMTP connection
-process.on 'SIGINT', () ->
-  debug 'shutting down SMTP connection'
-  smtpTransport.close()
-  # TODO close db connection
-  process.exit()
+debug 'starting feed listener'

@@ -2,7 +2,7 @@ replicant
 =========
 
 ```
-Replicator swapEventId, session
+Replicate swapEventId, session
   This service triggers replications between users databases
   @todo rename
   @possibleName Replicant
@@ -14,7 +14,7 @@ Replicator swapEventId, session
   ids.each (dst) -
     replicate src, dst, filter(swapEventId)
 
-Creator swapId, session
+SwapEvent swapId, session
   This service creates a swapEventId and initializes involed users 
   @todo rename
   @param swapId {string} swap for which swapEvent is being created
