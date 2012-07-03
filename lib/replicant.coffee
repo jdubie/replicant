@@ -1,11 +1,14 @@
 async = require('async')
+_ = require('underscore')
 debug = require('debug')('lifeswap:replicant')
 nano = require('nano')('http://tester:tester@localhost:5985')
+async = require('async')
 
 replicant = {}
 
 replicant.signup = (userId,callback) ->
   nano.db.create(userId,callback)
+
 
 replicant.swapEvent = ({swapId,userId}, callback) ->
   getGuest = (_callback) ->
@@ -28,6 +31,16 @@ replicant.swapEvent = ({swapId,userId}, callback) ->
     (result, next) -> createMapping(result, next)
   ], callback
 
+
+replicant.replicate = ({src, dsts, swapEventID}, callback) ->
+  opts =
+    create_target: true
+    query_params: {swapEventID}
+  params = _.map dsts, (dst) ->
+    return {src, dst, opts}
+  replicateEach = ({src,dst,opts}, cb) ->
+    nano.db.replicate(src, dst, opts, cb)
+  async.map(params, replicateEach, callback)
 
 module.exports = replicant
 
