@@ -1,6 +1,7 @@
 replicant
 =========
 
+```
 Replicator swapEventId, session
   This service triggers replications between users databases
   @todo rename
@@ -50,3 +51,4 @@ clientMessage swapEventId, doc
   userId = getIdFromSession()
   POST /userId {swapEventId, doc}
   Replicator(swapEventId)
+```
