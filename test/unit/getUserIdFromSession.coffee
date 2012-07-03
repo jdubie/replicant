@@ -1,11 +1,13 @@
 should = require('should')
+request = require('request')
 nano = require('nano')('http://lifeswaptest:5985')
 {getUserIdFromSession} = require('../../lib/replicant')
 
 describe '#getUserIdFromSession', () ->
 
   cookie = null
-  user = 'user1'
+  user = 'user1' # @todo create random user to avoid sessions carrying over
+                 # from previous tests
   password = 'pass1'
 
   before (ready) ->
@@ -14,13 +16,13 @@ describe '#getUserIdFromSession', () ->
       should.exist(headers and headers['set-cookie'])
       cookie = headers['set-cookie'][0]
       ready()
-    
+
   it 'should return userid with a good cookie', (done) ->
     getUserIdFromSession {cookie}, (err, res) ->
       should.not.exist(err)
       res.should.have.property('userId', user)
       done()
-
+    
   it 'should return an error with empty cookie', (done) ->
     getUserIdFromSession cookie: '', (err) ->
       err.should.equal(true)
