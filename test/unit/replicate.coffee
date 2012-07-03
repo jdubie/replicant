@@ -6,6 +6,12 @@ nano = require('nano')('http://tester:tester@localhost:5985')
 
 describe 'POST /replicate', () ->
 
+  msgFilter = (doc, req) ->
+    if doc.swapEventID isnt req.query.swapEventID
+      return false
+    else
+      return true
+
   # @note depends on lifeswap/scripts/instances/toy_data.coffee
   user1 = 'user1'
   user2 = 'user2'
@@ -21,13 +27,28 @@ describe 'POST /replicate', () ->
   ensureUser1DB = (callback) ->
     nano.db.list (err,dbs) ->
       if not (user1 in dbs)
-        nano.db.create(user1,callback)
+        nano.db.create user1, (err, res) ->
+          should.not.exist(err)
+          userdb = nano.db.use(user1)
+          ddoc =
+            _id: "_design/#{user1}"
+            filters:
+              msgFilter: msgFilter.toString()
+          userdb.insert(ddoc, callback)
       else callback()
 
   ensureUser2DB = (callback) ->
     nano.db.list (err,dbs) ->
       if not (user2 in dbs)
-        nano.db.create(user2,callback)
+        nano.db.create user2, (err, res) ->
+          should.not.exist(err)
+          # doesn't actually matter for tests as-is
+          userdb = nano.db.use(user2)
+          ddoc =
+            _id: "_design/#{user2}"
+            filters:
+              msgFilter: msgFilter.toString()
+          userdb.insert(ddoc, callback)
       else callback()
 
   ensureMapperPresent = (callback) ->
@@ -123,7 +144,7 @@ describe 'POST /replicate', () ->
   it 'should not replicate the wrong message', (done) ->
     db = nano.db.use(user2)
     db.get badMsgID, (err, res) ->
-      err.should.exist()
+      err.should.have.property('status_code', 404)
       done()
 
   it 'should keep both messages in the first user\'s db', (done) ->
