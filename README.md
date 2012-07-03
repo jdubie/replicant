@@ -35,6 +35,13 @@ Signup session
   POST /userId {firstname, lastname, ...}
   replicate /userId /lifeswap filter(public)
 
+clientSignup
+  This calls to the server signup to create user db for new user
+
+  POST /_users    # handled by 'users' package
+  POST /_session  # login handled by 'session' package
+  POST /Signup cookie   # for server to create user db
+
 clientCreate swapId
   Creates swapEventId and writes preliminary documents
   @param swapId {string} swap for which swapEvent is being created
