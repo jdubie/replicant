@@ -16,7 +16,7 @@ describe '#replicate', () ->
   user1 = 'user1'
   user2 = 'user2'
   swapEventID = 'swapEventID'
-  badSwapEventID = 'badSwapID'
+  badSwapEventID = 'badSwapEventID'
   mapperDB = 'mapper'
 
   results = null # to be assigned in before
@@ -75,7 +75,7 @@ describe '#replicate', () ->
         swapEventDoc =
           _id: badSwapEventID
           users: [user1, user2]
-        db.insert swapEventDoc, swapEventID, callback
+        db.insert swapEventDoc, badSwapEventID, callback
       else
         callback()
 
