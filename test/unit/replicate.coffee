@@ -4,17 +4,19 @@ async = require('async')
 nano = require('nano')('http://tester:tester@localhost:5985')
 {replicate} = require('../../lib/replicant')
 
-describe 'POST /swapEvent', () ->
+describe 'POST /replicate', () ->
 
   # @note depends on lifeswap/scripts/instances/toy_data.coffee
   user1 = 'user1'
   user2 = 'user2'
   swapEventID = 'swapEventID'
+  badSwapEventID = 'badSwapID'
   mapperDB = 'mapper'
 
   results = null # to be assigned in before
   error = null # to be assigned in before
   msgID = null
+  badMsgID = null
 
   ensureUser1DB = (callback) ->
     nano.db.list (err,dbs) ->
@@ -45,31 +47,51 @@ describe 'POST /swapEvent', () ->
       else
         callback()
 
+  ensureBadSwapEventExists = (callback) ->
+    db = nano.db.use(mapperDB)
+    db.get swapEventID, (err, swapEventDoc) ->
+      if err
+        swapEventDoc =
+          _id: badSwapEventID
+          users: [user1, user2]
+        db.insert swapEventDoc, swapEventID, callback
+      else
+        callback()
+
   before (ready) ->
     async.parallel [
       ensureUser1DB
       ensureUser2DB
       ensureMapperPresent
       ensureSwapEventExists
+      ensureBadSwapEventExists
     ], (err, res) ->
       should.not.exist(err)
 
       user1db = nano.db.use(user1)
       msgDoc =
-        type: 'message'
-        swapEventID: swapEventID
-        message: 'hey bro'
+          type: 'message'
+          swapEventID: swapEventID
+          message: 'hey bro'
+      badMsgDoc =
+          type: 'message'
+          swapEventID: badSwapEventID
+          message: 'boo brohan'
       user1db.insert msgDoc, (err, res) ->
         should.not.exist(err)
         msgID = res.id
-        replicateParams =
-          src: user1
-          dsts: [user2]
-          swapEventID: swapEventID
-        replicate replicateParams, (err, res) ->
-          error = err
-          results = res
-          ready()
+        user1db.insert badMsgDoc, (err, res) ->
+          should.not.exist(err)
+          badMsgID = res.id
+
+          replicateParams =
+            src: user1
+            dsts: [user2]
+            swapEventID: swapEventID
+          replicate replicateParams, (err, res) ->
+            error = err
+            results = res
+            ready()
 
   after (finished) ->
     destroyUser1DB = (callback) ->
@@ -98,10 +120,19 @@ describe 'POST /swapEvent', () ->
       msgDoc.should.have.property('type', 'message')
       done()
 
-  it 'should keep the message in the first user\'s db', (done) ->
+  it 'should not replicate the wrong message', (done) ->
+    db = nano.db.use(user2)
+    db.get badMsgID, (err, res) ->
+      err.should.exist()
+      done()
+
+  it 'should keep both messages in the first user\'s db', (done) ->
     db = nano.db.use(user1)
     db.get msgID, (err, msgDoc) ->
       should.not.exist(err)
       msgDoc.should.have.property('swapEventID', swapEventID)
       msgDoc.should.have.property('type', 'message')
-      done()
+      db.get badMsgID, (err, bMsgDoc) ->
+        bMsgDoc.should.have.property('swapEventID', badSwapEventID)
+        bMsgDoc.should.have.property('type', 'message')
+        done()

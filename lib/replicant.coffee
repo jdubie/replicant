@@ -36,6 +36,8 @@ replicant.replicate = ({src, dsts, swapEventID}, callback) ->
   opts =
     create_target: true
     query_params: {swapEventID}
+    # TODO: create this filter in the src's ddoc
+    filter: "#{src}/msgFilter"
   params = _.map dsts, (dst) ->
     return {src, dst, opts}
   replicateEach = ({src,dst,opts}, cb) ->
