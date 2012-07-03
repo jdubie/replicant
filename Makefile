@@ -6,6 +6,13 @@ test:
 		--require should \
 			$(TESTS)
 
+grep:
+	./node_modules/.bin/mocha \
+		--compilers coffee:coffee-script \
+		--require should \
+		--grep $(P) \
+			$(TESTS)
+
 run:
 	./node_modules/.bin/coffee lib/index.coffee
 

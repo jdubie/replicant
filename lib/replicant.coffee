@@ -4,10 +4,13 @@ nano = require('nano')('http://tester:tester@localhost:5985')
 
 replicant = {}
 
-replicant.signup = (userId,callback) ->
+replicant.getHello = () ->
+  return 'helro, world'
+
+replicant.signup = ({userId},callback) ->
   nano.db.create(userId,callback)
 
-replicant.swapEvent = ({swapId,userId}, callback) ->
+replicant.swapEvent = ({swapId, userId}, callback) ->
   getGuest = (_callback) ->
     _callback(null, userId) # @todo replace with getting this from cookies
   getHosts = (_callback) ->

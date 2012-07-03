@@ -11,6 +11,8 @@
     "debug": "*",
     "nodemailer": "*",
     "async": "*",
-    "should": "*"
+    "should": "*",
+    "express": "*",
+    "request": "*"
   }
 }

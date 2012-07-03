@@ -7,7 +7,7 @@ describe 'POST /signup', () ->
   userId = 'testuser'
 
   before (ready) ->
-    signup userId, (err,res) ->
+    signup {userId}, (err,res) ->
       should.not.exist(err)
       res.should.have.property('ok', true)
       ready()
