@@ -1,4 +1,5 @@
 async = require('async')
+request = require('request')
 _ = require('underscore')
 debug = require('debug')('lifeswap:replicant')
 nano = require('nano')('http://tester:tester@localhost:5985')
@@ -45,6 +46,16 @@ replicant.replicate = ({src, dsts, swapEventID}, callback) ->
   replicateEach = ({src,dst,opts}, cb) ->
     nano.db.replicate(src, dst, opts, cb)
   async.map(params, replicateEach, callback)
+
+replicant.getUserIdFromSession = ({cookie}, callback) ->
+  opts =
+    method: 'get'
+    url: 'http://lifeswaptest:5985/_session'
+    headers: cookie: cookie
+  request opts, (err, res, body) ->
+    userId = JSON.parse(body)?.userCtx?.name
+    if userId? then callback(null, {userId})
+    else callback(true) # will trigger 403
 
 module.exports = replicant
 

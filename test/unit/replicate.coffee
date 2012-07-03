@@ -4,7 +4,7 @@ async = require('async')
 nano = require('nano')('http://tester:tester@localhost:5985')
 {replicate} = require('../../lib/replicant')
 
-describe 'POST /replicate', () ->
+describe '#replicate', () ->
 
   msgFilter = (doc, req) ->
     if doc.swapEventID isnt req.query.swapEventID

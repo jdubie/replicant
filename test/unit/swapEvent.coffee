@@ -4,7 +4,7 @@ async = require('async')
 nano = require('nano')('http://tester:tester@localhost:5985')
 {swapEvent} = require('../../lib/replicant')
 
-describe 'POST /swapEvent', () ->
+describe '#swapEvent', () ->
 
   # @note depends on lifeswap/scripts/instances/toy_data.coffee
 
