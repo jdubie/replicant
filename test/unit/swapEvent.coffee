@@ -57,9 +57,6 @@ describe 'POST /swapEvent', () ->
         result = res
         ready()
 
-  after (finished) ->
-    nano.db.destroy(userId,finished)
-
   it 'should not error', () ->
     should.not.exist(error)
 
@@ -67,16 +64,16 @@ describe 'POST /swapEvent', () ->
     result.should.have.property('ok', true)
 
   it 'should return a swapEventId', () ->
-    result.should.have.property('swapId')
+    result.should.have.property('swapEventId')
 
   it 'should return a list of users', () ->
     result.users.should.eql(['user1', 'user2'])
 
   it 'should create that corresponding mapping', (done) ->
     db = nano.db.use('mapper')
-    db.get swapEventId, (err,doc) ->
+    db.get result.swapEventId, (err,doc) ->
       should.not.exist(err)
-      doc.should.have.property('_id', swapEventId)
+      doc.should.have.property('_id', result.swapEventId)
       doc.should.have.property('users')
       doc.users.should.eql(['user1', 'user2'])
       done()
