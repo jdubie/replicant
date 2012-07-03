@@ -8,7 +8,7 @@ describe '#signup', () ->
 
   before (ready) ->
 
-    _signup = signup.bind null,{userId}, (err, res) ->
+    _signup = signup.bind null, {userId}, (err, res) ->
       should.not.exist(err)
       res.should.have.property('ok', true)
       ready()

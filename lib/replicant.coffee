@@ -44,11 +44,14 @@ replicant.replicate = ({src, dsts, swapEventID}, callback) ->
     nano.db.replicate(src, dst, opts, cb)
   async.map(params, replicateEach, callback)
 
-replicant.getUserIdFromSession = ({cookie}, callback) ->
+replicant.getUserIdFromSession = ({headers}, callback) ->
+  unless headers?.cookie? # will trigger 403
+    callback(true)
+    return
   opts =
     method: 'get'
     url: 'http://lifeswaptest:5985/_session'
-    headers: cookie: cookie
+    headers: headers
   request opts, (err, res, body) ->
     userId = JSON.parse(body)?.userCtx?.name
     if userId? then callback(null, {userId})
