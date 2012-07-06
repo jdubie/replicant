@@ -7,10 +7,10 @@ async = require('async')
 
 replicant = {}
 
-replicant.signup = ({userId},callback) ->
+replicant.createUser = ({userId},callback) ->
   nano.db.create(userId,callback)
 
-replicant.swapEvent = ({swapId, userId}, callback) ->
+replicant.createSwapEvent = ({swapId, userId}, callback) ->
   getGuest = (_callback) ->
     _callback(null, userId) # @todo replace with getting this from cookies
   getHosts = (_callback) ->
@@ -32,7 +32,7 @@ replicant.swapEvent = ({swapId, userId}, callback) ->
   ], callback
 
 
-replicant.replicate = ({src, dsts, swapEventID}, callback) ->
+replicant.replicateSwapEvent = ({src, dsts, swapEventID}, callback) ->
   opts =
     create_target: true
     query_params: {swapEventID}
