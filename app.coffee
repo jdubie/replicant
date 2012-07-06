@@ -86,7 +86,6 @@ app.get '/message', (req, res) ->
             else
               res.json(r)
 
-
 # fire that baby up
 app.listen(3000)
 

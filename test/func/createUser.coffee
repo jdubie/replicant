@@ -4,7 +4,7 @@ request = require('request')
 nano = require('nano')('http://tester:tester@localhost:5985')
 {signup} = require('../../lib/replicant')
 
-describe 'POST /signup', () ->
+describe 'POST /user', () ->
 
   user = 'user1'
   password = 'pass1'
@@ -31,7 +31,7 @@ describe 'POST /signup', () ->
       else finished()
 
   it 'should 403 when user is unauthenticated', (done) ->
-    request.post 'http://localhost:3000/signup', (err, res, body) ->
+    request.post 'http://localhost:3000/user', (err, res, body) ->
       should.not.exist(err)
       res.statusCode.should.equal(403)
       body.should.equal('User must be logged in')
@@ -43,7 +43,7 @@ describe 'POST /signup', () ->
 
   it 'should create user data base if they are authenticated', (done) ->
     opts =
-      url: 'http://localhost:3000/signup'
+      url: 'http://localhost:3000/user'
       headers: cookie: cookie
     request.post opts, (err, res, body) ->
       should.not.exist(err)

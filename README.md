@@ -2,7 +2,7 @@ replicant
 =========
 
 ```
-Replicate swapEventId, session
+ReplicateSwapEvent swapEventId, session
   This service triggers replications between users databases
   @todo rename
   @possibleName Replicant
@@ -14,7 +14,7 @@ Replicate swapEventId, session
   ids.each (dst) -
     replicate src, dst, filter(swapEventId)
 
-SwapEvent swapId, session
+CreateSwapEvent swapId, session
   This service creates a swapEventId and initializes involed users 
   @todo rename
   @param swapId {string} swap for which swapEvent is being created
@@ -25,7 +25,7 @@ SwapEvent swapId, session
   swapEventId = POST /mapper {guest,hosts}
   return swapEventId
 
-Signup session
+CreateUser session
   This creates a user database and preliminary doc after user signups on client
   using user.signup and session.login on client
   @param session {cookie} authenicates user
@@ -35,7 +35,7 @@ Signup session
   POST /userId {firstname, lastname, ...}
   replicate /userId /lifeswap filter(public)
 
-clientCreate swapId
+clientCreateUser swapId
   Creates swapEventId and writes preliminary documents
   @param swapId {string} swap for which swapEvent is being created
 

@@ -50,7 +50,7 @@ replicant.signup = ({userId},callback) ->
       userdb.insert(ddoc, callback)
 
 
-replicant.swapEvent = ({swapId, userId}, callback) ->
+replicant.createSwapEvent = ({swapId, userId}, callback) ->
   getGuest = (_callback) ->
     _callback(null, userId) # @todo replace with getting this from cookies
   getHosts = (_callback) ->
@@ -83,6 +83,7 @@ replicant.swapEventUsers = ({eventId}, callback) ->
     else
       callback(null, {ok: true, status: 200, users: eventDoc.users})
 
+
 replicant.replicate = ({src, dsts, eventId}, callback) ->
   opts =
     create_target: true
@@ -94,6 +95,7 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
   replicateEach = ({src,dst,opts}, cb) ->
     nano.db.replicate(src, dst, opts, cb)
   async.map(params, replicateEach, callback)
+
 
 replicant.getUserIdFromSession = ({headers}, callback) ->
   console.log(headers)
@@ -109,6 +111,7 @@ replicant.getUserIdFromSession = ({headers}, callback) ->
     userId = JSON.parse(body)?.userCtx?.name
     if userId? then callback(null, {userId})
     else callback(true) # will trigger 403
+
 
 module.exports = replicant
 

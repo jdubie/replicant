@@ -2,9 +2,9 @@ util = require('util')
 should = require('should')
 async = require('async')
 nano = require('nano')('http://tester:tester@localhost:5985')
-{replicate} = require('../../lib/replicant')
+{replicateSwapEvent} = require('../../lib/replicant')
 
-describe '#replicate', () ->
+describe '#replicateSwapEvent', () ->
 
   msgFilter = (doc, req) ->
     if doc.swapEventID isnt req.query.swapEventID
@@ -109,7 +109,7 @@ describe '#replicate', () ->
             src: user1
             dsts: [user2]
             swapEventID: swapEventID
-          replicate replicateParams, (err, res) ->
+          replicateSwapEvent replicateParams, (err, res) ->
             error = err
             results = res
             ready()
