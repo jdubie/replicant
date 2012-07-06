@@ -8,7 +8,47 @@ async = require('async')
 replicant = {}
 
 replicant.signup = ({userId},callback) ->
-  nano.db.create(userId,callback)
+
+  # Filter function for user DBs
+  msgFilter = (doc, req) ->
+    if doc.eventId isnt req.query.eventId
+      return false
+    else
+      return true
+
+  # Thread view for user DBs (all messages for an event)
+  threadView =
+    map: (doc) ->
+      if doc.type is 'message'
+        value =
+          subject: doc.subject
+          message: doc.message
+          author: doc.author
+        key = [doc.eventId, doc.created]
+        emit(key, value)
+
+  # Thread view for user DBs (all events)
+  threadsView =
+    map: (doc) ->
+      if doc.type is 'event'
+        emit(null, null)
+
+  nano.db.create userId, (err, res) ->
+    if err
+      callback(err)
+    else
+      userdb = nano.db.use(userId)
+      ddoc =
+        _id: "_design/#{userId}"
+        filters:
+          msgFilter: msgFilter.toString()
+        views:
+          thread:
+            map: threadView.map.toString()
+          threads:
+            map: threadsView.map.toString()
+      userdb.insert(ddoc, callback)
+
 
 replicant.swapEvent = ({swapId, userId}, callback) ->
   getGuest = (_callback) ->
@@ -21,9 +61,9 @@ replicant.swapEvent = ({swapId, userId}, callback) ->
     users.push(userId) # @todo this logic may change
     mapper = nano.db.use('mapper')
     mapper.insert {users}, (err, res) ->
-      swapEventId = res.id
+      eventId = res.id
       ok = true
-      _callback(err, {swapEventId, users, ok})
+      _callback(err, {eventId, users, ok})
 
   async.waterfall [
     (next) -> getGuest(next)
@@ -32,10 +72,21 @@ replicant.swapEvent = ({swapId, userId}, callback) ->
   ], callback
 
 
-replicant.replicate = ({src, dsts, swapEventID}, callback) ->
+replicant.swapEventUsers = ({eventId}, callback) ->
+  mapper = nano.db.use('mapper')
+  mapper.get eventId, (err, eventDoc) ->
+    if err
+      if err.error is 'not_found'
+        callback({status: 404, reason: "No such event"})
+      else
+        callback({status: 500, reason: "Internal Server Error"})
+    else
+      callback(null, {ok: true, status: 200, users: eventDoc.users})
+
+replicant.replicate = ({src, dsts, eventId}, callback) ->
   opts =
     create_target: true
-    query_params: {swapEventID}
+    query_params: {eventId}
     # TODO: create this filter in the src's ddoc
     filter: "#{src}/msgFilter"
   params = _.map dsts, (dst) ->
@@ -45,7 +96,9 @@ replicant.replicate = ({src, dsts, swapEventID}, callback) ->
   async.map(params, replicateEach, callback)
 
 replicant.getUserIdFromSession = ({headers}, callback) ->
+  console.log(headers)
   unless headers?.cookie? # will trigger 403
+    console.log('no headers.cookie')
     callback(true)
     return
   opts =
