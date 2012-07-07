@@ -98,9 +98,7 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
 
 
 replicant.getUserIdFromSession = ({headers}, callback) ->
-  console.log(headers)
   unless headers?.cookie? # will trigger 403
-    console.log('no headers.cookie')
     callback(true)
     return
   opts =
