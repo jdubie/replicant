@@ -31,7 +31,7 @@ replicant.signup = ({userId},callback) ->
   threadsView =
     map: (doc) ->
       if doc.type is 'event'
-        emit(null, null)
+        emit(doc.eventId, doc.swapId)
 
   nano.db.create userId, (err, res) ->
     if err
