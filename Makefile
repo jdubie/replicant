@@ -31,6 +31,7 @@ grep:
 			$(TESTS)
 
 run:
-	./node_modules/.bin/coffee lib/index.coffee
+	@DEBUG=replicant* \
+		./node_modules/.bin/coffee app.coffee
 
 .PHONY: run, test

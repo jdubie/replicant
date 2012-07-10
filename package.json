@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "Sends messages for lifeswap",
   "devDependencies": {
+    "email-listener": "https://github.com/jdubie/node-email-listener/tarball/master",
     "mocha": "*"
   },
   "dependencies": {
@@ -14,6 +15,7 @@
     "should": "*",
     "express": "*",
     "request": "*",
-    "underscore": "*"
+    "underscore": "*",
+    "mustache": "*"
   }
 }

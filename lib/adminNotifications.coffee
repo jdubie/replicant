@@ -1,13 +1,18 @@
+debug = require('debug')('replicant:lib:adminNotifications')
+config = require('../config')
+
 # TODO make non-admin
 debug 'creating database connection'
 user = 'hedwig'
 if process.env.PROD
   pwd = process.env.HEDWIG_PWD
+  port = 5984
 else
   pwd = 'hedwig'
-credentials = {user,pwd}
-nano = require('nano')("http://#{credentials.user}:#{credentials.pwd}@localhost:5984")
-db = nano.db.use('lifeswap')
+  port = 5985
+
+nano = require('nano')("http://#{user}:#{pwd}@localhost:#{port}")
+db = config.nano.db.use('lifeswap')
 debug 'connected to database'
 
 debug 'creating smtp server connection'
@@ -45,6 +50,6 @@ feed.on 'change', (change) ->
     else
       debug "mail successfully sent: #{JSON.stringify(res)}"
 
-
-feed.follow()
-debug 'starting feed listener'
+module.exports.start = () ->
+  feed.follow()
+  debug 'starting feed listener'

@@ -6,6 +6,7 @@ _ = require('underscore')
 {createSwapEvent} = require('./lib/replicant')
 {swapEventUsers} = require('./lib/replicant')
 {replicate} = require('./lib/replicant')
+{listen} = require('./lib/adminNotifications')
 
 app = express.createServer()
 
@@ -119,7 +120,10 @@ app.get '/message', (req, res) ->
                   res.json(r)
 
 
-# fire that baby up
+# fire up HTTP server
 app.listen(3000)
+
+# fire up server listening to send out admin actions
+listen()
 
 module.exports = app
