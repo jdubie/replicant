@@ -39,7 +39,7 @@ app.post '/events', (req, res) ->
 
 
 # GET /events/members
-app.post '/swapEventUsers', (req, res) ->
+app.get '/events/members', (req, res) ->
   # TODO: do we want it as a GET?
   eventId = req.query.eventId
   getUserIdFromSession headers: req.headers, (err, r) ->
