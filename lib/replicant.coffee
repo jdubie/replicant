@@ -92,7 +92,6 @@ replicant.replicateMessages = ({src, dsts, eventId}, callback) ->
   opts =
     create_target: true
     query_params: {eventId}
-    # TODO: create this filter in the src's ddoc
     filter: "#{src}/msgFilter"
   params = _.map dsts, (dst) ->
     return {src, dst, opts}

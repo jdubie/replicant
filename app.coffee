@@ -14,14 +14,14 @@ app = express.createServer()
 app.post '/users', (req, res) ->
   getUserIdFromSession headers: req.headers, (err, r) ->
     if err
-      res.json({status: 403, reason: 'User must be logged in'})
+      res.json({status: 403, reason: 'User must be logged in'}, 403)
     else
       userId = r.userId
       createUser {userId}, (e,r) ->
         if e
-          res.json({status: 500, reason: "Internal Server Error: #{e}"})
+          res.json({status: 500, reason: "Internal Server Error: #{e}", 500})
         else
-          res.json(r)
+          res.json(r, 201)
 
 
 # POST /events
@@ -29,13 +29,13 @@ app.post '/events', (req, res) ->
   swapId = req.query.swapId
   getUserIdFromSession headers: req.headers, (err, r) ->
     if err
-      res.json({status: 403, reason: 'User must be logged in'})
+      res.json({status: 403, reason: 'User must be logged in'}, 403)
     else
       userId = r.userId
       createEvent {swapId, userId}, (e, r) ->
-        if e then res.json({status: 500, reason: "Internal Server Error: #{e}"})
+        if e then res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
         else
-          res.json(r)
+          res.json(r, 201)
 
 
 # GET /events/members
@@ -44,40 +44,40 @@ app.get '/events/members', (req, res) ->
   eventId = req.query.eventId
   getUserIdFromSession headers: req.headers, (err, r) ->
     if err
-      res.json({status: 403, reason: 'User must be logged in'})
+      res.json({status: 403, reason: 'User must be logged in'}, 403)
     else
       userId = r.userId
       getEventUsers {eventId}, (e, r) ->
         # there should only be responses, no errors
         if e
-          res.json({status: 500, reason: "Internal Server Error: #{e}"})
+          res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
         else
           if not (userId in r.users)
-            res.json({status: 403, reason: "Not authorized to view this event"})
+            res.json({status: 403, reason: "Not authorized to view this event"}, 403)
           else
-            res.json(r)
+            res.json(r, 200)
 
 # POST /events/message
 app.post '/events/message', (req, res) ->
   eventId = req.query.eventId
   getUserIdFromSession headers: req.headers, (err, r) ->
     if err
-      res.json({status: 403, reason: 'User must be logged in'})
+      res.json({status: 403, reason: 'User must be logged in'}, 403)
     else
       src = r.userId
       getEventUsers {eventId}, (e, r) ->
         # 404 or 500
-        if e then res.json(e)
+        if e then res.json(e, e.status)
         else
           if not (src in r.users)
-            res.json({status: 403, reason: "Not authorized to write messages to this event"})
+            res.json({status: 403, reason: "Not authorized to write messages to this event"}, 403)
           else
             dsts = _.without(r.users, src)
             replicateMessages {src, dsts, eventId}, (e, r) ->
               if e
-                res.json({status: 500, reason: "Internal Server Error: #{e}"})
+                res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
               else
-                res.json(r)
+                res.json(r, 201)
 
 
 # fire that baby up

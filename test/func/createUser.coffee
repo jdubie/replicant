@@ -64,8 +64,7 @@ describe 'POST /user', () ->
     request.post 'http://localhost:3000/users', (err, res, body) ->
       should.not.exist(err)
       JSON.parse(body).should.have.property('status', 403)
-      #res.statusCode.should.equal(403)
-      #body.should.equal('User must be logged in')
+      res.statusCode.should.equal(403)
 
       # assert user database was not created
       nano.db.list (err, res) ->
@@ -78,7 +77,7 @@ describe 'POST /user', () ->
       headers: cookie: cookie
     request.post opts, (err, res, body) ->
       should.not.exist(err)
-      res.statusCode.should.equal(200)
+      res.statusCode.should.equal(201)
       res.body = JSON.parse(res.body)
       res.body.should.have.property('ok', true)
 
