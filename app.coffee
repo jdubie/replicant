@@ -25,7 +25,7 @@ app.post '/users', (req, res) ->
 
 
 # POST /events
-app.post '/swapEvent', (req, res) ->
+app.post '/events', (req, res) ->
   swapId = req.query.swapId
   getUserIdFromSession headers: req.headers, (err, r) ->
     if err
