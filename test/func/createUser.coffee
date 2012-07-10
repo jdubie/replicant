@@ -31,7 +31,7 @@ describe 'POST /user', () ->
       else finished()
 
   it 'should 403 when user is unauthenticated', (done) ->
-    request.post 'http://localhost:3000/user', (err, res, body) ->
+    request.post 'http://localhost:3000/signup', (err, res, body) ->
       should.not.exist(err)
       res.statusCode.should.equal(403)
       body.should.equal('User must be logged in')
@@ -43,7 +43,7 @@ describe 'POST /user', () ->
 
   it 'should create user data base if they are authenticated', (done) ->
     opts =
-      url: 'http://localhost:3000/user'
+      url: 'http://localhost:3000/signup'
       headers: cookie: cookie
     request.post opts, (err, res, body) ->
       should.not.exist(err)
