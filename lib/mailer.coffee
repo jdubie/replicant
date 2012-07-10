@@ -24,14 +24,14 @@ module.exports.Mailer = class Mailer
   constructor: ({@headers, @data, @templateName}) ->
     #@template = fs.readFileSync(path.join(__dirname, @templateName))
 
-  send: ({headers, data}) ->
+  send: ({headers, data}, callback) ->
+    callback = callback || () ->
+    headers = headers || {}
     _.defaults(headers, @headers)
-    #html = @_getHtml(data)
-    options =
-      text: 'hello, world'
-    _.defaults(options, headers)
 
-    config.smtp.sendMail options, () ->
+    #html = @_getHtml(data)
+
+    config.smtp.sendMail(headers)
 
   _getHtml: (data) ->
     _.defaults(data, @data)

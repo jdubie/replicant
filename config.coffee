@@ -19,19 +19,22 @@ module.exports.__defineGetter__ 'nano', do ->
     return inst
 
 # lazily instantiate SMTP transport
+module.exports.emailPort = 8000 # 25 is priviledged port
 module.exports.__defineGetter__ 'smtp', do ->
   inst = null
   () ->
     if inst == null
-      debug 'creating smtp server connection'
       if process.env.PROD
+        debug 'creating smtp server connection to GMAIL'
         inst = nodemailer.createTransport 'SMTP',
           service: 'Gmail'
           auth:
             user: process.env.GMAIL_USER
             pass: process.env.GMAIL_PWD
       else
-        inst = nodemailer.createTransport 'STMP',
+        debug 'creating smtp server connection to localhost'
+        inst = nodemailer.createTransport 'SMTP',
           host: 'localhost'
-          port: '2500' # 25 is priviledged port
+          port: module.exports.emailPort
     return inst
+

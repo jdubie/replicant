@@ -1,20 +1,26 @@
 should = require('should')
-emaillisten = require('email-listener')
+emailListen = require('email-listener')
 {Mailer} = require('../../lib/mailer')
+config  = require('../../config')
 
 describe 'class Mailer', () ->
 
+  to = 'testTo'
+  from = 'testFrom'
+  text = 'testText'
+  subject = 'testSubject'
+
   before () ->
-    emaillisten.start(2500)
+    emailListen.start(config.emailPort)
 
   after () ->
-    emaillisten.stop()
+    emailListen.stop()
 
   it 'send simple email', (done) ->
-    done()
-    #emaillisten.once 'msg', (recipient, rawbody, parsed) ->
-    #  console.error recipient, rawbody, parsed
-    #  done()
-
-    #mailer = new Mailer(to: 'wefwef')
-    #mailer.send({})
+    emailListen.on 'msg', (recipient, rawbody, parsed) ->
+      #console.error recipient, rawbody, parsed
+      parsed.should.have.property('subject', subject)
+      done()
+    headers = {to,from,text,subject}
+    m = new Mailer({headers})
+    m.send({})
