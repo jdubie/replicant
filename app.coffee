@@ -58,7 +58,7 @@ app.get '/events/members', (req, res) ->
             res.json(r)
 
 # POST /events/message
-app.post '/message', (req, res) ->
+app.post '/events/message', (req, res) ->
   eventId = req.query.eventId
   getUserIdFromSession headers: req.headers, (err, r) ->
     if err
