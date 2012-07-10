@@ -29,6 +29,7 @@ CreateUser session
   This creates a user database and preliminary doc after user signups on client
   using user.signup and session.login on client
   @param session {cookie} authenicates user
+  @method POST /user
 
   userId = getIdFromSession()
   POST / userId # creates users database

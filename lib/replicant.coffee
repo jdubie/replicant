@@ -7,6 +7,7 @@ async = require('async')
 
 replicant = {}
 
+# replicant.createUser
 replicant.signup = ({userId},callback) ->
 
   # Filter function for user DBs
@@ -50,6 +51,7 @@ replicant.signup = ({userId},callback) ->
       userdb.insert(ddoc, callback)
 
 
+# replicant.createEvent
 replicant.createSwapEvent = ({swapId, userId}, callback) ->
   getGuest = (_callback) ->
     _callback(null, userId) # @todo replace with getting this from cookies
@@ -72,6 +74,7 @@ replicant.createSwapEvent = ({swapId, userId}, callback) ->
   ], callback
 
 
+# replicant.getEventUsers
 replicant.swapEventUsers = ({eventId}, callback) ->
   mapper = nano.db.use('mapper')
   mapper.get eventId, (err, eventDoc) ->
@@ -84,6 +87,7 @@ replicant.swapEventUsers = ({eventId}, callback) ->
       callback(null, {ok: true, status: 200, users: eventDoc.users})
 
 
+# replicant.replicateMessages
 replicant.replicate = ({src, dsts, eventId}, callback) ->
   opts =
     create_target: true
@@ -97,6 +101,7 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
   async.map(params, replicateEach, callback)
 
 
+# replicant.getUserIdFromSession
 replicant.getUserIdFromSession = ({headers}, callback) ->
   unless headers?.cookie? # will trigger 403
     callback(true)
