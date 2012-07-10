@@ -2,9 +2,9 @@ util = require('util')
 should = require('should')
 async = require('async')
 nano = require('nano')('http://tester:tester@localhost:5985')
-{createSwapEvent} = require('../../lib/replicant')
+{createEvent} = require('../../lib/replicant')
 
-describe '#createSwapEvent', () ->
+describe '#createEvent', () ->
 
   # @note depends on lifeswap/scripts/instances/toy_data.coffee
 
@@ -52,7 +52,7 @@ describe '#createSwapEvent', () ->
     ], (err, res) ->
       should.not.exist(err)
 
-      createSwapEvent {swapId, userId}, (err,res) ->
+      createEvent {swapId, userId}, (err,res) ->
         error = err
         result = res
         ready()

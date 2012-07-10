@@ -7,7 +7,8 @@ async = require('async')
 
 replicant = {}
 
-replicant.signup = ({userId},callback) ->
+# replicant.createUser
+replicant.createUser = ({userId},callback) ->
 
   # Filter function for user DBs
   msgFilter = (doc, req) ->
@@ -50,7 +51,8 @@ replicant.signup = ({userId},callback) ->
       userdb.insert(ddoc, callback)
 
 
-replicant.createSwapEvent = ({swapId, userId}, callback) ->
+# replicant.createEvent
+replicant.createEvent = ({swapId, userId}, callback) ->
   getGuest = (_callback) ->
     _callback(null, userId) # @todo replace with getting this from cookies
   getHosts = (_callback) ->
@@ -72,7 +74,8 @@ replicant.createSwapEvent = ({swapId, userId}, callback) ->
   ], callback
 
 
-replicant.swapEventUsers = ({eventId}, callback) ->
+# replicant.getEventUsers
+replicant.getEventUsers = ({eventId}, callback) ->
   mapper = nano.db.use('mapper')
   mapper.get eventId, (err, eventDoc) ->
     if err
@@ -84,11 +87,11 @@ replicant.swapEventUsers = ({eventId}, callback) ->
       callback(null, {ok: true, status: 200, users: eventDoc.users})
 
 
-replicant.replicate = ({src, dsts, eventId}, callback) ->
+# replicant.replicateMessages
+replicant.replicateMessages = ({src, dsts, eventId}, callback) ->
   opts =
     create_target: true
     query_params: {eventId}
-    # TODO: create this filter in the src's ddoc
     filter: "#{src}/msgFilter"
   params = _.map dsts, (dst) ->
     return {src, dst, opts}
@@ -97,6 +100,7 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
   async.map(params, replicateEach, callback)
 
 
+# replicant.getUserIdFromSession
 replicant.getUserIdFromSession = ({headers}, callback) ->
   unless headers?.cookie? # will trigger 403
     callback(true)
