@@ -1,6 +1,6 @@
 should = require('should')
 nano = require('nano')('http://tester:tester@localhost:5985')
-{createUser} = require('../../lib/replicant')
+{signup} = require('../../lib/replicant')
 
 describe '#createUser', () ->
 
@@ -8,7 +8,7 @@ describe '#createUser', () ->
 
   before (ready) ->
 
-    _signup = createUser.bind null, {userId}, (err, res) ->
+    _signup = signup.bind null, {userId}, (err, res) ->
       should.not.exist(err)
       res.should.have.property('ok', true)
       ready()

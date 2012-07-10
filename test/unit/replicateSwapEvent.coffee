@@ -2,12 +2,12 @@ util = require('util')
 should = require('should')
 async = require('async')
 nano = require('nano')('http://tester:tester@localhost:5985')
-{replicateSwapEvent} = require('../../lib/replicant')
+{replicate} = require('../../lib/replicant')
 
-describe '#replicateSwapEvent', () ->
+describe '#replicate', () ->
 
   msgFilter = (doc, req) ->
-    if doc.swapEventID isnt req.query.swapEventID
+    if doc.eventId isnt req.query.eventId
       return false
     else
       return true
@@ -15,8 +15,8 @@ describe '#replicateSwapEvent', () ->
   # @note depends on lifeswap/scripts/instances/toy_data.coffee
   user1 = 'user1'
   user2 = 'user2'
-  swapEventID = 'swapEventID'
-  badSwapEventID = 'badSwapEventID'
+  eventId = 'eventid'
+  badEventId = 'badeventid'
   mapperDB = 'mapper'
 
   results = null # to be assigned in before
@@ -59,23 +59,23 @@ describe '#replicateSwapEvent', () ->
 
   ensureSwapEventExists = (callback) ->
     db = nano.db.use(mapperDB)
-    db.get swapEventID, (err, swapEventDoc) ->
+    db.get eventId, (err, swapEventDoc) ->
       if err
         swapEventDoc =
-          _id: swapEventID
+          _id: eventId
           users: [user1, user2]
-        db.insert swapEventDoc, swapEventID, callback
+        db.insert swapEventDoc, eventId, callback
       else
         callback()
 
   ensureBadSwapEventExists = (callback) ->
     db = nano.db.use(mapperDB)
-    db.get swapEventID, (err, swapEventDoc) ->
+    db.get eventId, (err, swapEventDoc) ->
       if err
         swapEventDoc =
-          _id: badSwapEventID
+          _id: badEventId
           users: [user1, user2]
-        db.insert swapEventDoc, badSwapEventID, callback
+        db.insert swapEventDoc, badEventId, callback
       else
         callback()
 
@@ -92,11 +92,11 @@ describe '#replicateSwapEvent', () ->
       user1db = nano.db.use(user1)
       msgDoc =
           type: 'message'
-          swapEventID: swapEventID
+          eventId: eventId
           message: 'hey bro'
       badMsgDoc =
           type: 'message'
-          swapEventID: badSwapEventID
+          eventId: badEventId
           message: 'boo brohan'
       user1db.insert msgDoc, (err, res) ->
         should.not.exist(err)
@@ -108,8 +108,8 @@ describe '#replicateSwapEvent', () ->
           replicateParams =
             src: user1
             dsts: [user2]
-            swapEventID: swapEventID
-          replicateSwapEvent replicateParams, (err, res) ->
+            eventId: eventId
+          replicate replicateParams, (err, res) ->
             error = err
             results = res
             ready()
@@ -137,7 +137,7 @@ describe '#replicateSwapEvent', () ->
     db = nano.db.use(user2)
     db.get msgID, (err, msgDoc) ->
       should.not.exist(err)
-      msgDoc.should.have.property('swapEventID', swapEventID)
+      msgDoc.should.have.property('eventId', eventId)
       msgDoc.should.have.property('type', 'message')
       done()
 
@@ -151,9 +151,9 @@ describe '#replicateSwapEvent', () ->
     db = nano.db.use(user1)
     db.get msgID, (err, msgDoc) ->
       should.not.exist(err)
-      msgDoc.should.have.property('swapEventID', swapEventID)
+      msgDoc.should.have.property('eventId', eventId)
       msgDoc.should.have.property('type', 'message')
       db.get badMsgID, (err, bMsgDoc) ->
-        bMsgDoc.should.have.property('swapEventID', badSwapEventID)
+        bMsgDoc.should.have.property('eventId', badEventId)
         bMsgDoc.should.have.property('type', 'message')
         done()

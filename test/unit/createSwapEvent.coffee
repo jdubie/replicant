@@ -63,15 +63,15 @@ describe '#createSwapEvent', () ->
   it 'should should return ok', () ->
     result.should.have.property('ok', true)
 
-  it 'should return a swapEventId', () ->
-    result.should.have.property('swapEventId')
+  it 'should return a eventId', () ->
+    result.should.have.property('eventId')
 
   it 'should return a list of users', () ->
     result.users.should.eql(['user1', 'user2'])
 
   it 'should create that corresponding mapping', (done) ->
     db = nano.db.use('mapper')
-    db.get result.swapEventId, (err,doc) ->
+    db.get result.eventId, (err,doc) ->
       should.not.exist(err)
       doc.should.have.property('_id', result.swapEventId)
       doc.should.have.property('users')
