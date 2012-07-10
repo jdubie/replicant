@@ -52,7 +52,7 @@ replicant.createUser = ({userId},callback) ->
 
 
 # replicant.createEvent
-replicant.createSwapEvent = ({swapId, userId}, callback) ->
+replicant.createEvent = ({swapId, userId}, callback) ->
   getGuest = (_callback) ->
     _callback(null, userId) # @todo replace with getting this from cookies
   getHosts = (_callback) ->

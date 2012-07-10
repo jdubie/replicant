@@ -3,7 +3,7 @@ _ = require('underscore')
 
 {getUserIdFromSession} = require('./lib/replicant')
 {createUser} = require('./lib/replicant')
-{createSwapEvent} = require('./lib/replicant')
+{createEvent} = require('./lib/replicant')
 {swapEventUsers} = require('./lib/replicant')
 {replicate} = require('./lib/replicant')
 
@@ -32,7 +32,7 @@ app.post '/events', (req, res) ->
       res.json({status: 403, reason: 'User must be logged in'})
     else
       userId = r.userId
-      createSwapEvent {swapId, userId}, (e, r) ->
+      createEvent {swapId, userId}, (e, r) ->
         if e then res.json({status: 500, reason: "Internal Server Error: #{e}"})
         else
           res.json(r)
