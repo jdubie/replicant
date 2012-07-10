@@ -31,10 +31,11 @@ describe 'POST /user', () ->
       else finished()
 
   it 'should 403 when user is unauthenticated', (done) ->
-    request.post 'http://localhost:3000/signup', (err, res, body) ->
+    request.get 'http://localhost:3000/signup', (err, res, body) ->
       should.not.exist(err)
-      res.statusCode.should.equal(403)
-      body.should.equal('User must be logged in')
+      JSON.parse(body).should.have.property('status', 403)
+      #res.statusCode.should.equal(403)
+      #body.should.equal('User must be logged in')
 
       # assert user database was not created
       nano.db.list (err, res) ->
@@ -45,7 +46,7 @@ describe 'POST /user', () ->
     opts =
       url: 'http://localhost:3000/signup'
       headers: cookie: cookie
-    request.post opts, (err, res, body) ->
+    request.get opts, (err, res, body) ->
       should.not.exist(err)
       res.statusCode.should.equal(200)
       res.body = JSON.parse(res.body)
