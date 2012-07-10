@@ -9,7 +9,7 @@ _ = require('underscore')
 
 app = express.createServer()
 
-app.get '/signup', (req, res) ->
+app.post '/signup', (req, res) ->
   getUserIdFromSession headers: req.headers, (err, r) ->
     if err
       res.json({status: 403, reason: 'User must be logged in'})
@@ -22,7 +22,7 @@ app.get '/signup', (req, res) ->
           res.json(r)
 
 
-app.get '/swapEvent', (req, res) ->
+app.post '/swapEvent', (req, res) ->
   swapId = req.query.swapId
   getUserIdFromSession headers: req.headers, (err, r) ->
     if err
@@ -35,7 +35,7 @@ app.get '/swapEvent', (req, res) ->
           res.json(r)
 
 
-app.get '/swapEventUsers', (req, res) ->
+app.post '/swapEventUsers', (req, res) ->
   eventId = req.query.eventId
   getUserIdFromSession headers: req.headers, (err, r) ->
     if err
@@ -52,7 +52,7 @@ app.get '/swapEventUsers', (req, res) ->
           else
             res.json(r)
 
-app.get '/message', (req, res) ->
+app.post '/message', (req, res) ->
   eventId = req.query.eventId
   getUserIdFromSession headers: req.headers, (err, r) ->
     if err

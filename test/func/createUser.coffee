@@ -1,4 +1,5 @@
 should = require('should')
+async = require('async')
 util = require('util')
 request = require('request')
 nano = require('nano')('http://tester:tester@localhost:5985')
@@ -6,8 +7,8 @@ nano = require('nano')('http://tester:tester@localhost:5985')
 
 describe 'POST /user', () ->
 
-  user = 'user1'
-  password = 'pass1'
+  _userId = 'newuser'
+  _password = 'sekr1t'
   app = null
   cookie = null
 
@@ -17,21 +18,50 @@ describe 'POST /user', () ->
   before (ready) ->
     # start webserver
     app = require('../../app')
-    nano.auth user, password, (err, body, headers) ->
-      should.not.exist(err)
-      should.exist(headers and headers['set-cookie'])
-      cookie = headers['set-cookie'][0]
-      ready()
-
+    insertUser = (callback) ->
+      usersDb = nano.db.use('_users')
+      userDoc =
+        _id: "org.couchdb.user:#{_userId}"
+        type: 'user'
+        name: _userId
+        password: _password
+        roles: []
+      usersDb.insert userDoc, (err, res) ->
+        should.not.exist(err)
+        callback()
+    authUser = (callback) ->
+      nano.auth _userId, _password, (err, body, headers) ->
+        should.not.exist(err)
+        should.exist(headers and headers['set-cookie'])
+        cookie = headers['set-cookie'][0]
+        callback()
+    async.series([insertUser, authUser], ready)
 
   afterEach (finished) ->
     nano.db.list (err, res) ->
-      if user in res
-        nano.db.destroy(user,finished)
+      if _userId in res
+        nano.db.destroy(_userId,finished)
       else finished()
 
+  after (finished) ->
+    destroyUser = (callback) ->
+      usersDb = nano.db.use('_users')
+      couchUser = "org.couchdb.user:#{_userId}"
+      usersDb.get couchUser, (err, userDoc) ->
+        should.not.exist(err)
+        usersDb.destroy(couchUser, userDoc._rev, callback)
+    destroyLifeswapUser = (callback) ->
+      db = nano.db.use('lifeswap')
+      db.get _userId, (err, userDoc) ->
+        if err
+          callback()
+        else
+          db.destroy(_userId, userDoc._rev, callback)
+    async.parallel([destroyUser, destroyLifeswapUser], finished)
+
+
   it 'should 403 when user is unauthenticated', (done) ->
-    request.get 'http://localhost:3000/signup', (err, res, body) ->
+    request.post 'http://localhost:3000/signup', (err, res, body) ->
       should.not.exist(err)
       JSON.parse(body).should.have.property('status', 403)
       #res.statusCode.should.equal(403)
@@ -39,14 +69,14 @@ describe 'POST /user', () ->
 
       # assert user database was not created
       nano.db.list (err, res) ->
-        res.should.not.include(user)
+        res.should.not.include(_userId)
         done()
 
   it 'should create user data base if they are authenticated', (done) ->
     opts =
       url: 'http://localhost:3000/signup'
       headers: cookie: cookie
-    request.get opts, (err, res, body) ->
+    request.post opts, (err, res, body) ->
       should.not.exist(err)
       res.statusCode.should.equal(200)
       res.body = JSON.parse(res.body)
@@ -54,7 +84,7 @@ describe 'POST /user', () ->
 
       # assert user database was created
       nano.db.list (err, res) ->
-        res.should.include(user)
+        res.should.include(_userId)
         done()
 
   # @todo be able to start/stop couch from tests
