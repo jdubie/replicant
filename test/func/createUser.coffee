@@ -3,7 +3,7 @@ async = require('async')
 util = require('util')
 request = require('request')
 nano = require('nano')('http://tester:tester@localhost:5985')
-{signup} = require('../../lib/replicant')
+{createUser} = require('../../lib/replicant')
 
 describe 'POST /user', () ->
 

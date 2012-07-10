@@ -8,7 +8,7 @@ async = require('async')
 replicant = {}
 
 # replicant.createUser
-replicant.signup = ({userId},callback) ->
+replicant.createUser = ({userId},callback) ->
 
   # Filter function for user DBs
   msgFilter = (doc, req) ->

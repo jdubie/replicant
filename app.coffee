@@ -2,7 +2,7 @@ express = require('express')
 _ = require('underscore')
 
 {getUserIdFromSession} = require('./lib/replicant')
-{signup} = require('./lib/replicant')
+{createUser} = require('./lib/replicant')
 {createSwapEvent} = require('./lib/replicant')
 {swapEventUsers} = require('./lib/replicant')
 {replicate} = require('./lib/replicant')
@@ -17,7 +17,7 @@ app.post '/users', (req, res) ->
       res.json({status: 403, reason: 'User must be logged in'})
     else
       userId = r.userId
-      signup {userId}, (e,r) ->
+      createUser {userId}, (e,r) ->
         if e
           res.json({status: 500, reason: "Internal Server Error: #{e}"})
         else
