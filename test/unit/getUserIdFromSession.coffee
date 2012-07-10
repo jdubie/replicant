@@ -18,17 +18,17 @@ describe '#getUserIdFromSession', () ->
       ready()
 
   it 'should return userid with a good cookie', (done) ->
-    getUserIdFromSession {cookie}, (err, res) ->
+    getUserIdFromSession headers: {cookie}, (err, res) ->
       should.not.exist(err)
       res.should.have.property('userId', user)
       done()
     
-  it 'should return an error with empty cookie', (done) ->
-    getUserIdFromSession cookie: '', (err) ->
-      err.should.equal(true)
-      done()
+   it 'should return an error with empty cookie', (done) ->
+     getUserIdFromSession headers: cookie: '', (err) ->
+       err.should.equal(true)
+       done()
 
-  it 'should return an error with undefined cookie', (done) ->
-    getUserIdFromSession {}, (err) ->
-      err.should.equal(true)
-      done()
+   it 'should return an error with undefined cookie', (done) ->
+     getUserIdFromSession headers: {}, (err) ->
+       err.should.equal(true)
+       done()
