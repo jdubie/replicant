@@ -5,6 +5,8 @@ debug = require('debug')('lifeswap:replicant')
 nano = require('nano')('http://tester:tester@localhost:5985')
 async = require('async')
 
+{getUserDbName} = require('../../lifeswap/shared/helpers')
+
 replicant = {}
 
 # replicant.createUser
@@ -13,13 +15,15 @@ replicant.createUser = ({userId},callback) ->
   userDdocDbName = 'userddocdb'
   userDdocName = 'userddoc'
 
-  nano.db.create userId, (err, res) ->
+  userDbName = getUserDbName({userId})
+  nano.db.create userDbName, (err, res) ->
     if err
+      console.log(err)
       callback(err)
     else
       opts =
         doc_ids: [ "_design/#{userDdocName}" ]
-      nano.db.replicate(userDdocDbName, userId, opts, callback)
+      nano.db.replicate(userDdocDbName, userDbName, opts, callback)
 
 # replicant.createEvent
 replicant.createEvent = ({swapId, userId}, callback) ->
@@ -60,6 +64,8 @@ replicant.getEventUsers = ({eventId}, callback) ->
 # replicant.replicateMessages
 replicant.replicateMessages = ({src, dsts, eventId}, callback) ->
   userDdocName = 'userddoc'
+  src = getUserDbName({userId: src})
+  dsts = _.map dsts, (userId) -> return getUserDbName({userId})
   opts =
     create_target: true
     query_params: {eventId}
