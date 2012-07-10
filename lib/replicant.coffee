@@ -88,7 +88,7 @@ replicant.getEventUsers = ({eventId}, callback) ->
 
 
 # replicant.replicateMessages
-replicant.replicate = ({src, dsts, eventId}, callback) ->
+replicant.replicateMessages = ({src, dsts, eventId}, callback) ->
   opts =
     create_target: true
     query_params: {eventId}

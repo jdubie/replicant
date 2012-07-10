@@ -5,7 +5,7 @@ _ = require('underscore')
 {createUser} = require('./lib/replicant')
 {createEvent} = require('./lib/replicant')
 {getEventUsers} = require('./lib/replicant')
-{replicate} = require('./lib/replicant')
+{replicateMessages} = require('./lib/replicant')
 
 app = express.createServer()
 
@@ -73,7 +73,7 @@ app.post '/events/message', (req, res) ->
             res.json({status: 403, reason: "Not authorized to write messages to this event"})
           else
             dsts = _.without(r.users, src)
-            replicate {src, dsts, eventId}, (e, r) ->
+            replicateMessages {src, dsts, eventId}, (e, r) ->
               if e
                 res.json({status: 500, reason: "Internal Server Error: #{e}"})
               else
