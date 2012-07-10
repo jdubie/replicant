@@ -75,7 +75,7 @@ replicant.createEvent = ({swapId, userId}, callback) ->
 
 
 # replicant.getEventUsers
-replicant.swapEventUsers = ({eventId}, callback) ->
+replicant.getEventUsers = ({eventId}, callback) ->
   mapper = nano.db.use('mapper')
   mapper.get eventId, (err, eventDoc) ->
     if err

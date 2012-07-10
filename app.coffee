@@ -4,7 +4,7 @@ _ = require('underscore')
 {getUserIdFromSession} = require('./lib/replicant')
 {createUser} = require('./lib/replicant')
 {createEvent} = require('./lib/replicant')
-{swapEventUsers} = require('./lib/replicant')
+{getEventUsers} = require('./lib/replicant')
 {replicate} = require('./lib/replicant')
 
 app = express.createServer()
@@ -47,7 +47,7 @@ app.get '/events/members', (req, res) ->
       res.json({status: 403, reason: 'User must be logged in'})
     else
       userId = r.userId
-      swapEventUsers {eventId}, (e, r) ->
+      getEventUsers {eventId}, (e, r) ->
         # there should only be responses, no errors
         if e
           res.json({status: 500, reason: "Internal Server Error: #{e}"})
@@ -65,7 +65,7 @@ app.post '/events/message', (req, res) ->
       res.json({status: 403, reason: 'User must be logged in'})
     else
       src = r.userId
-      swapEventUsers {eventId}, (e, r) ->
+      getEventUsers {eventId}, (e, r) ->
         # 404 or 500
         if e then res.json(e)
         else
