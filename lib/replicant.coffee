@@ -10,46 +10,16 @@ replicant = {}
 # replicant.createUser
 replicant.createUser = ({userId},callback) ->
 
-  # Filter function for user DBs
-  msgFilter = (doc, req) ->
-    if doc.eventId isnt req.query.eventId
-      return false
-    else
-      return true
-
-  # Thread view for user DBs (all messages for an event)
-  threadView =
-    map: (doc) ->
-      if doc.type is 'message'
-        value =
-          subject: doc.subject
-          message: doc.message
-          author: doc.author
-        key = [doc.eventId, doc.created]
-        emit(key, value)
-
-  # Thread view for user DBs (all events)
-  threadsView =
-    map: (doc) ->
-      if doc.type is 'event'
-        emit(doc.eventId, doc.swapId)
+  userDdocDbName = 'userddocdb'
+  userDdocName = 'userddoc'
 
   nano.db.create userId, (err, res) ->
     if err
       callback(err)
     else
-      userdb = nano.db.use(userId)
-      ddoc =
-        _id: "_design/#{userId}"
-        filters:
-          msgFilter: msgFilter.toString()
-        views:
-          thread:
-            map: threadView.map.toString()
-          threads:
-            map: threadsView.map.toString()
-      userdb.insert(ddoc, callback)
-
+      opts =
+        doc_ids: [ "_design/#{userDdocName}" ]
+      nano.db.replicate(userDdocDbName, userId, opts, callback)
 
 # replicant.createEvent
 replicant.createEvent = ({swapId, userId}, callback) ->
@@ -89,10 +59,11 @@ replicant.getEventUsers = ({eventId}, callback) ->
 
 # replicant.replicateMessages
 replicant.replicateMessages = ({src, dsts, eventId}, callback) ->
+  userDdocName = 'userddoc'
   opts =
     create_target: true
     query_params: {eventId}
-    filter: "#{src}/msgFilter"
+    filter: "#{userDdocName}/msgFilter"
   params = _.map dsts, (dst) ->
     return {src, dst, opts}
   replicateEach = ({src,dst,opts}, cb) ->

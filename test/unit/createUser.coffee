@@ -4,11 +4,11 @@ nano = require('nano')('http://tester:tester@localhost:5985')
 
 describe '#createUser', () ->
 
-  userId = 'testuser'
+  _userId = 'testuser'
 
   before (ready) ->
 
-    _createUser = createUser.bind null, {userId}, (err, res) ->
+    _createUser = createUser.bind null, {userId: _userId}, (err, res) ->
       should.not.exist(err)
       res.should.have.property('ok', true)
       ready()
@@ -16,18 +16,18 @@ describe '#createUser', () ->
     # make sure we delete users's db beforehand
     nano.db.list (err,res) ->
       should.not.exist(err)
-      if userId in res
-        nano.db.destroy(userId, _createUser)
+      if _userId in res
+        nano.db.destroy(_userId, _createUser)
       else _createUser()
 
 
   after (finished) ->
-    nano.db.destroy(userId,finished)
+    nano.db.destroy(_userId,finished)
 
   it 'should create user\'s database', (done) ->
     nano.db.list (err, res) ->
       should.not.exist(err)
-      res.should.include(userId)
+      res.should.include(_userId)
       done()
     
   # @todo assert existence of user data document

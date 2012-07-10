@@ -18,6 +18,7 @@ describe '#replicateMessages', () ->
   eventId = 'eventid'
   badEventId = 'badeventid'
   mapperDB = 'mapper'
+  userDdocName = 'userddoc'
 
   results = null # to be assigned in before
   error = null # to be assigned in before
@@ -31,7 +32,7 @@ describe '#replicateMessages', () ->
           should.not.exist(err)
           userdb = nano.db.use(user1)
           ddoc =
-            _id: "_design/#{user1}"
+            _id: "_design/#{userDdocName}"
             filters:
               msgFilter: msgFilter.toString()
           userdb.insert(ddoc, callback)
@@ -45,7 +46,7 @@ describe '#replicateMessages', () ->
           # doesn't actually matter for tests as-is
           userdb = nano.db.use(user2)
           ddoc =
-            _id: "_design/#{user2}"
+            _id: "_design/#{userDdocName}"
             filters:
               msgFilter: msgFilter.toString()
           userdb.insert(ddoc, callback)
