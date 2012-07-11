@@ -3,6 +3,8 @@ should = require('should')
 async = require('async')
 nano = require('nano')('http://tester:tester@localhost:5985')
 {createEvent} = require('../../lib/replicant')
+{getUserDocId} = require('../../../lifeswap/shared/helpers')
+
 
 describe '#createEvent', () ->
 
@@ -35,11 +37,13 @@ describe '#createEvent', () ->
 
   ensureSwapHostExists = (callback) ->
     db = nano.db.use('lifeswap')
-    db.get 'user1', (err, res) ->
+    userDocId = getUserDocId({userId: 'user1'})
+    db.get userDocId, (err, res) ->
       if res? then callback()
       else if err.status_code is 404 # create them if they don't exist
         doc =
-          _id: 'user1'
+          _id: userDocId
+          name: 'user1'
           type: 'user'
         db.insert doc, doc._id, callback
       else callback(err)

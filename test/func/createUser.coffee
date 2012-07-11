@@ -5,6 +5,8 @@ request = require('request')
 nano = require('nano')('http://tester:tester@localhost:5985')
 {createUser} = require('../../lib/replicant')
 
+{getUserDbName} = require('../../../lifeswap/shared/helpers')
+
 describe 'POST /user', () ->
 
   _userId = 'newuser'
@@ -39,8 +41,9 @@ describe 'POST /user', () ->
 
   afterEach (finished) ->
     nano.db.list (err, res) ->
-      if _userId in res
-        nano.db.destroy(_userId,finished)
+      userDbName = getUserDbName({userId: _userId})
+      if userDbName in res
+        nano.db.destroy(userDbName,finished)
       else finished()
 
   after (finished) ->
@@ -83,7 +86,8 @@ describe 'POST /user', () ->
 
       # assert user database was created
       nano.db.list (err, res) ->
-        res.should.include(_userId)
+        userDbName = getUserDbName({userId: _userId})
+        res.should.include(userDbName)
         done()
 
   # @todo be able to start/stop couch from tests
