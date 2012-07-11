@@ -5,52 +5,28 @@ debug = require('debug')('lifeswap:replicant')
 nano = require('nano')('http://tester:tester@localhost:5985')
 async = require('async')
 
+{getUserDbName} = require('../../lifeswap/shared/helpers')
+
 replicant = {}
 
-replicant.signup = ({userId},callback) ->
+# replicant.createUser
+replicant.createUser = ({userId},callback) ->
 
-  # Filter function for user DBs
-  msgFilter = (doc, req) ->
-    if doc.eventId isnt req.query.eventId
-      return false
-    else
-      return true
+  userDdocDbName = 'userddocdb'
+  userDdocName = 'userddoc'
 
-  # Thread view for user DBs (all messages for an event)
-  threadView =
-    map: (doc) ->
-      if doc.type is 'message'
-        value =
-          subject: doc.subject
-          message: doc.message
-          author: doc.author
-        key = [doc.eventId, doc.created]
-        emit(key, value)
-
-  # Thread view for user DBs (all events)
-  threadsView =
-    map: (doc) ->
-      if doc.type is 'event'
-        emit(doc.eventId, doc.swapId)
-
-  nano.db.create userId, (err, res) ->
+  userDbName = getUserDbName({userId})
+  nano.db.create userDbName, (err, res) ->
     if err
+      console.log(err)
       callback(err)
     else
-      userdb = nano.db.use(userId)
-      ddoc =
-        _id: "_design/#{userId}"
-        filters:
-          msgFilter: msgFilter.toString()
-        views:
-          thread:
-            map: threadView.map.toString()
-          threads:
-            map: threadsView.map.toString()
-      userdb.insert(ddoc, callback)
+      opts =
+        doc_ids: [ "_design/#{userDdocName}" ]
+      nano.db.replicate(userDdocDbName, userDbName, opts, callback)
 
-
-replicant.createSwapEvent = ({swapId, userId}, callback) ->
+# replicant.createEvent
+replicant.createEvent = ({swapId, userId}, callback) ->
   getGuest = (_callback) ->
     _callback(null, userId) # @todo replace with getting this from cookies
   getHosts = (_callback) ->
@@ -72,7 +48,8 @@ replicant.createSwapEvent = ({swapId, userId}, callback) ->
   ], callback
 
 
-replicant.swapEventUsers = ({eventId}, callback) ->
+# replicant.getEventUsers
+replicant.getEventUsers = ({eventId}, callback) ->
   mapper = nano.db.use('mapper')
   mapper.get eventId, (err, eventDoc) ->
     if err
@@ -84,12 +61,15 @@ replicant.swapEventUsers = ({eventId}, callback) ->
       callback(null, {ok: true, status: 200, users: eventDoc.users})
 
 
-replicant.replicate = ({src, dsts, eventId}, callback) ->
+# replicant.replicateMessages
+replicant.replicateMessages = ({src, dsts, eventId}, callback) ->
+  userDdocName = 'userddoc'
+  src = getUserDbName({userId: src})
+  dsts = _.map dsts, (userId) -> return getUserDbName({userId})
   opts =
     create_target: true
     query_params: {eventId}
-    # TODO: create this filter in the src's ddoc
-    filter: "#{src}/msgFilter"
+    filter: "#{userDdocName}/msgFilter"
   params = _.map dsts, (dst) ->
     return {src, dst, opts}
   replicateEach = ({src,dst,opts}, cb) ->
@@ -97,6 +77,7 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
   async.map(params, replicateEach, callback)
 
 
+# replicant.getUserIdFromSession
 replicant.getUserIdFromSession = ({headers}, callback) ->
   unless headers?.cookie? # will trigger 403
     callback(true)

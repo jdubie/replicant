@@ -2,9 +2,11 @@ util = require('util')
 should = require('should')
 async = require('async')
 nano = require('nano')('http://tester:tester@localhost:5985')
-{replicate} = require('../../lib/replicant')
+{replicateMessages} = require('../../lib/replicant')
 
-describe '#replicate', () ->
+{getUserDbName} = require('../../../lifeswap/shared/helpers')
+
+describe '#replicateMessages', () ->
 
   msgFilter = (doc, req) ->
     if doc.eventId isnt req.query.eventId
@@ -18,20 +20,24 @@ describe '#replicate', () ->
   eventId = 'eventid'
   badEventId = 'badeventid'
   mapperDB = 'mapper'
+  userDdocName = 'userddoc'
+
+  user1DbName = getUserDbName({userId: user1})
+  user2DbName = getUserDbName({userId: user2})
 
   results = null # to be assigned in before
   error = null # to be assigned in before
-  msgID = null
-  badMsgID = null
+  _msgId = null
+  _badMsgId = null
 
   ensureUser1DB = (callback) ->
     nano.db.list (err,dbs) ->
-      if not (user1 in dbs)
-        nano.db.create user1, (err, res) ->
+      if not (user1DbName in dbs)
+        nano.db.create user1DbName, (err, res) ->
           should.not.exist(err)
-          userdb = nano.db.use(user1)
+          userdb = nano.db.use(user1DbName)
           ddoc =
-            _id: "_design/#{user1}"
+            _id: "_design/#{userDdocName}"
             filters:
               msgFilter: msgFilter.toString()
           userdb.insert(ddoc, callback)
@@ -39,13 +45,13 @@ describe '#replicate', () ->
 
   ensureUser2DB = (callback) ->
     nano.db.list (err,dbs) ->
-      if not (user2 in dbs)
-        nano.db.create user2, (err, res) ->
+      if not (user2DbName in dbs)
+        nano.db.create user2DbName, (err, res) ->
           should.not.exist(err)
           # doesn't actually matter for tests as-is
-          userdb = nano.db.use(user2)
+          userdb = nano.db.use(user2DbName)
           ddoc =
-            _id: "_design/#{user2}"
+            _id: "_design/#{userDdocName}"
             filters:
               msgFilter: msgFilter.toString()
           userdb.insert(ddoc, callback)
@@ -75,7 +81,7 @@ describe '#replicate', () ->
         swapEventDoc =
           _id: badEventId
           users: [user1, user2]
-        db.insert swapEventDoc, badEventId, callback
+        db.insert(swapEventDoc, badEventId, callback)
       else
         callback()
 
@@ -89,7 +95,7 @@ describe '#replicate', () ->
     ], (err, res) ->
       should.not.exist(err)
 
-      user1db = nano.db.use(user1)
+      user1db = nano.db.use(user1DbName)
       msgDoc =
           type: 'message'
           eventId: eventId
@@ -100,31 +106,38 @@ describe '#replicate', () ->
           message: 'boo brohan'
       user1db.insert msgDoc, (err, res) ->
         should.not.exist(err)
-        msgID = res.id
+        _msgId = res.id
         user1db.insert badMsgDoc, (err, res) ->
           should.not.exist(err)
-          badMsgID = res.id
+          _badMsgId = res.id
 
           replicateParams =
             src: user1
             dsts: [user2]
             eventId: eventId
-          replicate replicateParams, (err, res) ->
+          replicateMessages replicateParams, (err, res) ->
             error = err
             results = res
             ready()
 
   after (finished) ->
-    destroyUser1DB = (callback) ->
-      nano.db.destroy(user1, callback)
-    destroyUser2DB = (callback) ->
-      nano.db.destroy(user2, callback)
-    async.parallel [
-      destroyUser1DB
-      destroyUser2DB
-    ], (err, res) ->
+    destroyUserMsg = ({userId, msgId}, callback) ->
+      userDbName = getUserDbName({userId})
+      userdb = nano.db.use(userDbName)
+      userdb.get msgId, (err, msgDoc) ->
+        should.not.exist(err)
+        userdb.destroy msgId, msgDoc._rev, (err, res) ->
+          should.not.exist(err)
+          callback()
+    params = [
+      {userId: user1, msgId: _msgId}
+      {userId: user1, msgId: _badMsgId}
+      {userId: user2, msgId: _msgId}
+    ]
+    async.map params, destroyUserMsg, (err, res) ->
       should.not.exist(err)
       finished()
+
 
   it 'should not error', () ->
     should.not.exist(error)
@@ -134,26 +147,26 @@ describe '#replicate', () ->
     results[0].should.have.property('ok', true)
 
   it 'should replicate the message to the other user', (done) ->
-    db = nano.db.use(user2)
-    db.get msgID, (err, msgDoc) ->
+    db = nano.db.use(user2DbName)
+    db.get _msgId, (err, msgDoc) ->
       should.not.exist(err)
       msgDoc.should.have.property('eventId', eventId)
       msgDoc.should.have.property('type', 'message')
       done()
 
   it 'should not replicate the wrong message', (done) ->
-    db = nano.db.use(user2)
-    db.get badMsgID, (err, res) ->
+    db = nano.db.use(user2DbName)
+    db.get _badMsgId, (err, res) ->
       err.should.have.property('status_code', 404)
       done()
 
   it 'should keep both messages in the first user\'s db', (done) ->
-    db = nano.db.use(user1)
-    db.get msgID, (err, msgDoc) ->
+    db = nano.db.use(user1DbName)
+    db.get _msgId, (err, msgDoc) ->
       should.not.exist(err)
       msgDoc.should.have.property('eventId', eventId)
       msgDoc.should.have.property('type', 'message')
-      db.get badMsgID, (err, bMsgDoc) ->
+      db.get _badMsgId, (err, bMsgDoc) ->
         bMsgDoc.should.have.property('eventId', badEventId)
         bMsgDoc.should.have.property('type', 'message')
         done()

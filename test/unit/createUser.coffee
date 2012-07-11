@@ -1,14 +1,17 @@
 should = require('should')
 nano = require('nano')('http://tester:tester@localhost:5985')
-{signup} = require('../../lib/replicant')
+{createUser} = require('../../lib/replicant')
+
+{getUserDbName} = require('../../../lifeswap/shared/helpers')
 
 describe '#createUser', () ->
 
-  userId = 'testuser'
+  _userId = 'testuser'
+  userDbName = getUserDbName({userId: _userId})
 
   before (ready) ->
 
-    _signup = signup.bind null, {userId}, (err, res) ->
+    _createUser = createUser.bind null, {userId: _userId}, (err, res) ->
       should.not.exist(err)
       res.should.have.property('ok', true)
       ready()
@@ -16,18 +19,18 @@ describe '#createUser', () ->
     # make sure we delete users's db beforehand
     nano.db.list (err,res) ->
       should.not.exist(err)
-      if userId in res
-        nano.db.destroy(userId, _signup)
-      else _signup()
+      if userDbName in res
+        nano.db.destroy(userDbName, _createUser)
+      else _createUser()
 
 
   after (finished) ->
-    nano.db.destroy(userId,finished)
+    nano.db.destroy(userDbName, finished)
 
   it 'should create user\'s database', (done) ->
     nano.db.list (err, res) ->
       should.not.exist(err)
-      res.should.include(userId)
+      res.should.include(userDbName)
       done()
     
   # @todo assert existence of user data document
