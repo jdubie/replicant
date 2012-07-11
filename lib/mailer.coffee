@@ -18,8 +18,7 @@ module.exports.Mailer = class Mailer
     debug 'creating mailer'
     @headers = @headers || {}
     if @templateName?
-      #@templateText = fs.readFileSync(path.join(__dirname, 'templates', 'text', @templateName + '.mustache'), 'utf-8')
-      @templateHtml = fs.readFileSync(path.join(__dirname, 'templates', 'html', @templateName + '.mustache'), 'utf-8')
+      @templateHtml = fs.readFileSync(path.join(__dirname, 'templates', @templateName + '.mustache'), 'utf-8')
 
   send: ({headers, data}, callback) ->
     callback = callback || () ->
@@ -38,7 +37,5 @@ module.exports.Mailer = class Mailer
     data = data || {}
     _.defaults(data, @data)
 
-    #text = mustache.to_html(@templateText, data)
     html = mustache.to_html(@templateHtml, data)
-    #return {text,html}
     return {html}
