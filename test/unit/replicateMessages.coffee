@@ -28,7 +28,7 @@ describe '#replicateMessages', () ->
   results = null # to be assigned in before
   error = null # to be assigned in before
   _msgId = null
-  badMsgID = null
+  _badMsgId = null
 
   ensureUser1DB = (callback) ->
     nano.db.list (err,dbs) ->
@@ -109,7 +109,7 @@ describe '#replicateMessages', () ->
         _msgId = res.id
         user1db.insert badMsgDoc, (err, res) ->
           should.not.exist(err)
-          badMsgID = res.id
+          _badMsgId = res.id
 
           replicateParams =
             src: user1
@@ -121,15 +121,20 @@ describe '#replicateMessages', () ->
             ready()
 
   after (finished) ->
-    destroyUserMsg = (userId, callback) ->
+    destroyUserMsg = ({userId, msgId}, callback) ->
       userDbName = getUserDbName({userId})
       userdb = nano.db.use(userDbName)
-      userdb.get _msgId, (err, msgDoc) ->
+      userdb.get msgId, (err, msgDoc) ->
         should.not.exist(err)
-        userdb.destroy _msgId, msgDoc._rev, (err, res) ->
+        userdb.destroy msgId, msgDoc._rev, (err, res) ->
           should.not.exist(err)
           callback()
-    async.map [user1, user2], destroyUserMsg, (err, res) ->
+    params = [
+      {userId: user1, msgId: _msgId}
+      {userId: user1, msgId: _badMsgId}
+      {userId: user2, msgId: _msgId}
+    ]
+    async.map params, destroyUserMsg, (err, res) ->
       should.not.exist(err)
       finished()
 
@@ -151,7 +156,7 @@ describe '#replicateMessages', () ->
 
   it 'should not replicate the wrong message', (done) ->
     db = nano.db.use(user2DbName)
-    db.get badMsgID, (err, res) ->
+    db.get _badMsgId, (err, res) ->
       err.should.have.property('status_code', 404)
       done()
 
@@ -161,7 +166,7 @@ describe '#replicateMessages', () ->
       should.not.exist(err)
       msgDoc.should.have.property('eventId', eventId)
       msgDoc.should.have.property('type', 'message')
-      db.get badMsgID, (err, bMsgDoc) ->
+      db.get _badMsgId, (err, bMsgDoc) ->
         bMsgDoc.should.have.property('eventId', badEventId)
         bMsgDoc.should.have.property('type', 'message')
         done()
