@@ -5,7 +5,8 @@ debug = require('debug')('lifeswap:replicant')
 nano = require('nano')('http://tester:tester@localhost:5985')
 async = require('async')
 
-{getUserDbName} = require('../../lifeswap/shared/helpers')
+getUserDbName = ({userId}) ->
+  return "users_#{userId}"
 
 replicant = {}
 
