@@ -9,10 +9,12 @@ module.exports.__defineGetter__ 'nano', do ->
     if inst == null
       debug 'creating database connection'
       if process.env.PROD
+        module.exports.dbUrl = 'http://localhost:5984'
         user = 'replicant'
         pwd = process.env.REPLICANT_PWD
         port = 5984
       else
+        module.exports.dbUrl = 'http://localhost:5985'
         user = 'tester'
         pwd = 'tester'
         port = 5985

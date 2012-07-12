@@ -4,7 +4,8 @@ _ = require('underscore')
 async = require('async')
 
 debug = require('debug')('lifeswap:replicant')
-{nano} = require('../config')
+config = require('../config')
+{nano} = config
 
 
 getUserDbName = ({userId}) ->
@@ -87,7 +88,7 @@ replicant.getUserIdFromSession = ({headers}, callback) ->
     return
   opts =
     method: 'get'
-    url: 'http://lifeswaptest:5985/_session'
+    url: "#{config.dbUrl}/_session"
     headers: headers
   request opts, (err, res, body) ->
     userId = JSON.parse(body)?.userCtx?.name
