@@ -1,5 +1,6 @@
 debug = require('debug')('replicant:lib:adminNotifications')
 config = require('../config')
+db = config.nano.db.use('lifeswap')
 
 # TODO make non-admin
 debug 'creating database connection'
@@ -11,9 +12,6 @@ else
   pwd = 'hedwig'
   port = 5985
 
-nano = require('nano')("http://#{user}:#{pwd}@localhost:#{port}")
-db = config.nano.db.use('lifeswap')
-debug 'connected to database'
 
 debug 'creating smtp server connection'
 smtpTransport = nodemailer.createTransport "SMTP",

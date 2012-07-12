@@ -1,6 +1,6 @@
 debug = require('debug')('replicant:config')
 nodemailer = require('nodemailer')
-user = 'hedwig'
+user = 'replicant'
 
 # lazily instantiate db connection
 module.exports.__defineGetter__ 'nano', do ->
@@ -9,10 +9,12 @@ module.exports.__defineGetter__ 'nano', do ->
     if inst == null
       debug 'creating database connection'
       if process.env.PROD
-        pwd = process.env.HEDWIG_PWD
+        user = 'replicant'
+        pwd = process.env.REPLICANT_PWD
         port = 5984
       else
-        pwd = 'hedwig'
+        user = 'tester'
+        pwd = 'tester'
         port = 5985
       dbUrl = "http://#{user}:#{pwd}@localhost:#{port}"
       inst = require('nano')(dbUrl)

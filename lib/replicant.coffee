@@ -1,9 +1,11 @@
 async = require('async')
 request = require('request')
 _ = require('underscore')
-debug = require('debug')('lifeswap:replicant')
-nano = require('nano')('http://tester:tester@localhost:5985')
 async = require('async')
+
+debug = require('debug')('lifeswap:replicant')
+{nano} = require('../config')
+
 
 getUserDbName = ({userId}) ->
   return "users_#{userId}"
