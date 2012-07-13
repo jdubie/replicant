@@ -12,7 +12,20 @@ debug = require('debug')('replicant:app')
 app = express.createServer()
 app.use(express.bodyParser())
 
-# POST /users
+###
+  POST /users
+  CreateUser
+    This creates a user database and preliminary doc after user signups on client
+    using user.signup and session.login on client
+    @param session {cookie} authenicates user
+    @method POST
+    @url /users
+
+    userId = getIdFromSession()
+    POST / userId # creates users database
+    POST /userId {firstname, lastname, ...}
+    replicate /userId /lifeswap filter(public)
+###
 app.post '/users', (req, res) ->
   debug 'POST /users'
   getUserIdFromSession headers: req.headers, (err, r) ->
@@ -27,7 +40,19 @@ app.post '/users', (req, res) ->
           res.json(r, 201)
 
 
-# POST /events
+###
+  POST /events
+  CreateEvent
+    This service creates a swapEventId and initializes involed users 
+    @param swapId {string} swap for which swapEvent is being created
+    @param session {cookie} authenicates user
+    @method POST
+
+    hosts = GET /lifeswap/swapId
+    guest = getIdFromSession()
+    swapEventId = POST /mapper {guest,hosts}
+    return swapEventId
+###
 app.post  '/events', (req, res) ->
   swapId = req.body.swapId
   debug "POST /events"
@@ -64,7 +89,22 @@ app.get '/events/members', (req, res) ->
           else
             res.json(r, 200)
 
-# POST /events/message
+###
+  POST /events/message
+  ReplicateEventMessage swapEventId, session
+    This service triggers replications between users databases
+    @todo make PUT
+    @possibleName Replicant
+    @param swapEventId {string} id of swap event to filter on
+    @param session {cookie} authenicates user
+    @method POST
+    @url /events/message
+
+    ids = GET /mapper/swapEventId
+    src = getIdFromSession()
+    ids.each (dst) -
+    replicate src, dst, filter(swapEventId)
+###
 app.post '/events/message', (req, res) ->
   eventId = req.body.eventId
   debug "POST /events/message"
