@@ -14,7 +14,7 @@ ReplicateSwapEvent swapEventId, session
   ids.each (dst) -
     replicate src, dst, filter(swapEventId)
 
-CreateSwapEvent swapId, session
+CreateEvent swapId, session
   This service creates a swapEventId and initializes involed users 
   @todo rename
   @param swapId {string} swap for which swapEvent is being created

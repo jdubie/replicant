@@ -21,6 +21,7 @@ module.exports.Mailer = class Mailer
       @templateHtml = fs.readFileSync(path.join(__dirname, 'templates', @templateName + '.mustache'), 'utf-8')
 
   send: ({headers, data}, callback) ->
+    debug 'sending'
     callback = callback || () ->
     headers = headers || {}
     _.defaults(headers, @headers)
@@ -31,6 +32,7 @@ module.exports.Mailer = class Mailer
       _.extend(headers, templates)
 
     ## actually send email
+    debug headers
     config.smtp.sendMail(headers, callback)
 
   _getTemplates: (data) ->

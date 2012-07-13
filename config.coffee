@@ -19,7 +19,7 @@ module.exports.nano = require('nano')(url.format({protocol,hostname,port,auth}))
 
 
 # SMTP transport
-emailPort = 8000
+testEmailPort = 8000
 
 if process.env.PROD
   smtpOptions =
@@ -28,9 +28,9 @@ if process.env.PROD
       user: process.env.GMAIL_USER
       pass: process.env.GMAIL_PWD
 else
-  smtpOptions =
+  smtpOptions = # testing
     host: 'localhost'
-    port: emailPort
+    port: testEmailPort
 
 module.exports.smtp = nodemailer.createTransport('SMTP', smtpOptions)
-module.exports.emailPort = emailPort
+module.exports.testEmailPort = testEmailPort

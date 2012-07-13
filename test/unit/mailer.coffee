@@ -12,7 +12,7 @@ describe 'class Mailer', () ->
   subject = 'testSubject'
 
   before () ->
-    mailserver = ms.init(config.emailPort)
+    mailserver = ms.init(config.testEmailPort)
 
   after () ->
     mailserver.stop()
