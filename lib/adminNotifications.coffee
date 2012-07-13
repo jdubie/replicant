@@ -20,6 +20,8 @@ lastId = null
 
 # @todo retry three times on error/failure
 feed.on 'change', (change) ->
+  console.error 'change'
+  process.exit()
   id = change.id
   if id != lastId # weird issue with double notifications being sent
     # set email info
