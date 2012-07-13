@@ -13,7 +13,11 @@ getUserDbName = ({userId}) ->
 
 replicant = {}
 
-# replicant.createUser
+###
+  createUser - creates usersDB and replicates ddocs to it also sends notification
+  @param userId {string}
+  @param callback {function}
+###
 replicant.createUser = ({userId},callback) ->
 
   userDdocDbName = 'userddocdb'
@@ -29,7 +33,12 @@ replicant.createUser = ({userId},callback) ->
         doc_ids: [ "_design/#{userDdocName}" ]
       nano.db.replicate(userDdocDbName, userDbName, opts, callback)
 
-# replicant.createEvent
+###
+  createEvent - creates event -> [users] mapping and writes initial events docs to users db
+  @param swapId {string}
+  @param userId {string}
+  @param callback {function}
+###
 replicant.createEvent = ({swapId, userId}, callback) ->
   getGuest = (_callback) ->
     _callback(null, userId) # @todo replace with getting this from cookies
@@ -52,7 +61,10 @@ replicant.createEvent = ({swapId, userId}, callback) ->
   ], callback
 
 
-# replicant.getEventUsers
+###
+  getEventUsers
+  @param eventId {string}
+###
 replicant.getEventUsers = ({eventId}, callback) ->
   mapper = nano.db.use('mapper')
   mapper.get eventId, (err, eventDoc) ->
@@ -65,7 +77,12 @@ replicant.getEventUsers = ({eventId}, callback) ->
       callback(null, {ok: true, status: 200, users: eventDoc.users})
 
 
-# replicant.replicateMessages
+###
+  replicateMessages - replicates from one users db to others
+  @param src {string} dbname of source database
+  @param dst {string} dbname of destination database
+###
+replicant.replicateMessages
 replicant.replicateMessages = ({src, dsts, eventId}, callback) ->
   userDdocName = 'userddoc'
   src = getUserDbName({userId: src})
@@ -81,7 +98,10 @@ replicant.replicateMessages = ({src, dsts, eventId}, callback) ->
   async.map(params, replicateEach, callback)
 
 
-# replicant.getUserIdFromSession
+###
+  getUserIdFromSession - helper that extracts userId from session
+  @params headers {object.<string, {string|object}>} http headers object
+###
 replicant.getUserIdFromSession = ({headers}, callback) ->
   unless headers?.cookie? # will trigger 403
     callback(true)
@@ -101,6 +121,5 @@ module.exports = replicant
 # shut down SMTP connection
 process.on 'SIGINT', () ->
   #debug 'shutting down SMTP connection'
-  #smtpTransport.close()
-  # TODO close db connection
+  # @todo close db connection
   process.exit()
