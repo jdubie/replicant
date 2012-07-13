@@ -1,53 +1,33 @@
 debug = require('debug')('replicant:lib:adminNotifications')
-config = require('../config')
-db = config.nano.db.use('lifeswap')
+{nano, smtp} = require('../config')
+db = nano.db.use('lifeswap')
+{Mailer} = require('./mailer')
 
-# TODO make non-admin
-debug 'creating database connection'
-user = 'hedwig'
-if process.env.PROD
-  pwd = process.env.HEDWIG_PWD
-  port = 5984
-else
-  pwd = 'hedwig'
-  port = 5985
-
-
-debug 'creating smtp server connection'
-smtpTransport = nodemailer.createTransport "SMTP",
-  service: 'Gmail'
-  auth:
-    user: process.env.GMAIL_USER
-    pass: process.env.GMAIL_PWD
-debug 'connected to smtp server'
-
-mailOptions =
-  from: "Notifications <notifications@thelifeswap.com>"
-  to: "Jack <jack@thelifeswap.com>"
-  subject: "New Swap Created"
-  # text:
-  # html:
-
+headers =
+  to: 'admin@thelifeswap.com'
+  from: 'notifications@thelifeswap.com'
+  subject: 'Swap review required'
+templateName = 'swapReview'
+reviewSwapMailer = new Mailer({headers,templateName})
 
 feed = db.follow(since: 'now')
-
 feed.filter = (doc, req) ->
   if doc.type == 'swap'
     return true
   return false
 
+lastId = null
+
 # @todo retry three times on error/failure
 feed.on 'change', (change) ->
-  # set email info
-  mailOptions.text = "Approve/Deny new Swap here: http://lifeswap.co/admin/swaps/#{change.id}"
+  id = change.id
+  if id != lastId # weird issue with double notifications being sent
+    # set email info
+    lastId = id
+    reviewSwapMailer.send {data: {id}}, (err, res) ->
+      if err then "ERROR: #{JSON.stringify(err)}"
+      else debug "mail successfully sent: #{JSON.stringify(res)}"
 
-  debug "sending email with for swap with id: #{change.id}"
-  smtpTransport.sendMail mailOptions, (err,res) ->
-    if err
-      debug "ERROR: #{JSON.stringify(err)}"
-    else
-      debug "mail successfully sent: #{JSON.stringify(res)}"
-
-module.exports.start = () ->
+module.exports.listen = () ->
   feed.follow()
   debug 'starting feed listener'
