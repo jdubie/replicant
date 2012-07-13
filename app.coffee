@@ -1,5 +1,6 @@
 express = require('express')
 _ = require('underscore')
+debug = require('debug')('replicant:app')
 
 {getUserIdFromSession} = require('./lib/replicant')
 {createUser} = require('./lib/replicant')
@@ -13,7 +14,7 @@ app.use(express.bodyParser())
 
 # POST /users
 app.post '/users', (req, res) ->
-  console.log("POST /users")
+  debug 'POST /users'
   getUserIdFromSession headers: req.headers, (err, r) ->
     if err
       res.json({status: 403, reason: 'User must be logged in'}, 403)
@@ -29,8 +30,8 @@ app.post '/users', (req, res) ->
 # POST /events
 app.post  '/events', (req, res) ->
   swapId = req.body.swapId
-  console.log("POST /events")
-  console.log("   swapId: #{swapId}")
+  debug "POST /events"
+  debug "   swapId: #{swapId}"
   getUserIdFromSession headers: req.headers, (err, r) ->
     if err
       res.json({status: 403, reason: 'User must be logged in'}, 403)
@@ -46,8 +47,8 @@ app.post  '/events', (req, res) ->
 app.get '/events/members', (req, res) ->
   # TODO: do we want it as a GET?
   eventId = req.query.eventId
-  console.log("GET /events/members")
-  console.log("   eventId: #{eventId}")
+  debug "GET /events/members"
+  debug "   eventId: #{eventId}"
   getUserIdFromSession headers: req.headers, (err, r) ->
     if err
       res.json({status: 403, reason: 'User must be logged in'}, 403)
@@ -66,8 +67,8 @@ app.get '/events/members', (req, res) ->
 # POST /events/message
 app.post '/events/message', (req, res) ->
   eventId = req.body.eventId
-  console.log("POST /events/message")
-  console.log("   eventId: #{eventId}")
+  debug "POST /events/message"
+  debug "   eventId: #{eventId}"
   getUserIdFromSession headers: req.headers, (err, r) ->
     if err
       res.json({status: 403, reason: 'User must be logged in'}, 403)

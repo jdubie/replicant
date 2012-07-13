@@ -1,5 +1,5 @@
 should = require('should')
-nano = require('nano')('http://tester:tester@localhost:5985')
+{nano} = require('../../config')
 {createUser} = require('../../lib/replicant')
 
 {getUserDbName} = require('../../../lifeswap/shared/helpers')

@@ -1,7 +1,7 @@
 util = require('util')
 should = require('should')
 async = require('async')
-nano = require('nano')('http://tester:tester@localhost:5985')
+{nano} = require('../../config')
 {createEvent} = require('../../lib/replicant')
 {getUserDocId} = require('../../../lifeswap/shared/helpers')
 

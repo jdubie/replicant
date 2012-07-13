@@ -1,44 +1,36 @@
 debug = require('debug')('replicant:config')
 nodemailer = require('nodemailer')
-user = 'replicant'
+url = require('url')
 
-# lazily instantiate db connection
-module.exports.__defineGetter__ 'nano', do ->
-  inst = null
-  () ->
-    if inst == null
-      debug 'creating database connection'
-      if process.env.PROD
-        module.exports.dbUrl = 'http://localhost:5984'
-        user = 'replicant'
-        pwd = process.env.REPLICANT_PWD
-        port = 5984
-      else
-        module.exports.dbUrl = 'http://localhost:5985'
-        user = 'tester'
-        pwd = 'tester'
-        port = 5985
-      dbUrl = "http://#{user}:#{pwd}@localhost:#{port}"
-      inst = require('nano')(dbUrl)
-    return inst
+# Db connection
+if process.env.PROD
+  protocol = 'http:'
+  auth = "replicant:#{process.env.REPLICANT_PWD}"
+  hostname = 'localhost'
+  port = 5984
+else
+  protocol = 'http:'
+  auth = 'replicant:replicant'
+  hostname = 'localhost'
+  port = 5985
 
-# lazily instantiate SMTP transport
-module.exports.emailPort = 8000 # 25 is priviledged port
-module.exports.__defineGetter__ 'smtp', do ->
-  inst = null
-  () ->
-    if inst == null
-      if process.env.PROD
-        debug 'creating smtp server connection to GMAIL'
-        inst = nodemailer.createTransport 'SMTP',
-          service: 'Gmail'
-          auth:
-            user: process.env.GMAIL_USER
-            pass: process.env.GMAIL_PWD
-      else
-        debug 'creating smtp server connection to localhost'
-        inst = nodemailer.createTransport 'SMTP',
-          host: 'localhost'
-          port: module.exports.emailPort
-    return inst
+module.exports.dbUrl = url.format({protocol,hostname,port})
+module.exports.nano = require('nano')(url.format({protocol,hostname,port,auth}))
 
+
+# SMTP transport
+emailPort = 8000
+
+if process.env.PROD
+  smtpOptions =
+    service: 'Gmail'
+    auth:
+      user: process.env.GMAIL_USER
+      pass: process.env.GMAIL_PWD
+else
+  smtpOptions =
+    host: 'localhost'
+    port: emailPort
+
+module.exports.smtp = nodemailer.createTransport('SMTP', smtpOptions)
+module.exports.emailPort = emailPort

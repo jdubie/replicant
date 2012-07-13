@@ -1,6 +1,6 @@
 should = require('should')
 request = require('request')
-nano = require('nano')('http://lifeswaptest:5985')
+{nano} = require('../../config')
 {getUserIdFromSession} = require('../../lib/replicant')
 
 describe '#getUserIdFromSession', () ->

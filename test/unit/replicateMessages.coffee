@@ -1,7 +1,7 @@
 util = require('util')
 should = require('should')
 async = require('async')
-nano = require('nano')('http://tester:tester@localhost:5985')
+{nano} = require('../../config')
 {replicateMessages} = require('../../lib/replicant')
 
 {getUserDbName} = require('../../../lifeswap/shared/helpers')
