@@ -17,17 +17,6 @@ describe 'class Mailer', () ->
   after () ->
     mailserver.stop()
 
-  it 'should send empty email', (done) ->
-    to = 'simple@thelifeswap.com'
-    headers = {to,from,subject}
-    mailer = new Mailer({headers})
-    mailer.send({})
-
-    handler = (addr, id, email) ->
-      mailserver.unbind(handler)
-      done()
-    mailserver.bind(to, handler)
-
   it 'should send an email with an html template', (done) ->
     to = 'htmlTemplate@thelifeswap.com'
     data = src: 'http://placehold.it/10x10'

@@ -14,11 +14,10 @@ module.exports.Mailer = class Mailer
     @param headers {object.<string, string>} email headers
     @param data {object.<string, {string|array}> data for template
   ###
-  constructor: ({@headers, @data, @templateName}) ->
+  constructor: ({@headers, @data, templateName}) ->
     debug 'creating mailer'
     @headers = @headers || {}
-    if @templateName?
-      @templateHtml = fs.readFileSync(path.join(__dirname, 'templates', @templateName + '.mustache'), 'utf-8')
+    @templatePath = path.join(__dirname, 'templates', templateName + '.mustache')
 
   send: ({headers, data}, callback) ->
     debug 'sending'
@@ -27,17 +26,17 @@ module.exports.Mailer = class Mailer
     _.defaults(headers, @headers)
 
     ## generate templates and graft them onto headers
-    if @templateName?
-      templates = @_getTemplates(data)
+    @_getTemplates data, (err, templates) ->
       _.extend(headers, templates)
 
-    ## actually send email
-    debug headers
-    config.smtp.sendMail(headers, callback)
+      ## actually send email
+      debug headers
+      config.smtp.sendMail(headers, callback)
 
-  _getTemplates: (data) ->
+  _getTemplates: (data, callback) ->
     data = data || {}
     _.defaults(data, @data)
 
-    html = mustache.to_html(@templateHtml, data)
-    return {html}
+    fs.readFile @templatePath, 'utf-8', (err, templateHtml) ->
+      html = mustache.to_html(templateHtml, data)
+      callback(err, {html})
