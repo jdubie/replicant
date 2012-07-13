@@ -26,7 +26,7 @@ replicant.createUser = ({userId},callback) ->
   userDbName = getUserDbName({userId})
   nano.db.create userDbName, (err, res) ->
     if err
-      console.log(err)
+      debug err
       callback(err)
     else
       opts =
