@@ -23,15 +23,29 @@ replicant.createUser = ({userId},callback) ->
   userDdocDbName = 'userddocdb'
   userDdocName = 'userddoc'
 
+  security =
+    admins:
+      names: []
+      roles: []
+    members:
+      names: [userId]
+      roles: []
+
   userDbName = getUserDbName({userId})
   nano.db.create userDbName, (err, res) ->
     if err
       debug err
       callback(err)
     else
-      opts =
-        doc_ids: [ "_design/#{userDdocName}" ]
-      nano.db.replicate(userDdocDbName, userDbName, opts, callback)
+      userdb = nano.db.use(userDbName)
+      userdb.insert security, '_security', (err, res) ->
+        if err
+          debug err
+          callback(err)
+        else
+          opts =
+            doc_ids: [ "_design/#{userDdocName}" ]
+          nano.db.replicate(userDdocDbName, userDbName, opts, callback)
 
 ###
   createEvent - creates event -> [users] mapping and writes initial events docs to users db
@@ -82,7 +96,6 @@ replicant.getEventUsers = ({eventId}, callback) ->
   @param src {string} dbname of source database
   @param dst {string} dbname of destination database
 ###
-replicant.replicateMessages
 replicant.replicateMessages = ({src, dsts, eventId}, callback) ->
   userDdocName = 'userddoc'
   src = getUserDbName({userId: src})
