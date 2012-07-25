@@ -6,7 +6,7 @@ debug = require('debug')('replicant:app')
 {createUser} = require('./lib/replicant')
 {createEvent} = require('./lib/replicant')
 {getEventUsers} = require('./lib/replicant')
-{replicateMessages} = require('./lib/replicant')
+{replicate} = require('./lib/replicant')
 {listen} = require('./lib/adminNotifications')
 
 app = express.createServer()
@@ -105,9 +105,9 @@ app.get '/events/members', (req, res) ->
     ids.each (dst) -
     replicate src, dst, filter(swapEventId)
 ###
-app.post '/events/message', (req, res) ->
+app.post '/events/replicate', (req, res) ->
   eventId = req.body.eventId
-  debug "POST /events/message"
+  debug "POST /events/replicate"
   debug "   eventId: #{eventId}"
   getUserIdFromSession headers: req.headers, (err, r) ->
     if err
@@ -122,7 +122,7 @@ app.post '/events/message', (req, res) ->
             res.json({status: 403, reason: "Not authorized to write messages to this event"}, 403)
           else
             dsts = _.without(r.users, src)
-            replicateMessages {src, dsts, eventId}, (e, r) ->
+            replicate {src, dsts, eventId}, (e, r) ->
               if e
                 res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
               else

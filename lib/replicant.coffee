@@ -92,18 +92,18 @@ replicant.getEventUsers = ({eventId}, callback) ->
 
 
 ###
-  replicateMessages - replicates from one users db to others
+  replicate - replicates from one users db to others
   @param src {string} dbname of source database
   @param dst {string} dbname of destination database
 ###
-replicant.replicateMessages = ({src, dsts, eventId}, callback) ->
+replicant.replicate = ({src, dsts, eventId}, callback) ->
   userDdocName = 'userddoc'
   src = getUserDbName({userId: src})
   dsts = _.map dsts, (userId) -> return getUserDbName({userId})
   opts =
     create_target: true
     query_params: {eventId}
-    filter: "#{userDdocName}/msgFilter"
+    filter: "#{userDdocName}/eventFilter"
   params = _.map dsts, (dst) ->
     return {src, dst, opts}
   replicateEach = ({src,dst,opts}, cb) ->
