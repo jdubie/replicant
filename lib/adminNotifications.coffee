@@ -4,9 +4,8 @@ db = nano.db.use('lifeswap')
 {Mailer} = require('./mailer')
 
 headers =
-  to: ['jdubie@stanford.edu']
+  to: ['admin@stanford.edu']
   from: 'info@thelifeswap.com'
-  #from: 'jack@thelifeswap.com'
   subject: 'Swap review required'
 templateName = 'swapReview'
 reviewSwapMailer = new Mailer({headers,templateName})
