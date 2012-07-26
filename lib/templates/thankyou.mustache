@@ -1,0 +1,38 @@
+<h1>Your LifeSwap request has been sent! -- {{ swapDoc.title }}</h1>
+<img src="{{ swapDoc.image_url }}"></img>
+<div class="row">
+  {{! START message }}
+  <div class="span8">
+    <p>Hi {{ guestDoc.first_name }}!
+    <p>Congratulations -- your request to step into the life of {{ swapDoc.title }} {{ userDoc.first_name }} has been sent! Here are the next steps:
+    <ul>
+      <li>{{ userDoc.first_name }} has 24 hours to approve your request</li>
+      <li>You receive a confirmation email – until you receive this email your LifeSwap is not confirmed. Your card will not be charged.</li>
+      <li>We put you and Kiley in touch so you can start discussing the details!</li>
+    </ul>
+    <p>We hope you have a wonderful experience! If you have any questions, take a look at our <a href="#/faq">FAQ</a> page or send us an email at <a href="mailto:team@thelifeswap.com">team@thelifeswap.com</a>.</p>
+
+    <h3>Want to save $20 on this experience?</h3>
+    <a href="/#/swaps/create" class="btn btn-success">
+      <i class="icon-home icon-white"></i>
+      Sign up to be a host
+    </a>
+
+  </div>
+  {{! END }}
+
+  {{! START right column }}
+  <div class="span4">
+    <h3>
+      <i class="icon-clipboard"></i>
+      The Details
+    </h3>
+    <p>Duration: {{ swapDoc.duration }}</p>
+    <p>Who: Just you and Kiley</p>
+    <p>Approval Required: {{ swapDoc.require_approval }}</p>
+
+    {{> users_partials_preview }}
+
+  </div>
+  {{! END right column }}
+</div>

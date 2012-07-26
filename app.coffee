@@ -92,6 +92,6 @@ app.post '/events/message', (req, res) ->
 app.listen(3000)
 
 # fire up server listening to send out admin actions
-#listen()
+listen()
 
 module.exports = app

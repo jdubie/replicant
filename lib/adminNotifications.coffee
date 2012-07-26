@@ -28,6 +28,12 @@ mailOptions =
   # text:
   # html:
 
+headers =
+  to: ['admin@thelifeswap.com', 'jdubie@stanford.edu']
+  from: 'notifications@thelifeswap.com'
+  subject: 'Swap review required'
+templateName = 'swapReview'
+reviewSwapMailer = new Mailer({headers, templateName})
 
 feed = db.follow(since: 'now')
 
