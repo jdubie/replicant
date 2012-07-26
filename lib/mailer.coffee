@@ -30,7 +30,7 @@ module.exports.Mailer = class Mailer
       _.extend(headers, templates)
 
       ## actually send email
-      debug headers
+      debug "headers: #{JSON.stringify(headers)}"
       config.smtp.sendMail(headers, callback)
 
   _getTemplates: (data, callback) ->
