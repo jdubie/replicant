@@ -2,12 +2,10 @@ express = require('express')
 _ = require('underscore')
 debug = require('debug')('replicant:app')
 
-{getUserIdFromSession} = require('./lib/replicant')
-{createUser} = require('./lib/replicant')
-{createEvent} = require('./lib/replicant')
-{getEventUsers} = require('./lib/replicant')
-{replicate} = require('./lib/replicant')
+{getUserIdFromSession} = require('./lib/helpers')
+{createUser, createEvent, getEventUsers, replicate} = require('./lib/replicant')
 adminNotifications = require('./lib/adminNotifications')
+config = require('./config')
 
 app = express.createServer()
 app.use(express.bodyParser())
@@ -84,7 +82,7 @@ app.get '/events/members', (req, res) ->
         if e
           res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
         else
-          if not (userId in r.users)
+          if not (userId in r.users) and not (userId in config.ADMINS)
             res.json({status: 403, reason: "Not authorized to view this event"}, 403)
           else
             res.json(r, 200)
@@ -118,9 +116,12 @@ app.post '/events/replicate', (req, res) ->
         # 404 or 500
         if e then res.json(e, e.status)
         else
-          if not (src in r.users)
+          if not (src in r.users) and not (src in config.ADMINS)
             res.json({status: 403, reason: "Not authorized to write messages to this event"}, 403)
           else
+            dsts = r.users
+            for admin in config.ADMINS
+              dsts.push(admin)
             dsts = _.without(r.users, src)
             replicate {src, dsts, eventId}, (e, r) ->
               if e

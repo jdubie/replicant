@@ -110,23 +110,12 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
     nano.db.replicate(src, dst, opts, cb)
   async.map(params, replicateEach, callback)
 
+  # send emails
+  replicant.sendNotifications({dsts, eventId})
 
-###
-  getUserIdFromSession - helper that extracts userId from session
-  @params headers {object.<string, {string|object}>} http headers object
-###
-replicant.getUserIdFromSession = ({headers}, callback) ->
-  unless headers?.cookie? # will trigger 403
-    callback(true)
-    return
-  opts =
-    method: 'get'
-    url: "#{config.dbUrl}/_session"
-    headers: headers
-  request opts, (err, res, body) ->
-    userId = JSON.parse(body)?.userCtx?.name
-    if userId? then callback(null, {userId})
-    else callback(true) # will trigger 403
+replicant.sendNotifications = ({dsts, eventId}) ->
+  _.each dsts, (dst) ->
+    getDbName
 
 
 module.exports = replicant
