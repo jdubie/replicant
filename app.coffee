@@ -7,7 +7,7 @@ debug = require('debug')('replicant:app')
 {createEvent} = require('./lib/replicant')
 {getEventUsers} = require('./lib/replicant')
 {replicate} = require('./lib/replicant')
-{listen} = require('./lib/adminNotifications')
+adminNotifications = require('./lib/adminNotifications')
 
 app = express.createServer()
 app.use(express.bodyParser())
@@ -133,6 +133,6 @@ app.post '/events/replicate', (req, res) ->
 app.listen(3000)
 
 # fire up server listening to send out admin actions
-listen()
+adminNotifications.listen()
 
 module.exports = app

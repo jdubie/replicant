@@ -8,11 +8,6 @@ headers =
   from: 'notifications@thelifeswap.com'
   subject: 'Swap review required'
 templateName = 'swapReview'
-reviewSwapMailer = new Mailer({headers, templateName})
-  to: 'admin@thelifeswap.com'
-  from: 'notifications@thelifeswap.com'
-  subject: 'Swap review required'
-templateName = 'swapReview'
 reviewSwapMailer = new Mailer({headers,templateName})
 
 feed = db.follow(since: 'now')
