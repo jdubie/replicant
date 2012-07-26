@@ -18,6 +18,15 @@ module.exports.dbUrl = url.format({protocol,hostname,port})
 module.exports.nano = require('nano')(url.format({protocol,hostname,port,auth}))
 
 
+# Admins
+if process.env.PROD
+  ADMINS = ['shawntuteja', 'jdubie', 'mike', 'bastiaan', 'aotimme']
+else
+  ADMINS = ['tester']
+
+module.exports.ADMINS = ADMINS
+
+
 # SMTP transport
 testEmailPort = 8000
 
