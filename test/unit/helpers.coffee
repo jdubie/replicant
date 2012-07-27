@@ -12,8 +12,11 @@ describe 'helpers', () ->
         res.should.equal 'user1@test.com'
         done()
 
-    it 'should return null when no email addresses', (done) ->
-      done()
+    it 'should return undefined when no email addresses', (done) ->
+      getEmailForUser {userId: 'user2'}, (err,res) ->
+        should.not.exist(err)
+        should.not.exist(res)
+        done()
 
 
   describe '#getUserIdFromSession', () ->
