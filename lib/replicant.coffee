@@ -2,14 +2,10 @@ async = require('async')
 request = require('request')
 _ = require('underscore')
 async = require('async')
-
 debug = require('debug')('lifeswap:replicant')
-config = require('../config')
-{nano} = config
+{nano} = require('config')
+{getUserDbName} = require('lib/helpers')
 
-
-getUserDbName = ({userId}) ->
-  return "users_#{userId}"
 
 replicant = {}
 
@@ -111,11 +107,11 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
   async.map(params, replicateEach, callback)
 
   # send emails
-  replicant.sendNotifications({dsts, eventId})
+  #replicant.sendNotifications({dsts, eventId})
 
-replicant.sendNotifications = ({dsts, eventId}) ->
-  _.each dsts, (dst) ->
-    getDbName
+  #replicant.sendNotifications = ({dsts, eventId}) ->
+  #_.each dsts, (dst) ->
+  #  getDbName
 
 
 module.exports = replicant
