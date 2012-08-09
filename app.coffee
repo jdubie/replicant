@@ -9,7 +9,7 @@ config = require('./config')
 
 app = express()
 app.use(express.static(__dirname + '/public'))
-app.use(express.bodyParser())
+#app.use(express.bodyParser())
 
 ###
   POST /users
@@ -148,6 +148,7 @@ app.get '/users', (req, res) ->
   getUsers (err, users) ->
     debug err, users
     res.json(200, users)
+    res.end()
 
 
 app.get '/swaps', (req, res) ->
