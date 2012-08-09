@@ -11,8 +11,11 @@ config = require('./config')
 
 app = express()
 app.use(express.static(__dirname + '/public'))
-#app.use(express.bodyParser())
-
+app.use (req, res, next) ->
+  if req.url == '/user_ctx'
+    express.bodyParser()(req, res, next)
+  else
+    next()
 ###
   POST /users
   CreateUser
@@ -133,7 +136,7 @@ app.post '/events/replicate', (req, res) ->
                 res.json(r, 201)
 
 ###
-  
+  Login
 ###
 app.post '/user_ctx', (req, res) ->
   username = req.body.username
@@ -141,8 +144,11 @@ app.post '/user_ctx', (req, res) ->
   debug "POST /user_ctx"
   debug "   username: #{username}"
   auth {username, password}, (err,cookie) ->
-    res.set('Set-Cookie', cookie)
-    res.end()
+    if err or not cookie
+      res.send(403, 'Invalid credentials')
+    else
+      res.set('Set-Cookie', cookie)
+      res.end()
 
 
 app.get '/users', (req, res) ->
