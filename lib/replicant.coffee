@@ -128,6 +128,12 @@ replicant.getUserIdFromSession = ({headers}, callback) ->
     if userId? then callback(null, {userId})
     else callback(true) # will trigger 403
 
+replicant.auth = ({username, password}, callback) ->
+  nano.auth username, password, (err, body, headers) ->
+    if err or not headers
+      callback(err or not headers)
+    else
+      callback(null, headers['set-cookie'])
 
 module.exports = replicant
 

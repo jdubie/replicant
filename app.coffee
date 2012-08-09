@@ -11,6 +11,7 @@ debug = require('debug')('replicant:app')
 config = require('./config')
 
 app = express.createServer()
+app.use(express.static(__dirname + '/public'))
 app.use(express.bodyParser())
 
 ###
@@ -131,6 +132,21 @@ app.post '/events/replicate', (req, res) ->
                 res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
               else
                 res.json(r, 201)
+
+###
+  
+###
+app.post '/user_ctx', (req, res) ->
+  username = req.body.username
+  password = req.body.password
+  debug "POST /user_ctx"
+  debug "   username: #{username}"
+  auth {username, password}, (err,cookie) ->
+    debug err, res
+    res.header['set-cookie'] = res
+    res.set
+      'Set-Cookie': cookie
+    res.end()
 
 
 # fire up HTTP server
