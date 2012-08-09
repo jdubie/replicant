@@ -64,7 +64,7 @@ describe 'POST /user', () ->
 
 
   it 'should 403 when user is unauthenticated', (done) ->
-    request.post 'http://localhost:3000/users', (err, res, body) ->
+    request.post 'http://localhost:3001/users', (err, res, body) ->
       should.not.exist(err)
       JSON.parse(body).should.have.property('status', 403)
       res.statusCode.should.equal(403)
@@ -76,7 +76,7 @@ describe 'POST /user', () ->
 
   it 'should create user data base if they are authenticated', (done) ->
     opts =
-      url: 'http://localhost:3000/users'
+      url: 'http://localhost:3001/users'
       headers: cookie: cookie
     request.post opts, (err, res, body) ->
       should.not.exist(err)

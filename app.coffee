@@ -158,7 +158,7 @@ app.get '/swaps', (req, res) ->
 
 
 # fire up HTTP server
-app.listen(3000)
+app.listen(config.port)
 
 # fire up server listening to send out admin actions
 adminNotifications.listen()

@@ -50,5 +50,11 @@ else
     host: 'localhost'
     port: testEmailPort
 
+switch process.env.ENV
+  when 'test'
+    exports.port = 3001
+  else
+    exports.port = 3000
+
 module.exports.smtp = nodemailer.createTransport('SMTP', smtpOptions)
 module.exports.testEmailPort = testEmailPort
