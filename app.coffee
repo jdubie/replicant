@@ -7,7 +7,7 @@ debug = require('debug')('replicant:app')
 adminNotifications = require('./lib/adminNotifications')
 config = require('./config')
 
-app = express.createServer()
+app = express()
 app.use(express.static(__dirname + '/public'))
 app.use(express.bodyParser())
 
@@ -139,10 +139,7 @@ app.post '/user_ctx', (req, res) ->
   debug "POST /user_ctx"
   debug "   username: #{username}"
   auth {username, password}, (err,cookie) ->
-    debug err, res
-    res.header['set-cookie'] = res
-    res.set
-      'Set-Cookie': cookie
+    res.set('Set-Cookie', cookie)
     res.end()
 
 
