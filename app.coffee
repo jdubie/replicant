@@ -1,6 +1,8 @@
 express = require('express')
 _ = require('underscore')
 debug = require('debug')('replicant:app')
+request = require('request')
+util = require('util')
 
 {getUserIdFromSession} = require('./lib/helpers')
 {auth, getUsers, getSwaps, createUser, createEvent, getEventUsers, replicate} = require('./lib/replicant')
@@ -9,7 +11,7 @@ config = require('./config')
 
 app = express()
 app.use(express.static(__dirname + '/public'))
-app.use(express.bodyParser())
+#app.use(express.bodyParser())
 
 ###
   POST /users
@@ -151,11 +153,23 @@ app.get '/users', (req, res) ->
     res.end()
 
 
+app.get '/users/:id', (req, res) ->
+  request("http://localhost:5985/lifeswap/#{req.params.id}").pipe(res)
+
 app.get '/swaps', (req, res) ->
   debug "GET /swaps"
   getSwaps (err, swaps) ->
     debug err, swaps
     res.json(200, swaps)
+
+app.post '/swaps', (req, res) ->
+  #debug util.inspect req.headers
+  endpoint = request.post('http://localhost:5985/toits')
+  req.pipe(endpoint)
+  endpoint.pipe(res)
+
+app.get '/swaps/:id', (req, res) ->
+  request("http://localhost:5985/lifeswap/#{req.params.id}").pipe(res)
 
 
 # fire up HTTP server
