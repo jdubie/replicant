@@ -3,7 +3,7 @@ _ = require('underscore')
 debug = require('debug')('replicant:app')
 
 {getUserIdFromSession} = require('./lib/helpers')
-{createUser, createEvent, getEventUsers, replicate} = require('./lib/replicant')
+{auth, getUsers, getSwaps, createUser, createEvent, getEventUsers, replicate} = require('./lib/replicant')
 adminNotifications = require('./lib/adminNotifications')
 config = require('./config')
 
@@ -144,6 +144,20 @@ app.post '/user_ctx', (req, res) ->
     res.set
       'Set-Cookie': cookie
     res.end()
+
+
+app.get '/users', (req, res) ->
+  debug "GET /users"
+  getUsers (err, users) ->
+    debug err, users
+    res.json(200, users)
+
+
+app.get '/swaps', (req, res) ->
+  debug "GET /swaps"
+  getSwaps (err, swaps) ->
+    debug err, swaps
+    res.json(200, swaps)
 
 
 # fire up HTTP server

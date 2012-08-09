@@ -2,7 +2,7 @@ async = require('async')
 request = require('request')
 _ = require('underscore')
 async = require('async')
-debug = require('debug')('lifeswap:replicant')
+debug = require('debug')('replicant:lib')
 {nano} = require('config')
 {getUserDbName} = require('lib/helpers')
 
@@ -119,6 +119,25 @@ replicant.auth = ({username, password}, callback) ->
       callback(err or not headers)
     else
       callback(null, headers['set-cookie'])
+
+
+replicant.getUsers = (callback) ->
+  db = nano.db.use('lifeswap')
+  opts = include_docs: true
+  db.view 'lifeswap', 'users', opts, (err, res) ->
+    debug err, res
+    if not err then users = (row.doc for row in res.rows)
+    callback(err, users)
+
+
+replicant.getSwaps = (callback) ->
+  db = nano.db.use('lifeswap')
+  opts = include_docs: true
+  db.view 'lifeswap', 'swaps', opts, (err, res) ->
+    debug err, res
+    if not err then swaps = (row.doc for row in res.rows)
+    callback(err, swaps)
+
 
 module.exports = replicant
 
