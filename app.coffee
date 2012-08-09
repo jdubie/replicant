@@ -2,12 +2,9 @@ express = require('express')
 _ = require('underscore')
 debug = require('debug')('replicant:app')
 
-{getUserIdFromSession} = require('./lib/replicant')
-{createUser} = require('./lib/replicant')
-{createEvent} = require('./lib/replicant')
-{getEventUsers} = require('./lib/replicant')
-{replicate} = require('./lib/replicant')
-{listen} = require('./lib/adminNotifications')
+{getUserIdFromSession} = require('./lib/helpers')
+{createUser, createEvent, getEventUsers, replicate} = require('./lib/replicant')
+adminNotifications = require('./lib/adminNotifications')
 config = require('./config')
 
 app = express.createServer()
@@ -153,6 +150,6 @@ app.post '/user_ctx', (req, res) ->
 app.listen(3000)
 
 # fire up server listening to send out admin actions
-#listen()
+adminNotifications.listen()
 
 module.exports = app

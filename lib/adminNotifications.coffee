@@ -4,8 +4,8 @@ db = nano.db.use('lifeswap')
 {Mailer} = require('./mailer')
 
 headers =
-  to: 'admin@thelifeswap.com'
-  from: 'notifications@thelifeswap.com'
+  to: ['admin@thelifeswap.com']
+  from: 'info@thelifeswap.com'
   subject: 'Swap review required'
 templateName = 'swapReview'
 reviewSwapMailer = new Mailer({headers,templateName})
@@ -25,7 +25,7 @@ feed.on 'change', (change) ->
     # set email info
     lastId = id
     reviewSwapMailer.send {data: {id}}, (err, res) ->
-      if err then "ERROR: #{JSON.stringify(err)}"
+      if err then debug "ERROR: #{JSON.stringify(err)}"
       else debug "mail successfully sent: #{JSON.stringify(res)}"
 
 module.exports.listen = () ->

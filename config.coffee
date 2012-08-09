@@ -30,12 +30,21 @@ module.exports.ADMINS = ADMINS
 # SMTP transport
 testEmailPort = 8000
 
+gmailSmtpOptions =
+  service: 'Gmail'
+  auth:
+    user: process.env.GMAIL_USER
+    pass: process.env.GMAIL_PWD
+
+mailjetSmtpOptions =
+  host: 'in.mailjet.com'
+  port: 587
+  auth:
+    user: process.env.MAILJET_KEY
+    pass: process.env.MAILJET_SECRET
+
 if process.env.PROD
-  smtpOptions =
-    service: 'Gmail'
-    auth:
-      user: process.env.GMAIL_USER
-      pass: process.env.GMAIL_PWD
+  smtpOptions = mailjetSmtpOptions
 else
   smtpOptions = # testing
     host: 'localhost'

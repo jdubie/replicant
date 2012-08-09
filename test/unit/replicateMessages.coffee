@@ -1,12 +1,12 @@
 util = require('util')
 should = require('should')
 async = require('async')
-{nano} = require('../../config')
-{replicateMessages} = require('../../lib/replicant')
+{nano} = require('config')
+{replicate} = require('lib/replicant')
+{getUserDbName} = require('lib/helpers')
 
-{getUserDbName} = require('../../../lifeswap/shared/helpers')
 
-describe '#replicateMessages', () ->
+describe '#replicate', () ->
 
   msgFilter = (doc, req) ->
     if doc.eventId isnt req.query.eventId
@@ -115,7 +115,7 @@ describe '#replicateMessages', () ->
             src: user1
             dsts: [user2]
             eventId: eventId
-          replicateMessages replicateParams, (err, res) ->
+          replicate replicateParams, (err, res) ->
             error = err
             results = res
             ready()
