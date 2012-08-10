@@ -15,7 +15,8 @@ else
   port = 5985
 
 module.exports.dbUrl = url.format({protocol,hostname,port})
-module.exports.nano = require('nano')(url.format({protocol,hostname,port,auth}))
+module.exports.nano = require('nano')(url.format({protocol,hostname,port}))
+module.exports.nanoAdmin = require('nano')(url.format({protocol,hostname,port,auth}))
 
 
 # Admins

@@ -1,18 +1,19 @@
 express = require('express')
+async = require('async')
 _ = require('underscore')
 debug = require('debug')('replicant:app')
 request = require('request')
 util = require('util')
 
-{getUserIdFromSession} = require('./lib/helpers')
-{auth, getUsers, getSwaps, createUser, createEvent, getEventUsers, replicate} = require('./lib/replicant')
+{getUserIdFromSession, hash, getUserDbName} = require('./lib/helpers')
+{auth, getUsers, getSwaps, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate} = require('./lib/replicant')
 adminNotifications = require('./lib/adminNotifications')
 config = require('./config')
 
 app = express()
 app.use(express.static(__dirname + '/public'))
 app.use (req, res, next) ->
-  if req.url == '/user_ctx'
+  if req.url is '/user_ctx' or (req.url is '/users' and req.method is 'POST')
     express.bodyParser()(req, res, next)
   else
     next()
@@ -31,17 +32,68 @@ app.use (req, res, next) ->
     replicate /userId /lifeswap filter(public)
 ###
 app.post '/users', (req, res) ->
-  debug 'POST /users'
-  getUserIdFromSession headers: req.headers, (err, r) ->
+  debug "POST /users"
+  user = req.body
+  {email, password, _id} = user   # extract email and password
+  user_id = _id
+  # delete private data
+  delete user.password
+  delete user.email
+  debug "   email: #{email}"
+
+  name = hash(email)
+  response =
+    name: name
+    roles: []
+    user_id: user_id
+  cookie = null
+
+  async.waterfall [
+    (next) ->
+      ## insert document to _users
+      debug '   insert document to _users'
+      createUnderscoreUser({email, password, user_id}, next)
+
+    (resp, next) ->
+      ## auth to get cookie
+      debug '   auth to get cookie'
+      auth({username: name, password: password}, next)
+
+    (kookie, next) ->
+      ## create user database
+      debug '   create user database'
+      cookie = kookie
+      createUserDb({userId: user_id, name: name}, next)
+
+    (resp, next) ->
+      ## create 'user' type document
+      debug "   create 'user' type document"
+      nanoOpts =
+        url: "#{config.dbUrl}/lifeswap"
+        cookie: cookie
+      debug 'nanoOpts', nanoOpts
+      userNano = require('nano')(nanoOpts)
+      userNano.insert(user, user_id, next)
+
+    (resp, headers, next) ->
+      ## create 'email_address' type private document
+      #debug JSON.stringify(resp), headers
+      debug "   create 'email_address' type private document"
+      nanoOpts =
+        url: "#{config.dbUrl}/#{getUserDbName(userId: user_id)}"
+        cookie: cookie
+      userPrivateNano = require('nano')(nanoOpts)
+      emailDoc =
+        type: 'email_address'
+        email_address: email
+        user_id: user_id
+      userPrivateNano.insert(emailDoc, next)
+
+  ], (err, body, headers) ->
     if err
-      res.json({status: 403, reason: 'User must be logged in'}, 403)
-    else
-      userId = r.userId
-      createUser {userId}, (e,r) ->
-        if e
-          res.json({status: 500, reason: "Internal Server Error: #{e}", 500})
-        else
-          res.json(r, 201)
+      debug '   ERROR', err
+      res.json(err.status ? 500, err)
+    else res.json(response)       # {name, roles, id}
 
 
 ###
@@ -169,8 +221,9 @@ app.get '/swaps', (req, res) ->
     res.json(200, swaps)
 
 app.post '/swaps', (req, res) ->
+  debug 'POST /swaps'
   #debug util.inspect req.headers
-  endpoint = request.post('http://localhost:5985/toits')
+  endpoint = request.post('http://localhost:5985/lifeswap')
   req.pipe(endpoint)
   endpoint.pipe(res)
 

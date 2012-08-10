@@ -3,18 +3,52 @@ request = require('request')
 _ = require('underscore')
 async = require('async')
 debug = require('debug')('replicant:lib')
-{nano} = require('config')
-{getUserDbName} = require('lib/helpers')
+{nanoAdmin, dbUrl} = require('config')
+{getUserDbName, getStatusFromCouchError, hash} = require('lib/helpers')
 
 
 replicant = {}
 
 ###
-  createUser - creates usersDB and replicates ddocs to it also sends notification
+  createUnderscoreUser - creates user in _users DB
+  @param email {string}
+  @param password {string}
+  @param user_id {uuid string}
+###
+replicant.createUnderscoreUser = ({email, password, user_id}, callback) ->
+  name = hash(email)
+  underscoreUser =
+    _id: "org.couchdb.user:#{name}"
+    name: name
+    password: password
+    roles: []
+    type: 'user'
+    user_id: user_id
+  opts =
+    url: "#{dbUrl}/_users"
+    body: JSON.stringify(underscoreUser)
+    method: 'POST'
+    json: true
+  request opts, (err, res, body) ->
+    if err then error =
+      status: 403
+      error: "unauthorized"
+      reason: "Error authorizing"
+    else if body.error? # {error, reason}
+      error = body
+      error.status = getStatusFromCouchError(body.error)
+    else
+      error = null
+    callback(error, body)
+
+
+
+###
+  createUserDb - creates usersDB and replicates ddocs to it also sends notification
   @param userId {string}
   @param callback {function}
 ###
-replicant.createUser = ({userId},callback) ->
+replicant.createUserDb = ({userId, name}, callback) ->
 
   userDdocDbName = 'userddocdb'
   userDdocName = 'userddoc'
@@ -24,24 +58,29 @@ replicant.createUser = ({userId},callback) ->
       names: []
       roles: []
     members:
-      names: [userId]
+      names: [name]
       roles: []
 
   userDbName = getUserDbName({userId})
-  nano.db.create userDbName, (err, res) ->
+  nanoAdmin.db.create userDbName, (err, res) ->
     if err
+      if err.status_code then err.status = err.status_code
+      else err.status = getStatusFromCouchError(err)
       debug err
       callback(err)
     else
-      userdb = nano.db.use(userDbName)
+      userdb = nanoAdmin.db.use(userDbName)
       userdb.insert security, '_security', (err, res) ->
         if err
           debug err
+          err.status = getStatusFromCouchError(err)
           callback(err)
         else
           opts =
             doc_ids: [ "_design/#{userDdocName}" ]
-          nano.db.replicate(userDdocDbName, userDbName, opts, callback)
+          nanoAdmin.db.replicate userDdocDbName, userDbName, opts, (err, res) ->
+            if err then err.status = getStatusFromCouchError(err)
+            callback(err, res)
 
 ###
   createEvent - creates event -> [users] mapping and writes initial events docs to users db
@@ -53,12 +92,12 @@ replicant.createEvent = ({swapId, userId}, callback) ->
   getGuest = (_callback) ->
     _callback(null, userId) # @todo replace with getting this from cookies
   getHosts = (_callback) ->
-    db = nano.db.use('lifeswap')
+    db = nanoAdmin.db.use('lifeswap')
     db.get swapId, (err, swapDoc) ->
       _callback(err, [swapDoc.host]) # @todo swapDoc.host should will be array in future
   createMapping = (users, _callback) ->
     users.push(userId) # @todo this logic may change
-    mapper = nano.db.use('mapper')
+    mapper = nanoAdmin.db.use('mapper')
     mapper.insert {users}, (err, res) ->
       eventId = res.id
       ok = true
@@ -76,13 +115,13 @@ replicant.createEvent = ({swapId, userId}, callback) ->
   @param eventId {string}
 ###
 replicant.getEventUsers = ({eventId}, callback) ->
-  mapper = nano.db.use('mapper')
+  mapper = nanoAdmin.db.use('mapper')
   mapper.get eventId, (err, eventDoc) ->
     if err
       if err.error is 'not_found'
-        callback({status: 404, reason: "No such event"})
+        callback(status: 404, reason: "No such event")
       else
-        callback({status: 500, reason: "Internal Server Error"})
+        callback(status: 500, reason: "Internal Server Error")
     else
       callback(null, {ok: true, status: 200, users: eventDoc.users})
 
@@ -103,7 +142,7 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
   params = _.map dsts, (dst) ->
     return {src, dst, opts}
   replicateEach = ({src,dst,opts}, cb) ->
-    nano.db.replicate(src, dst, opts, cb)
+    nanoAdmin.db.replicate(src, dst, opts, cb)
   async.map(params, replicateEach, callback)
 
   # send emails
@@ -114,15 +153,19 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
   #  getDbName
 
 replicant.auth = ({username, password}, callback) ->
-  nano.auth username, password, (err, body, headers) ->
+  nanoAdmin.auth username, password, (err, body, headers) ->
     if err or not headers
-      callback(err or not headers)
+      error =
+        status: 403
+        error: "unauthorized"
+        reason: "Error authorizing"
+      callback(error)
     else
       callback(null, headers['set-cookie'])
 
 
 replicant.getUsers = (callback) ->
-  db = nano.db.use('lifeswap')
+  db = nanoAdmin.db.use('lifeswap')
   opts = include_docs: true
   db.view 'lifeswap', 'users', opts, (err, res) ->
     debug err, res
@@ -131,7 +174,7 @@ replicant.getUsers = (callback) ->
 
 
 replicant.getSwaps = (callback) ->
-  db = nano.db.use('lifeswap')
+  db = nanoAdmin.db.use('lifeswap')
   opts = include_docs: true
   db.view 'lifeswap', 'swaps', opts, (err, res) ->
     debug err, res

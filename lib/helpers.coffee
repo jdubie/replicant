@@ -50,4 +50,16 @@ helpers.hash = (message) ->
   shasum.update(message)
   return shasum.digest('hex')
 
+
+###
+  @param error {string}
+  @return {number}
+###
+helpers.getStatusFromCouchError = (error) ->
+  switch error
+    when "unauthorized" then return 401
+    when "forbidden" then return 403
+    when "conflict" then return 409
+    when "file_exists" then return 409      # database already exists
+
 module.exports = helpers
