@@ -1,6 +1,7 @@
 request = require('request')
 debug = require('debug')('lifeswap:helpers')
 config = require('config')
+crypto = require('crypto')
 {nano} = config
 
 helpers = {}
@@ -39,5 +40,14 @@ helpers.getUserIdFromSession = ({headers}, callback) ->
     userId = JSON.parse(body)?.userCtx?.name
     if userId? then callback(null, {userId})
     else callback(true) # will trigger 403
+
+###
+  @param message {string}
+  @return {string}
+###
+helpers.hash = (message) ->
+  shasum = crypto.createHash('sha1')
+  shasum.update(message)
+  return shasum.digest('hex')
 
 module.exports = helpers
