@@ -2,8 +2,7 @@ should = require('should')
 async = require('async')
 util = require('util')
 request = require('request')
-{nano} = require('../../config')
-{createUser} = require('../../lib/replicant')
+{nano} = require('../../../config')
 
 
 describe 'GET /user', () ->
@@ -15,7 +14,7 @@ describe 'GET /user', () ->
   ###
   before (ready) ->
     # start webserver
-    app = require('../../app')
+    app = require('../../../app')
 
     db = nano.db.use('lifeswap')
     opts = include_docs: true

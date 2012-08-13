@@ -54,18 +54,18 @@ app.post '/users', (req, res) ->
       debug '   insert document to _users'
       createUnderscoreUser({email, password, user_id}, next)
 
-    (resp, next) ->
+    (_res, next) ->
       ## auth to get cookie
       debug '   auth to get cookie'
       auth({username: name, password: password}, next)
 
-    (kookie, next) ->
+    (_cookie, next) ->
       ## create user database
       debug '   create user database'
-      cookie = kookie
+      cookie = _cookie
       createUserDb({userId: user_id, name: name}, next)
 
-    (resp, next) ->
+    (_res, next) ->
       ## create 'user' type document
       debug "   create 'user' type document"
       nanoOpts =
@@ -75,9 +75,9 @@ app.post '/users', (req, res) ->
       userNano = require('nano')(nanoOpts)
       userNano.insert(user, user_id, next)
 
-    (resp, headers, next) ->
+    (_res, headers, next) ->
       ## create 'email_address' type private document
-      #debug JSON.stringify(resp), headers
+      #debug JSON.stringify(_res), headers
       debug "   create 'email_address' type private document"
       nanoOpts =
         url: "#{config.dbUrl}/#{getUserDbName(userId: user_id)}"
@@ -93,7 +93,7 @@ app.post '/users', (req, res) ->
     if err
       debug '   ERROR', err
       res.json(err.status ? 500, err)
-    else res.json(response)       # {name, roles, id}
+    else res.json(201, response)       # {name, roles, id}
 
 
 ###

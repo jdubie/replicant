@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 
-NODE_PATH=`pwd` \
+NODE_PATH=`pwd` ENV=test \
 DEBUG=replicant* \
 	./node_modules/.bin/mocha \
 		--compilers coffee:coffee-script \
