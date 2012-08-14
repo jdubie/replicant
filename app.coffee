@@ -206,7 +206,6 @@ app.post '/users', (req, res) ->
       res.json(err.status ? 500, err)
     else res.json(201, response)       # {name, roles, id}
 
-
 ###
   GET /users
 ###
@@ -223,8 +222,7 @@ app.get '/users', (req, res) ->
 app.get '/users/:id', (req, res) ->
   debug "GET /users/:id"
   debug "   id = #{req.params.id}"
-  request("http://localhost:5985/lifeswap/#{req.params.id}").pipe(res)
-
+  request("#{config.dbUrl}/lifeswap/#{req.params.id}").pipe(res)
 
 ###
   PUT /users/:id
@@ -234,10 +232,9 @@ app.put '/users/:id', (req, res) ->
   id = req.params.id
   debug "   id = #{id}"
 
-  endpoint = request.put("http://localhost:5985/lifeswap/#{id}")
+  endpoint = request.put("#{config.dbUrl}/lifeswap/#{id}")
   req.pipe(endpoint)
   endpoint.pipe(res)
-
 
 ###
   DELETE /users/:id
@@ -245,21 +242,36 @@ app.put '/users/:id', (req, res) ->
 app.delete '/users/:id', (req, res) ->
   res.send(403)
 
+###
+  Swaps
+###
+
+###
+  GET /swaps
+###
 app.get '/swaps', (req, res) ->
   debug "GET /swaps"
   getSwaps (err, swaps) ->
     debug err, swaps
     res.json(200, swaps)
 
+###
+  GET /swaps/:id
+###
+app.get '/swaps/:id', (req, res) ->
+  debug "GET /swaps/:id"
+  id = req.params.id
+  debug "   id = #{id}"
+  request("#{config.dbUrl}/lifeswap/#{id}").pipe(res)
+
+
 app.post '/swaps', (req, res) ->
   debug 'POST /swaps'
   #debug util.inspect req.headers
-  endpoint = request.post('http://localhost:5985/lifeswap')
+  endpoint = request.post("#{config.dbUrl}/lifeswap")
   req.pipe(endpoint)
   endpoint.pipe(res)
 
-app.get '/swaps/:id', (req, res) ->
-  request("http://localhost:5985/lifeswap/#{req.params.id}").pipe(res)
 
 
 # fire up HTTP server

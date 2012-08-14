@@ -79,7 +79,7 @@ describe 'DELETE /users/:id', () ->
         dbs.should.include(userDbName)
         nanoAdmin.db.destroy userDbName, (err, res) ->
           should.not.exist(err)
-          finished()
+          callback()
 
     async.parallel [
       destroyUser

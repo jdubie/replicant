@@ -6,27 +6,28 @@ request = require('request')
 {createUser} = require('lib/replicant')
 
 
-describe 'GET /swaps', () ->
+describe 'GET /swaps/:id', () ->
 
-  swapsNano = []
+  someSwap = null
 
-  ###
-    Make sure that user's db doesn't exist
-  ###
   before (ready) ->
-    # start webserver
+    ## start webserver
     app = require('../../../app')
 
+    ## get one of the swaps (the first from the 'swaps' view)
     db = nano.db.use('lifeswap')
     opts = include_docs: true
     db.view 'lifeswap', 'swaps', opts, (err, res) ->
       should.not.exist(err)
-      swapsNano = (row.doc for row in res.rows)
+      someSwap = res.rows[0].doc
       ready()
 
-  it 'should provide a list of all the correct swaps', (done) ->
-    request.get 'http://localhost:3001/swaps', (err, res, swaps) ->
+  it 'should get the correct swap', (done) ->
+    opts =
+      method: 'GET'
+      url: "http://localhost:3001/swaps/#{someSwap._id}"
+      json: true
+    request opts, (err, res, swapDoc) ->
       should.not.exist(err)
-      swaps = JSON.parse(swaps)
-      swaps.should.eql(swapsNano)
+      swapDoc.should.eql(someSwap)
       done()
