@@ -13,7 +13,7 @@ config = require('./config')
 app = express()
 app.use(express.static(__dirname + '/public'))
 app.use (req, res, next) ->
-  if req.url is '/user_ctx' or (req.url is '/users' and req.method is 'POST')
+  if req.url is '/user_ctx' or (req.url is '/users' and req.method is 'POST') or req.url is '/events'
     express.bodyParser()(req, res, next)
   else
     next()
@@ -35,15 +35,25 @@ app.post  '/events', (req, res) ->
   swapId = req.body.swapId
   debug "POST /events"
   debug "   swapId: #{swapId}"
-  getUserIdFromSession headers: req.headers, (err, r) ->
-    if err
-      res.json({status: 403, reason: 'User must be logged in'}, 403)
-    else
-      userId = r.userId
-      createEvent {swapId, userId}, (e, r) ->
-        if e then res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
-        else
-          res.json(r, 201)
+  async.waterfall [
+    (next) ->
+      getUserIdFromSession headers: req.headers, (err, _res) ->
+        if err
+          err.statusCode = 403
+          err.reason = 'User must be logged in'
+          next(err)
+        else next(null, _res.userId)
+    (userId, next) ->
+      createEvent({swapId, userId}, next)
+  ], (err, _res) ->
+    if err then res.json(err.statusCode, _res)
+    else res.json(201, _res)
+
+
+## TODO: have createEvent do _everything_
+#     * createMapping (getGuest, getHost, createMapping)
+#     * create event document -> put in guest db
+#     * trigger replication b/w dbs
 
 
 # GET /events/members

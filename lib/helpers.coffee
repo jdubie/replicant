@@ -36,8 +36,9 @@ helpers.getUserIdFromSession = ({headers}, callback) ->
     method: 'get'
     url: "#{config.dbUrl}/_session"
     headers: headers
+    json: true
   request opts, (err, res, body) ->
-    userId = JSON.parse(body)?.userCtx?.name
+    userId = body?.userCtx?.name
     if userId? then callback(null, {userId})
     else callback(true) # will trigger 403
 
@@ -55,6 +56,7 @@ helpers.hash = (message) ->
   @param error {string}
   @return {number}
 ###
+## TODO: stoopid - just get err.status_code from (err, res) ->
 helpers.getStatusFromCouchError = (error) ->
   switch error
     when "unauthorized" then return 401

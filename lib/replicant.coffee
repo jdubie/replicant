@@ -6,6 +6,7 @@ debug = require('debug')('replicant:lib')
 {nanoAdmin, dbUrl} = require('config')
 {getUserDbName, getStatusFromCouchError, hash} = require('lib/helpers')
 
+{EVENT_STATE} = require('../../lifeswap/userdb/shared/constants')
 
 replicant = {}
 
@@ -89,25 +90,47 @@ replicant.createUserDb = ({userId, name}, callback) ->
   @param callback {function}
 ###
 replicant.createEvent = ({swapId, userId}, callback) ->
-  getGuest = (_callback) ->
-    _callback(null, userId) # @todo replace with getting this from cookies
-  getHosts = (_callback) ->
+
+  getMembers = (next) ->
+    members = [userId]  # @todo replace with getting this from cookies
     db = nanoAdmin.db.use('lifeswap')
     db.get swapId, (err, swapDoc) ->
-      _callback(err, [swapDoc.host]) # @todo swapDoc.host should will be array in future
-  createMapping = (users, _callback) ->
-    users.push(userId) # @todo this logic may change
+      if not err then members.push(swapDoc.host)  # @todo swapDoc.host will be array in future
+      debug 'getMembers', members
+      next(err, members)
+
+  createMapping = (users, next) ->
     mapper = nanoAdmin.db.use('mapper')
     mapper.insert {users}, (err, res) ->
       eventId = res.id
       ok = true
-      _callback(err, {eventId, users, ok})
+      debug 'createMapping', eventId, users, ok
+      next(err, {eventId, users, ok})
+
+
+  createEventDocs = ({eventId, users, ok}, next) ->
+    eventDoc =
+      _id: eventId
+      type: 'event'
+      state: EVENT_STATE.requested
+      swap_id: swapId
+
+    createEventDoc = (userId, cb) ->
+      userDbName = getUserDbName(userId: userId)
+      userDb = nanoAdmin.db.use(userDbName)
+      userDb.insert(eventDoc, eventDoc._id, cb)
+
+    async.map users, createEventDoc, (err, res) ->
+      debug 'createEventDocs', users
+      next(err, {eventId, users, ok})
 
   async.waterfall [
-    (next) -> getGuest(next)
-    (result, next) -> getHosts(next)
-    (result, next) -> createMapping(result, next)
-  ], callback
+    getMembers
+    createMapping
+    createEventDocs
+  ], (err, res) ->
+    if err then err.statusCode = err.status_code if err.status_code else 500
+    callback(err, res)
 
 
 ###

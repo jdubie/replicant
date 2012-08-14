@@ -40,25 +40,6 @@ describe 'POST /users', () ->
       app = require('../../../app')
       ready()
 
-#    insertUser = (callback) ->
-#      usersDb = nano.db.use('_users')
-#      userDoc =
-#        _id: "org.couchdb.user:#{_userId}"
-#        type: 'user'
-#        name: _userId
-#        password: _password
-#        roles: []
-#      usersDb.insert userDoc, (err, res) ->
-#        should.not.exist(err)
-#        callback()
-#    authUser = (callback) ->
-#      nano.auth _userId, _password, (err, body, headers) ->
-#        should.not.exist(err)
-#        should.exist(headers and headers['set-cookie'])
-#        cookie = headers['set-cookie'][0]
-#        callback()
-#    async.series([insertUser, authUser], ready)
-
 
     after (finished) ->
       destroyUser = (callback) ->
