@@ -221,11 +221,14 @@ _.each ['users', 'swaps'], (model) ->
 
 ###
   GET /users/:id
+  GET /swaps/:id
 ###
-app.get '/users/:id', (req, res) ->
-  debug "GET /users/:id"
-  debug "   id = #{req.params.id}"
-  request("#{config.dbUrl}/lifeswap/#{req.params.id}").pipe(res)
+_.each ['users', 'swaps'], (model) ->
+  app.get "/#{model}/:id", (req, res) ->
+    debug "GET /#{model}/:id"
+    id = req.params.id
+    debug "   id = #{id}"
+    request("#{config.dbUrl}/lifeswap/#{id}").pipe(res)
 
 ###
   PUT /users/:id
@@ -248,17 +251,6 @@ app.delete '/users/:id', (req, res) ->
 ###
   Swaps
 ###
-
-
-###
-  GET /swaps/:id
-###
-app.get '/swaps/:id', (req, res) ->
-  debug "GET /swaps/:id"
-  id = req.params.id
-  debug "   id = #{id}"
-  request("#{config.dbUrl}/lifeswap/#{id}").pipe(res)
-
 
 ###
   POST /swaps
