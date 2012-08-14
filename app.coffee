@@ -298,6 +298,6 @@ app.delete '/swaps/:id', (req, res) ->
 app.listen(config.port)
 
 # fire up server listening to send out admin actions
-adminNotifications.listen()
+#adminNotifications.listen()
 
 module.exports = app
