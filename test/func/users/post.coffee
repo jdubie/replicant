@@ -3,8 +3,8 @@ async = require('async')
 util = require('util')
 request = require('request')
 
-{nanoAdmin} = require('../../../config')
-{hash} = require('../../../lib/helpers')
+{nanoAdmin} = require('config')
+{hash} = require('lib/helpers')
 
 #{getUserDbName} = require('../../../lifeswap/shared/helpers')
 getUserDbName = ({userId}) -> return "users_#{userId}"

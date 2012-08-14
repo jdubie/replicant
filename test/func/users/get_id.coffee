@@ -2,7 +2,8 @@ should = require('should')
 async = require('async')
 util = require('util')
 request = require('request')
-{nanoAdmin} = require('../../../config')
+
+{nanoAdmin} = require('config')
 
 
 describe 'GET /users/:id', () ->

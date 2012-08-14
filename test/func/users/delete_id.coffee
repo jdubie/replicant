@@ -3,12 +3,16 @@ async = require('async')
 util = require('util')
 request = require('request')
 
-{nanoAdmin, nano, dbUrl} = require('config')
+{nano, nanoAdmin, dbUrl} = require('config')
+
+getUserDbName = ({userId}) -> return "users_#{userId}"
 
 
-describe 'PUT /users/:id', () ->
+describe 'DELETE /users/:id', () ->
 
-  _userId = 'someuser'
+  ## simple test - for now should just 403 (forbidden)
+
+  _userId = 'deleteuser'
   _password = 'sekr1t'
   _userDoc =
     _id: _userId
@@ -19,6 +23,7 @@ describe 'PUT /users/:id', () ->
 
   mainDb = nanoAdmin.db.use('lifeswap')
   usersDb = nanoAdmin.db.use('_users')
+  userDbName = getUserDbName(userId: _userId)
 
   before (ready) ->
     ## start webserver
@@ -26,9 +31,6 @@ describe 'PUT /users/:id', () ->
 
     ## insert user
     insertUser = (callback) ->
-
-
-
       async.parallel [
         (cb) ->
           userDoc =
@@ -44,6 +46,10 @@ describe 'PUT /users/:id', () ->
           mainDb.insert _userDoc, _userId, (err, res) ->
             should.not.exist(err)
             _userDoc._rev = res.rev
+            cb()
+        (cb) ->
+          nanoAdmin.db.create userDbName, (err, res) ->
+            should.not.exist(err)
             cb()
       ], callback
 
@@ -68,21 +74,42 @@ describe 'PUT /users/:id', () ->
       mainDb.get _userId, (err, userDoc) ->
         should.not.exist(err)
         mainDb.destroy(_userId, userDoc._rev, callback)
+    destroyUserDb = (callback) ->
+      nanoAdmin.db.list (err, dbs) ->
+        dbs.should.include(userDbName)
+        nanoAdmin.db.destroy userDbName, (err, res) ->
+          should.not.exist(err)
+          finished()
+
     async.parallel [
       destroyUser
       destroyLifeswapUser
+      destroyUserDb
     ], finished
 
 
-  it 'should put the user\'s document correctly', (done) ->
-    _userDoc.foo = 'c3p0'
+  it 'should return a 403 (forbidden)', (done) ->
     opts =
-      method: 'PUT'
+      method: 'DELETE'
       url: "http://localhost:3001/users/#{_userId}"
-      json: _userDoc
+      json: true
       headers: cookie: cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
-      res.body.should.have.property('id', _userId)
-      res.statusCode.should.eql(201)
+      res.should.have.property('statusCode', 403)
+      done()
+
+
+  it 'should not delete _users entry', (done) ->
+    couchUser = "org.couchdb.user:#{_userId}"
+    usersDb.get couchUser, (err, userDoc) ->
+      should.not.exist(err)
+      userDoc.should.have.property('_id', couchUser)
+      done()
+
+
+  it 'should not delete \'user\' type entry in lifeswap db', (done) ->
+    mainDb.get _userId, (err, userDoc) ->
+      should.not.exist(err)
+      userDoc.should.eql(_userDoc)
       done()
