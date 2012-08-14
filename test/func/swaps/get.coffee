@@ -25,8 +25,11 @@ describe 'GET /swaps', () ->
       ready()
 
   it 'should provide a list of all the correct swaps', (done) ->
-    request.get 'http://localhost:3001/swaps', (err, res, swaps) ->
+    opts =
+      method: 'GET'
+      url: 'http://localhost:3001/swaps'
+      json: true
+    request opts, (err, res, swaps) ->
       should.not.exist(err)
-      swaps = JSON.parse(swaps)
       swaps.should.eql(swapsNano)
       done()

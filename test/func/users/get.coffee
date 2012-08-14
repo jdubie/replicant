@@ -23,8 +23,11 @@ describe 'GET /users', () ->
       ready()
 
   it 'should provide a list of all the correct users', (done) ->
-    request.get 'http://localhost:3001/users', (err, res, users) ->
+    opts =
+      method: 'GET'
+      url: 'http://localhost:3001/users'
+      json: true
+    request opts, (err, res, users) ->
       should.not.exist(err)
-      users = JSON.parse(users)
       users.should.eql(usersNano)
       done()

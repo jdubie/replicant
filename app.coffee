@@ -6,7 +6,7 @@ request = require('request')
 util = require('util')
 
 {getUserIdFromSession, hash, getUserDbName} = require('./lib/helpers')
-{auth, getUsers, getSwaps, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate} = require('./lib/replicant')
+{auth, getType, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate} = require('./lib/replicant')
 adminNotifications = require('./lib/adminNotifications')
 config = require('./config')
 
@@ -206,15 +206,18 @@ app.post '/users', (req, res) ->
       res.json(err.status ? 500, err)
     else res.json(201, response)       # {name, roles, id}
 
+
 ###
   GET /users
+  GET /swaps
 ###
-app.get '/users', (req, res) ->
-  debug "GET /users"
-  getUsers (err, users) ->
-    debug err, users
-    res.json(200, users)
-    res.end()
+_.each ['users', 'swaps'], (model) ->
+  app.get "/#{model}", (req, res) ->
+    debug "GET /#{model}"
+    getType model, (err, docs) ->
+      debug err, docs
+      res.json(200, docs)
+      res.end()
 
 ###
   GET /users/:id
@@ -246,14 +249,6 @@ app.delete '/users/:id', (req, res) ->
   Swaps
 ###
 
-###
-  GET /swaps
-###
-app.get '/swaps', (req, res) ->
-  debug "GET /swaps"
-  getSwaps (err, swaps) ->
-    debug err, swaps
-    res.json(200, swaps)
 
 ###
   GET /swaps/:id
