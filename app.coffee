@@ -125,10 +125,6 @@ app.post '/user_ctx', (req, res) ->
       res.end()
 
 ###
-  Users
-###
-
-###
   POST /users
   CreateUser
     This creates a user database and preliminary doc after user signups on client
@@ -208,6 +204,16 @@ app.post '/users', (req, res) ->
 
 
 ###
+  POST /swaps
+###
+app.post '/swaps', (req, res) ->
+  debug 'POST /swaps'
+  endpoint = request.post("#{config.dbUrl}/lifeswap")
+  req.pipe(endpoint)
+  endpoint.pipe(res)
+
+
+###
   GET /users
   GET /swaps
 ###
@@ -232,53 +238,28 @@ _.each ['users', 'swaps'], (model) ->
 
 ###
   PUT /users/:id
+  PUT /swaps/:id
 ###
-app.put '/users/:id', (req, res) ->
-  debug "PUT /users/:id"
-  id = req.params.id
-  debug "   id = #{id}"
+_.each ['users', 'swaps'], (model) ->
+  app.put "/#{model}/:id", (req, res) ->
+    debug "PUT /#{model}/:id"
+    id = req.params.id
+    debug "   id = #{id}"
+    endpoint = request.put("#{config.dbUrl}/lifeswap/#{id}")
+    req.pipe(endpoint)
+    endpoint.pipe(res)
 
-  endpoint = request.put("#{config.dbUrl}/lifeswap/#{id}")
-  req.pipe(endpoint)
-  endpoint.pipe(res)
 
 ###
   DELETE /users/:id
-###
-app.delete '/users/:id', (req, res) ->
-  res.send(403)
-
-###
-  Swaps
-###
-
-###
-  POST /swaps
-###
-app.post '/swaps', (req, res) ->
-  debug 'POST /swaps'
-  endpoint = request.post("#{config.dbUrl}/lifeswap")
-  req.pipe(endpoint)
-  endpoint.pipe(res)
-
-
-###
-  PUT /swaps/:id
-###
-app.put '/swaps/:id', (req, res) ->
-  debug "PUT /swaps/:id"
-  id = req.params.id
-  debug "   id = #{id}"
-  endpoint = request.put("#{config.dbUrl}/lifeswap/#{id}")
-  req.pipe(endpoint)
-  endpoint.pipe(res)
-
-
-###
   DELETE /swaps/:id
 ###
-app.delete '/swaps/:id', (req, res) ->
-  res.send(403)
+_.each ['users', 'swaps'], (model) ->
+  app.delete "/#{model}/:id", (req, res) ->
+    debug "DELETE /#{model}/:id"
+    id = req.params.id
+    debug "   id = #{id}"
+    res.send(403)
 
 
 # fire up HTTP server
