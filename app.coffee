@@ -213,34 +213,21 @@ app.post '/swaps', (req, res) ->
   endpoint.pipe(res)
 
 
-###
-  GET /users
-  GET /swaps
-###
 _.each ['users', 'swaps'], (model) ->
+  ## GET /model
   app.get "/#{model}", (req, res) ->
     debug "GET /#{model}"
     getType model, (err, docs) ->
       debug err, docs
       res.json(200, docs)
       res.end()
-
-###
-  GET /users/:id
-  GET /swaps/:id
-###
-_.each ['users', 'swaps'], (model) ->
+  ## GET /model/:id
   app.get "/#{model}/:id", (req, res) ->
     debug "GET /#{model}/:id"
     id = req.params.id
     debug "   id = #{id}"
     request("#{config.dbUrl}/lifeswap/#{id}").pipe(res)
-
-###
-  PUT /users/:id
-  PUT /swaps/:id
-###
-_.each ['users', 'swaps'], (model) ->
+  ## PUT /model/:id
   app.put "/#{model}/:id", (req, res) ->
     debug "PUT /#{model}/:id"
     id = req.params.id
@@ -248,13 +235,7 @@ _.each ['users', 'swaps'], (model) ->
     endpoint = request.put("#{config.dbUrl}/lifeswap/#{id}")
     req.pipe(endpoint)
     endpoint.pipe(res)
-
-
-###
-  DELETE /users/:id
-  DELETE /swaps/:id
-###
-_.each ['users', 'swaps'], (model) ->
+  ## DELETE /model/:id
   app.delete "/#{model}/:id", (req, res) ->
     debug "DELETE /#{model}/:id"
     id = req.params.id
