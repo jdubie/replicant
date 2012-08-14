@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
 
 NODE_PATH=`pwd` \
-  DEBUG=replicant* \
+  DEBUG=* \
     ./node_modules/.bin/coffee app.coffee

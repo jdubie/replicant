@@ -17,84 +17,6 @@ app.use (req, res, next) ->
     express.bodyParser()(req, res, next)
   else
     next()
-###
-  POST /users
-  CreateUser
-    This creates a user database and preliminary doc after user signups on client
-    using user.signup and session.login on client
-    @param session {cookie} authenicates user
-    @method POST
-    @url /users
-
-    userId = getIdFromSession()
-    POST / userId # creates users database
-    POST /userId {firstname, lastname, ...}
-    replicate /userId /lifeswap filter(public)
-###
-app.post '/users', (req, res) ->
-  debug "POST /users"
-  user = req.body
-  {email, password, _id} = user   # extract email and password
-  user_id = _id
-  # delete private data
-  delete user.password
-  delete user.email
-  debug "   email: #{email}"
-
-  name = hash(email)
-  response =
-    name: name
-    roles: []
-    user_id: user_id
-  cookie = null
-
-  async.waterfall [
-    (next) ->
-      ## insert document to _users
-      debug '   insert document to _users'
-      createUnderscoreUser({email, password, user_id}, next)
-
-    (_res, next) ->
-      ## auth to get cookie
-      debug '   auth to get cookie'
-      auth({username: name, password: password}, next)
-
-    (_cookie, next) ->
-      ## create user database
-      debug '   create user database'
-      cookie = _cookie
-      createUserDb({userId: user_id, name: name}, next)
-
-    (_res, next) ->
-      ## create 'user' type document
-      debug "   create 'user' type document"
-      nanoOpts =
-        url: "#{config.dbUrl}/lifeswap"
-        cookie: cookie
-      debug 'nanoOpts', nanoOpts
-      userNano = require('nano')(nanoOpts)
-      userNano.insert(user, user_id, next)
-
-    (_res, headers, next) ->
-      ## create 'email_address' type private document
-      #debug JSON.stringify(_res), headers
-      debug "   create 'email_address' type private document"
-      nanoOpts =
-        url: "#{config.dbUrl}/#{getUserDbName(userId: user_id)}"
-        cookie: cookie
-      userPrivateNano = require('nano')(nanoOpts)
-      emailDoc =
-        type: 'email_address'
-        email_address: email
-        user_id: user_id
-      userPrivateNano.insert(emailDoc, next)
-
-  ], (err, body, headers) ->
-    if err
-      debug '   ERROR', err
-      res.json(err.status ? 500, err)
-    else res.json(201, response)       # {name, roles, id}
-
 
 ###
   POST /events
@@ -195,14 +117,99 @@ app.post '/user_ctx', (req, res) ->
   password = req.body.password
   debug "POST /user_ctx"
   debug "   username: #{username}"
-  auth {username, password}, (err,cookie) ->
+  auth {username, password}, (err, cookie) ->
     if err or not cookie
       res.send(403, 'Invalid credentials')
     else
       res.set('Set-Cookie', cookie)
       res.end()
 
+###
+  Users
+###
 
+###
+  POST /users
+  CreateUser
+    This creates a user database and preliminary doc after user signups on client
+    using user.signup and session.login on client
+    @param session {cookie} authenicates user
+    @method POST
+    @url /users
+
+    userId = getIdFromSession()
+    POST / userId # creates users database
+    POST /userId {firstname, lastname, ...}
+    replicate /userId /lifeswap filter(public)
+###
+app.post '/users', (req, res) ->
+  debug "POST /users"
+  user = req.body
+  {email, password, _id} = user   # extract email and password
+  user_id = _id
+  # delete private data
+  delete user.password
+  delete user.email
+  debug "   email: #{email}"
+
+  name = hash(email)
+  response =
+    name: name
+    roles: []
+    user_id: user_id
+  cookie = null
+
+  async.waterfall [
+    (next) ->
+      ## insert document to _users
+      debug '   insert document to _users'
+      createUnderscoreUser({email, password, user_id}, next)
+
+    (_res, next) ->
+      ## auth to get cookie
+      debug '   auth to get cookie'
+      auth({username: name, password: password}, next)
+
+    (_cookie, next) ->
+      ## create user database
+      debug '   create user database'
+      cookie = _cookie
+      createUserDb({userId: user_id, name: name}, next)
+
+    (_res, next) ->
+      ## create 'user' type document
+      debug "   create 'user' type document"
+      nanoOpts =
+        url: "#{config.dbUrl}/lifeswap"
+        cookie: cookie
+      debug 'nanoOpts', nanoOpts
+      userNano = require('nano')(nanoOpts)
+      userNano.insert(user, user_id, next)
+
+    (_res, headers, next) ->
+      ## create 'email_address' type private document
+      #debug JSON.stringify(_res), headers
+      debug "   create 'email_address' type private document"
+      nanoOpts =
+        url: "#{config.dbUrl}/#{getUserDbName(userId: user_id)}"
+        cookie: cookie
+      userPrivateNano = require('nano')(nanoOpts)
+      emailDoc =
+        type: 'email_address'
+        email_address: email
+        user_id: user_id
+      userPrivateNano.insert(emailDoc, next)
+
+  ], (err, body, headers) ->
+    if err
+      debug '   ERROR', err
+      res.json(err.status ? 500, err)
+    else res.json(201, response)       # {name, roles, id}
+
+
+###
+  GET /users
+###
 app.get '/users', (req, res) ->
   debug "GET /users"
   getUsers (err, users) ->
@@ -210,9 +217,33 @@ app.get '/users', (req, res) ->
     res.json(200, users)
     res.end()
 
-
+###
+  GET /users/:id
+###
 app.get '/users/:id', (req, res) ->
+  debug "GET /users/:id"
+  debug "   id = #{req.params.id}"
   request("http://localhost:5985/lifeswap/#{req.params.id}").pipe(res)
+
+
+###
+  PUT /users/:id
+###
+app.put '/users/:id', (req, res) ->
+  debug "PUT /users/:id"
+  id = req.params.id
+  debug "   id = #{id}"
+
+  endpoint = request.put("http://localhost:5985/lifeswap/#{id}")
+  req.pipe(endpoint)
+  endpoint.pipe(res)
+
+
+###
+  DELETE /users/:id
+###
+app.delete '/users/:id', (req, res) ->
+  res.send(403)
 
 app.get '/swaps', (req, res) ->
   debug "GET /swaps"

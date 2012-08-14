@@ -31,7 +31,7 @@ describe 'POST /users', () ->
     hobo: 'foo'   # make sure 'user' doc is just this
 
 
-  describe 'correct functionality', () ->
+  describe 'correctness:', () ->
 
 
     ##  Start the app

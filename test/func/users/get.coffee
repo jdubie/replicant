@@ -5,17 +5,15 @@ request = require('request')
 {nano} = require('../../../config')
 
 
-describe 'GET /user', () ->
+describe 'GET /users', () ->
 
   usersNano = []
 
-  ###
-    Make sure that user's db doesn't exist
-  ###
   before (ready) ->
     # start webserver
     app = require('../../../app')
 
+    ## get the _correct_ list of users
     db = nano.db.use('lifeswap')
     opts = include_docs: true
     db.view 'lifeswap', 'users', opts, (err, res) ->
