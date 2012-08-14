@@ -274,6 +274,7 @@ app.post '/swaps', (req, res) ->
   req.pipe(endpoint)
   endpoint.pipe(res)
 
+
 ###
   PUT /swaps/:id
 ###
@@ -285,6 +286,12 @@ app.put '/swaps/:id', (req, res) ->
   req.pipe(endpoint)
   endpoint.pipe(res)
 
+
+###
+  DELETE /swaps/:id
+###
+app.delete '/swaps/:id', (req, res) ->
+  res.send(403)
 
 
 # fire up HTTP server

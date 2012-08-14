@@ -3,15 +3,17 @@ async = require('async')
 util = require('util')
 request = require('request')
 
-{nanoAdmin, nano, dbUrl} = require('config')
+{nano, nanoAdmin, dbUrl} = require('config')
 
 
-describe 'PUT /swaps/:id', () ->
+describe 'DELETE /swaps/:id', () ->
 
-  _userId = 'putswapsuser'
+  ## simple test - for now should just 403 (forbidden)
+
+  _userId = 'deleteswapsuser'
   _password = 'sekr1t'
   _swapDoc =
-    _id: 'putswap'
+    _id: 'deleteswap'
     type: 'swap'
     host: _userId
     foo: 'bar'
@@ -75,15 +77,20 @@ describe 'PUT /swaps/:id', () ->
     async.parallel([destroyUser, destroySwap], finished)
 
 
-  it 'should put the swap document correctly', (done) ->
-    _swapDoc.foo = 'c3p0'
+  it 'should return a 403 (forbidden)', (done) ->
     opts =
-      method: 'PUT'
-      url: "http://localhost:3001/swaps/#{_swapDoc._id}"
-      json: _swapDoc
+      method: 'DELETE'
+      url: "http://localhost:3001/swaps/#{_userId}"
+      json: true
       headers: cookie: cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
-      res.body.should.have.property('id', _swapDoc._id)
-      res.statusCode.should.eql(201)
+      res.should.have.property('statusCode', 403)
+      done()
+
+
+  it 'should not delete \'swap\' type entry in lifeswap db', (done) ->
+    mainDb.get _swapDoc._id, (err, swapDoc) ->
+      should.not.exist(err)
+      swapDoc.should.eql(_swapDoc)
       done()
