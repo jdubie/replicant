@@ -265,10 +265,23 @@ app.get '/swaps/:id', (req, res) ->
   request("#{config.dbUrl}/lifeswap/#{id}").pipe(res)
 
 
+###
+  POST /swaps
+###
 app.post '/swaps', (req, res) ->
   debug 'POST /swaps'
-  #debug util.inspect req.headers
   endpoint = request.post("#{config.dbUrl}/lifeswap")
+  req.pipe(endpoint)
+  endpoint.pipe(res)
+
+###
+  PUT /swaps/:id
+###
+app.put '/swaps/:id', (req, res) ->
+  debug "PUT /swaps/:id"
+  id = req.params.id
+  debug "   id = #{id}"
+  endpoint = request.put("#{config.dbUrl}/lifeswap/#{id}")
   req.pipe(endpoint)
   endpoint.pipe(res)
 

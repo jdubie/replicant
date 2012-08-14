@@ -6,13 +6,14 @@ request = require('request')
 {nanoAdmin, nano, dbUrl} = require('config')
 
 
-describe 'PUT /users/:id', () ->
+describe 'PUT /swaps/:id', () ->
 
-  _userId = 'someuser'
+  _userId = 'putswapsuser'
   _password = 'sekr1t'
-  _userDoc =
-    _id: _userId
-    type: 'user'
+  _swapDoc =
+    _id: 'putswap'
+    type: 'swap'
+    host: _userId
     foo: 'bar'
 
   cookie = null
@@ -26,23 +27,15 @@ describe 'PUT /users/:id', () ->
 
     ## insert user
     insertUser = (callback) ->
-      async.parallel [
-        (cb) ->
-          userDoc =
-            _id: "org.couchdb.user:#{_userId}"
-            type: 'user'
-            name: _userId
-            password: _password
-            roles: []
-          usersDb.insert userDoc, (err, res) ->
-            should.not.exist(err)
-            cb()
-        (cb) ->
-          mainDb.insert _userDoc, _userId, (err, res) ->
-            should.not.exist(err)
-            _userDoc._rev = res.rev
-            cb()
-      ], callback
+      userDoc =
+        _id: "org.couchdb.user:#{_userId}"
+        type: 'user'
+        name: _userId
+        password: _password
+        roles: []
+      usersDb.insert userDoc, (err, res) ->
+        should.not.exist(err)
+        callback()
 
     ## authenticate user
     authUser = (callback) ->
@@ -52,34 +45,46 @@ describe 'PUT /users/:id', () ->
         cookie = headers['set-cookie'][0]
         callback()
 
-    async.series([insertUser, authUser], ready)
+    ## insert swap
+    insertSwap = (callback) ->
+      mainDb.insert _swapDoc, (err, res) ->
+        should.not.exist(err)
+        _swapDoc._rev = res.rev
+        callback()
+
+    async.series [
+      insertUser
+      authUser
+      insertSwap
+    ], ready
 
 
   after (finished) ->
+    ## destroy user
     destroyUser = (callback) ->
       couchUser = "org.couchdb.user:#{_userId}"
       usersDb.get couchUser, (err, userDoc) ->
         should.not.exist(err)
         usersDb.destroy(couchUser, userDoc._rev, callback)
-    destroyLifeswapUser = (callback) ->
-      mainDb.get _userId, (err, userDoc) ->
+
+    ## destroy swap
+    destroySwap = (callback) ->
+      mainDb.get _swapDoc._id, (err, swapDoc) ->
         should.not.exist(err)
-        mainDb.destroy(_userId, userDoc._rev, callback)
-    async.parallel [
-      destroyUser
-      destroyLifeswapUser
-    ], finished
+        mainDb.destroy(swapDoc._id, swapDoc._rev, callback)
+
+    async.parallel([destroyUser, destroySwap], finished)
 
 
-  it 'should put the user\'s document correctly', (done) ->
-    _userDoc.foo = 'c3p0'
+  it 'should put the swap document correctly', (done) ->
+    _swapDoc.foo = 'c3p0'
     opts =
       method: 'PUT'
-      url: "http://localhost:3001/users/#{_userId}"
-      json: _userDoc
+      url: "http://localhost:3001/swaps/#{_swapDoc._id}"
+      json: _swapDoc
       headers: cookie: cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
-      res.body.should.have.property('id', _userId)
+      res.body.should.have.property('id', _swapDoc._id)
       res.statusCode.should.eql(201)
       done()
