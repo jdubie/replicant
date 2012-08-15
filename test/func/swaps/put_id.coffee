@@ -84,6 +84,6 @@ describe 'PUT /swaps/:id', () ->
       headers: cookie: cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
-      res.body.should.have.property('id', _swapDoc._id)
       res.statusCode.should.eql(201)
+      body.should.have.keys(['_rev', 'mtime'])
       done()

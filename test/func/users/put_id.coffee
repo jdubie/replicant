@@ -80,6 +80,6 @@ describe 'PUT /users/:id', () ->
       headers: cookie: cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
-      res.body.should.have.property('id', _userId)
       res.statusCode.should.eql(201)
+      body.should.have.keys(['_rev', 'mtime'])
       done()

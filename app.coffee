@@ -15,13 +15,17 @@ app.use(express.static(__dirname + '/public'))
 
 shouldParseBody = (req) ->
   if req.url is '/user_ctx' then return true
-  if req.url is '/users' and req.method in ['POST'] then return true
+  if req.url is '/users' and req.method is 'POST' then return true
   if req.url is '/events' then return true
-  if req.url is '/swaps' and req.method in ['POST'] then return true
+  if req.url is '/swaps' and req.method is 'POST' then return true
+  if /\/swaps\/.*/.test(req.url) and req.method is 'PUT' then return true
+  if /\/users\/.*/.test(req.url) and req.method is 'PUT' then return true
   return false
 
 app.use (req, res, next) ->
-  if shouldParseBody(req) then express.bodyParser()(req, res, next)
+  if shouldParseBody(req)
+    debug 'using body parser'
+    express.bodyParser()(req, res, next)
   else next()
 
 ###
@@ -237,8 +241,7 @@ app.post '/swaps', (req, res) ->
       _rev = body.rev
       ctime = swap.ctime
       mtime = swap.mtime
-      res.json(statusCode, {_rev, ctime, mtime})    # 201
-  ## pass back _rev
+      res.json(statusCode, {_rev, ctime, mtime})
 
 _.each ['users', 'swaps'], (model) ->
   ## GET /model
@@ -248,20 +251,35 @@ _.each ['users', 'swaps'], (model) ->
       debug err, docs
       res.json(200, docs)
       res.end()
+
   ## GET /model/:id
   app.get "/#{model}/:id", (req, res) ->
     debug "GET /#{model}/:id"
     id = req.params.id
     debug "   id = #{id}"
     request("#{config.dbUrl}/lifeswap/#{id}").pipe(res)
+
   ## PUT /model/:id
   app.put "/#{model}/:id", (req, res) ->
     debug "PUT /#{model}/:id"
     id = req.params.id
     debug "   id = #{id}"
-    endpoint = request.put("#{config.dbUrl}/lifeswap/#{id}")
-    req.pipe(endpoint)
-    endpoint.pipe(res)
+
+    doc = req.body
+    mtime = Date.now()
+    doc.mtime = mtime
+    opts =
+      method: 'PUT'
+      url: "#{config.dbUrl}/lifeswap/#{id}"
+      headers: req.headers
+      json: doc
+    request opts, (err, resp, body) ->
+      statusCode = resp.statusCode
+      if statusCode isnt 201 then res.send(statusCode)
+      else
+        _rev = body.rev
+        res.json(statusCode, {_rev, mtime})
+
   ## DELETE /model/:id
   app.delete "/#{model}/:id", (req, res) ->
     debug "DELETE /#{model}/:id"
