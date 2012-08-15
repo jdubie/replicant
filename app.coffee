@@ -225,8 +225,9 @@ app.post '/events', (req, res) ->
 
 
 ###
-  /events
-  /cards
+  Some routes for:
+    /events
+    /cards
 ###
 _.each ['events', 'cards'], (model) ->
   ## GET /model
@@ -251,6 +252,17 @@ _.each ['events', 'cards'], (model) ->
       headers: req.headers
     request(endpoint).pipe(res)
 
+###
+  DELETE
+    /events
+    /cards
+    /messages
+###
+_.each ['events', 'cards', 'messages'], (model) ->
+  app.delete "/#{model}/:id", (req, res) ->
+    id = req.params?.id
+    debug "DELETE /#{model}/#{id}"
+    res.send(403)
 
 ###
   PUT /events/:id
@@ -295,12 +307,6 @@ app.put '/events/:id', (req, res) ->
   ], (err, resp) ->
     if err then res.json(err.statusCode ? 500, err)
     else res.json(201, {_rev, mtime})
-
-
-app.delete '/events/:id', (req, res) ->
-  id = req.params?.id
-  debug "DELETE /events/#{id}"
-  res.send(403)
 
 
 app.post '/messages', (req, res) ->
@@ -367,11 +373,6 @@ app.put '/messages/:id', (req, res) ->
       res.json(statusCode, err)
     else
       res.send(201)
-
-app.delete '/messages/:id', (req, res) ->
-  id = req.params?.id
-  debug "DELETE /messages/#{id}"
-  res.send(403)   # cannot delete sent messages
 
 app.get '/messages', (req, res) ->
   debug "GET /messages"
