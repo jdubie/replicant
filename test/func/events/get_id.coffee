@@ -8,26 +8,18 @@ request = require('request')
 {EVENT_STATE} = require('../../../../lifeswap/userdb/shared/constants')
 
 
-describe 'GET /events', () ->
+describe 'GET /events/:id', () ->
 
   ## from the test/toy data
   _userId = 'user2'
   _password = 'pass2'
   cookie = null
-  _events = [
-    {
-      _id: 'eventid1'
-      type: 'event'
-      state: EVENT_STATE.requested
-      swap_id: 'swap1'
-    }
-    {
-      _id: 'eventid2'
-      type: 'event'
-      state: EVENT_STATE.requested
-      swap_id: 'swap1'
-    }
-  ]
+  _event =
+    _id: 'eventid'
+    type: 'event'
+    state: EVENT_STATE.requested
+    swap_id: 'swap1'
+
 
   mainDb = nanoAdmin.db.use('lifeswap')
   usersDb = nanoAdmin.db.use('_users')
@@ -46,35 +38,31 @@ describe 'GET /events', () ->
           cookie = headers['set-cookie'][0]
           cb()
       ## insert event
-      insertEvent = (event, cb) ->
-        userDb.insert event, event._id, (err, res) ->
-          event._rev = res.rev
+      insertEvent = (cb) ->
+        userDb.insert _event, _event._id, (err, res) ->
+          _event._rev = res.rev
           cb()
-      insertEvents = (cb) -> async.map(_events, insertEvent, cb)
       ## in parallel
       async.parallel [
         authUser
-        insertEvents
+        insertEvent
       ], (err, res) ->
         ready()
 
 
     after (finished) ->
-      ## destroy events
-      destroyEvent = (event, callback) ->
-        userDb.destroy(event._id, event._rev, callback)
-      ## in parallel
-      async.map(_events, destroyEvent, finished)
+      ## destroy event
+      userDb.destroy(_event._id, _event._rev, finished)
 
 
-    it 'should GET all events', (done) ->
+    it 'should GET the event', (done) ->
       opts =
         method: 'GET'
-        url: "http://localhost:3001/events"
+        url: "http://localhost:3001/events/#{_event._id}"
         json: true
         headers: cookie: cookie
       request opts, (err, res, body) ->
         should.not.exist(err)
         res.statusCode.should.eql(200)
-        body.should.eql(_events)
+        body.should.eql(_event)
         done()

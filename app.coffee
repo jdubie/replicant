@@ -29,12 +29,15 @@ app.use (req, res, next) ->
   else next()
 
 
-app.all '/events', (req, res, next) ->
+app.all /^\/events(\/.*)?$/, (req, res, next) ->
   getUserCtxFromSession headers: req.headers, (err, _res) ->
     if err then res.send(403)
     else
-      req.userCtx = _res.userCtx
-      next()
+      userCtx = _res.userCtx
+      if not userCtx or not userCtx.name then res.send(403)
+      else
+        req.userCtx = userCtx
+        next()
 
 
 ###
@@ -220,15 +223,25 @@ app.post '/events', (req, res) ->
 app.get '/events', (req, res) ->
   debug "GET /events"
   userCtx = req.userCtx   # from the app.all route
-  cookie = req.headers?.cookie
-  if not cookie then res.send(403)
-  else
-    getTypeUserDb 'events', userCtx.name, cookie, (err, events) ->
-      if err
-        statusCode = err.status_code ? 500
-        res.json(statusCode, err)
-      else
-        res.json(200, events)
+  cookie = req.headers.cookie
+  getTypeUserDb 'events', userCtx.name, cookie, (err, events) ->
+    if err
+      statusCode = err.status_code ? 500
+      res.json(statusCode, err)
+    else
+      res.json(200, events)
+
+
+app.get '/events/:id', (req, res) ->
+  id = req.params?.id
+  debug "GET /events/#{id}"
+  userCtx = req.userCtx   # from the app.all route
+  userDbName = getUserDbName(userId: userCtx.name)
+
+  endpoint =
+    url: "#{config.dbUrl}/#{userDbName}/#{id}"
+    headers: req.headers
+  request(endpoint).pipe(res)
 
 
 ###
