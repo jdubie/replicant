@@ -5,7 +5,7 @@ debug = require('debug')('replicant:app')
 request = require('request')
 util = require('util')
 
-{getUserIdFromSession, hash, getUserDbName} = require('./lib/helpers')
+{getUserIdFromSession, getUserCtxFromSession, hash, getUserDbName} = require('./lib/helpers')
 {auth, getType, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate} = require('./lib/replicant')
 adminNotifications = require('./lib/adminNotifications')
 config = require('./config')
@@ -16,10 +16,10 @@ app.use(express.static(__dirname + '/public'))
 shouldParseBody = (req) ->
   if req.url is '/user_ctx' then return true
   if req.url is '/users' and req.method is 'POST' then return true
-  if req.url is '/events' then return true
   if req.url is '/swaps' and req.method is 'POST' then return true
-  if /\/swaps\/.*/.test(req.url) and req.method is 'PUT' then return true
-  if /\/users\/.*/.test(req.url) and req.method is 'PUT' then return true
+  if /^\/events(\/.*)?$/.test(req.url) then return true
+  if /^\/swaps\/.*$/.test(req.url) and req.method is 'PUT' then return true
+  if /^\/users\/.*$/.test(req.url) and req.method is 'PUT' then return true
   return false
 
 app.use (req, res, next) ->
@@ -28,101 +28,14 @@ app.use (req, res, next) ->
     express.bodyParser()(req, res, next)
   else next()
 
-###
-  POST /events
-  CreateEvent
-    This service creates a swap event and initializes involved users 
-    @body event {object} event to create
-    @headers cookie {cookie} authenicates user
-    @method POST
 
-    return {_rev, ctime, mtime}
-###
-app.post '/events', (req, res) ->
-  event = req.body    # {_id, type, state, swap_id}
-  ## TODO: validate that event has _id, type, state, swap_id
-  debug "POST /events"
-  debug "   event: #{event}"
-  async.waterfall [
-    (next) ->
-      getUserIdFromSession headers: req.headers, (err, _res) ->
-        if err then next(statusCode: 403)
-        else next(null, _res.userId)
-    (userId, next) ->
-      createEvent({event, userId}, next)
-  ], (err, _res) ->
-    if err then res.send(err.statusCode)
-    else res.send(201, _res)    # {_rev, mtime, ctime}
-
-
-## TODO: have createEvent do _everything_
-#     * createMapping (getGuest, getHost, createMapping)
-#     * create event document -> put in guest db
-#     * trigger replication b/w dbs
-
-
-# GET /events/members
-app.get '/events/members', (req, res) ->
-  # TODO: do we want it as a GET?
-  eventId = req.query.eventId
-  debug "GET /events/members"
-  debug "   eventId: #{eventId}"
-  getUserIdFromSession headers: req.headers, (err, r) ->
-    if err
-      res.json({status: 403, reason: 'User must be logged in'}, 403)
+app.all /^\/events(\/.*)?$/, (req, res, next) ->
+  getUserCtxFromSession headers: req.headers, (err, _res) ->
+    if err then res.send(403)
     else
-      userId = r.userId
-      getEventUsers {eventId}, (e, r) ->
-        # there should only be responses, no errors
-        if e
-          res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
-        else
-          if not (userId in r.users) and not (userId in config.ADMINS)
-            res.json({status: 403, reason: "Not authorized to view this event"}, 403)
-          else
-            res.json(r, 200)
+      req.userCtx = _res.userCtx
+      next()
 
-###
-  POST /events/message
-  ReplicateEventMessage swapEventId, session
-    This service triggers replications between users databases
-    @todo make PUT
-    @possibleName Replicant
-    @param swapEventId {string} id of swap event to filter on
-    @param session {cookie} authenicates user
-    @method POST
-    @url /events/message
-
-    ids = GET /mapper/swapEventId
-    src = getIdFromSession()
-    ids.each (dst) -
-    replicate src, dst, filter(swapEventId)
-###
-app.post '/events/replicate', (req, res) ->
-  eventId = req.body.eventId
-  debug "POST /events/replicate"
-  debug "   eventId: #{eventId}"
-  getUserIdFromSession headers: req.headers, (err, r) ->
-    if err
-      res.json({status: 403, reason: 'User must be logged in'}, 403)
-    else
-      src = r.userId
-      getEventUsers {eventId}, (e, r) ->
-        # 404 or 500
-        if e then res.json(e, e.status)
-        else
-          if not (src in r.users) and not (src in config.ADMINS)
-            res.json({status: 403, reason: "Not authorized to write messages to this event"}, 403)
-          else
-            dsts = r.users
-            for admin in config.ADMINS
-              dsts.push(admin)
-            dsts = _.without(r.users, src)
-            replicate {src, dsts, eventId}, (e, r) ->
-              if e
-                res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
-              else
-                res.json(r, 201)
 
 ###
   Login
@@ -283,6 +196,98 @@ _.each ['users', 'swaps'], (model) ->
     id = req.params.id
     debug "   id = #{id}"
     res.send(403)
+
+###
+  POST /events
+  CreateEvent
+    This service creates a swap event and initializes involved users 
+    @body event {object} event to create
+    @headers cookie {cookie} authenicates user
+    @method POST
+
+    return {_rev, ctime, mtime}
+###
+app.post '/events', (req, res) ->
+  event = req.body    # {_id, type, state, swap_id}
+  userCtx = req.userCtx
+  ## TODO: validate that event has _id, type, state, swap_id
+  debug "POST /events"
+  debug "   event: #{event}"
+  createEvent {event, userId: userCtx.name}, (err, _res) ->
+    if err then res.send(err.statusCode)
+    else res.send(201, _res)    # {_rev, mtime, ctime}
+
+
+###
+# OLD ROUTES
+###
+
+# GET /events/members
+app.get '/events/members', (req, res) ->
+  # TODO: do we want it as a GET?
+  eventId = req.query.eventId
+  debug "GET /events/members"
+  debug "   eventId: #{eventId}"
+  getUserIdFromSession headers: req.headers, (err, r) ->
+    if err
+      res.json({status: 403, reason: 'User must be logged in'}, 403)
+    else
+      userId = r.userId
+      getEventUsers {eventId}, (e, r) ->
+        # there should only be responses, no errors
+        if e
+          res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
+        else
+          if not (userId in r.users) and not (userId in config.ADMINS)
+            res.json({status: 403, reason: "Not authorized to view this event"}, 403)
+          else
+            res.json(r, 200)
+
+###
+  POST /events/message
+  ReplicateEventMessage swapEventId, session
+    This service triggers replications between users databases
+    @todo make PUT
+    @possibleName Replicant
+    @param swapEventId {string} id of swap event to filter on
+    @param session {cookie} authenicates user
+    @method POST
+    @url /events/message
+
+    ids = GET /mapper/swapEventId
+    src = getIdFromSession()
+    ids.each (dst) -
+    replicate src, dst, filter(swapEventId)
+###
+app.post '/events/replicate', (req, res) ->
+  eventId = req.body.eventId
+  debug "POST /events/replicate"
+  debug "   eventId: #{eventId}"
+  getUserIdFromSession headers: req.headers, (err, r) ->
+    if err
+      res.json({status: 403, reason: 'User must be logged in'}, 403)
+    else
+      src = r.userId
+      getEventUsers {eventId}, (e, r) ->
+        # 404 or 500
+        if e then res.json(e, e.status)
+        else
+          if not (src in r.users) and not (src in config.ADMINS)
+            res.json({status: 403, reason: "Not authorized to write messages to this event"}, 403)
+          else
+            dsts = r.users
+            for admin in config.ADMINS
+              dsts.push(admin)
+            dsts = _.without(r.users, src)
+            replicate {src, dsts, eventId}, (e, r) ->
+              if e
+                res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
+              else
+                res.json(r, 201)
+
+###
+# END OLD ROUTES
+###
 
 
 # fire up HTTP server

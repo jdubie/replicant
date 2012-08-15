@@ -43,6 +43,24 @@ helpers.getUserIdFromSession = ({headers}, callback) ->
     else callback(true) # will trigger 403
 
 ###
+  getUserCtxFromSession - helper that gets userCtx from session cookie
+  @params headers {object.<string, {string|object}>} http headers object
+###
+helpers.getUserCtxFromSession = ({headers}, callback) ->
+  unless headers?.cookie? # will trigger 403
+    callback(true)
+    return
+  opts =
+    method: 'get'
+    url: "#{config.dbUrl}/_session"
+    headers: headers
+    json: true
+  request opts, (err, res, body) ->
+    userCtx = body?.userCtx
+    if userCtx? then callback(null, {userCtx})
+    else callback(true) # will trigger 403
+
+###
   @param message {string}
   @return {string}
 ###
