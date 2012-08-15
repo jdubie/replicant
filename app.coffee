@@ -404,25 +404,24 @@ app.get '/messages/:id', (req, res) ->
 ###
 
 # GET /events/members
-app.get '/events/members', (req, res) ->
-  # TODO: do we want it as a GET?
-  eventId = req.query.eventId
-  debug "GET /events/members"
-  debug "   eventId: #{eventId}"
-  getUserIdFromSession headers: req.headers, (err, r) ->
-    if err
-      res.json({status: 403, reason: 'User must be logged in'}, 403)
-    else
-      userId = r.userId
-      getEventUsers {eventId}, (e, r) ->
-        # there should only be responses, no errors
-        if e
-          res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
-        else
-          if not (userId in r.users) and not (userId in config.ADMINS)
-            res.json({status: 403, reason: "Not authorized to view this event"}, 403)
-          else
-            res.json(r, 200)
+#app.get '/events/members', (req, res) ->
+#  eventId = req.query.eventId
+#  debug "GET /events/members"
+#  debug "   eventId: #{eventId}"
+#  getUserIdFromSession headers: req.headers, (err, r) ->
+#    if err
+#      res.json({status: 403, reason: 'User must be logged in'}, 403)
+#    else
+#      userId = r.userId
+#      getEventUsers {eventId}, (e, r) ->
+#        # there should only be responses, no errors
+#        if e
+#          res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
+#        else
+#          if not (userId in r.users) and not (userId in config.ADMINS)
+#            res.json({status: 403, reason: "Not authorized to view this event"}, 403)
+#          else
+#            res.json(r, 200)
 
 ###
   POST /events/message
@@ -440,31 +439,31 @@ app.get '/events/members', (req, res) ->
     ids.each (dst) -
     replicate src, dst, filter(swapEventId)
 ###
-app.post '/events/replicate', (req, res) ->
-  eventId = req.body.eventId
-  debug "POST /events/replicate"
-  debug "   eventId: #{eventId}"
-  getUserIdFromSession headers: req.headers, (err, r) ->
-    if err
-      res.json({status: 403, reason: 'User must be logged in'}, 403)
-    else
-      src = r.userId
-      getEventUsers {eventId}, (e, r) ->
-        # 404 or 500
-        if e then res.json(e, e.status)
-        else
-          if not (src in r.users) and not (src in config.ADMINS)
-            res.json({status: 403, reason: "Not authorized to write messages to this event"}, 403)
-          else
-            dsts = r.users
-            for admin in config.ADMINS
-              dsts.push(admin)
-            dsts = _.without(r.users, src)
-            replicate {src, dsts, eventId}, (e, r) ->
-              if e
-                res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
-              else
-                res.json(r, 201)
+#app.post '/events/replicate', (req, res) ->
+#  eventId = req.body.eventId
+#  debug "POST /events/replicate"
+#  debug "   eventId: #{eventId}"
+#  getUserIdFromSession headers: req.headers, (err, r) ->
+#    if err
+#      res.json({status: 403, reason: 'User must be logged in'}, 403)
+#    else
+#      src = r.userId
+#      getEventUsers {eventId}, (e, r) ->
+#        # 404 or 500
+#        if e then res.json(e, e.status)
+#        else
+#          if not (src in r.users) and not (src in config.ADMINS)
+#            res.json({status: 403, reason: "Not authorized to write messages to this event"}, 403)
+#          else
+#            dsts = r.users
+#            for admin in config.ADMINS
+#              dsts.push(admin)
+#            dsts = _.without(r.users, src)
+#            replicate {src, dsts, eventId}, (e, r) ->
+#              if e
+#                res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
+#              else
+#                res.json(r, 201)
 
 ###
 # END OLD ROUTES
