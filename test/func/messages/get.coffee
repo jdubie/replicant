@@ -35,6 +35,7 @@ describe 'GET /messages', () ->
     _id: "getmessagesreaddoc"
     type: "read"
     message_id: "getmessages1"
+    event_id: _messages[0].event_id
 
   mainDb = nanoAdmin.db.use('lifeswap')
 

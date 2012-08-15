@@ -302,7 +302,6 @@ app.delete '/events/:id', (req, res) ->
 
 
 app.post '/messages', (req, res) ->
-  ## TODO: write 'read' message to self
   debug "POST /message"
   userCtx = req.userCtx   # from the app.all route
   userDbName = getUserDbName(userId: userCtx.name)
@@ -322,12 +321,23 @@ app.post '/messages', (req, res) ->
         json: message
       request(opts, next) # (err, resp, body)
     (resp, body, next) ->
-      debug 'get users'
+      debug 'mark message read'
       statusCode = resp.statusCode
       if statusCode isnt 201 then next(statusCode: statusCode)
       else
         _rev = body.rev
-        getEventUsers({eventId}, next)  # (err, users)
+        opts =
+          method: 'POST'
+          url: "#{config.dbUrl}/#{userDbName}"
+          headers: req.headers
+          json:
+            type: 'read'
+            message_id: message._id
+            event_id: message.event_id
+        request(opts, next) # (err, resp, body)
+    (resp, body, next) ->
+      debug 'get users'
+      getEventUsers({eventId}, next)  # (err, users)
     (users, next) ->
       debug 'replicate'
       src = userCtx.name

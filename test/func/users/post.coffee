@@ -69,9 +69,7 @@ describe 'POST /users', () ->
         json: _userDoc
       request opts, (err, res, body) ->
         should.not.exist(err)
-        #res.statusCode.should.equal(201)
         res.statusCode.should.eql(201)
-        #res.body.should.have.property('ok', true)
         body.should.have.keys(['name', 'roles', 'user_id'])
         body.name.should.eql(_emailHash)
         body.roles.should.eql([])
