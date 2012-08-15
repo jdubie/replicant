@@ -6,7 +6,7 @@ request = require('request')
 util = require('util')
 
 {getUserIdFromSession, getUserCtxFromSession, hash, getUserDbName} = require('./lib/helpers')
-{auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate, getMessages} = require('./lib/replicant')
+{auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate, getMessages, markReadStatus} = require('./lib/replicant')
 adminNotifications = require('./lib/adminNotifications')
 config = require('./config')
 
@@ -22,6 +22,7 @@ shouldParseBody = (req) ->
   if /^\/swaps\/.*$/.test(req.url) and req.method is 'PUT' then return true
   if /^\/users\/.*$/.test(req.url) and req.method is 'PUT' then return true
   if /^\/events\/.*$/.test(req.url) and req.method is 'PUT' then return true
+  if /^\/messages\/.*$/.test(req.url) and req.method is 'PUT' then return true
   return false
 
 app.use (req, res, next) ->
@@ -353,10 +354,18 @@ app.post '/messages', (req, res) ->
 
 
 app.put '/messages/:id', (req, res) ->
-  ## _allow_ change only when read => true (write 'read' doc)
+  ## TODO: _allow_ change only when read => true (write 'read' doc)
   id = req.params?.id
   debug "PUT /messages/#{id}"
-  res.send(403)   # cannot modify sent messages
+  userCtx = req.userCtx
+  cookie = req.headers.cookie
+  message = req.body
+  markReadStatus message, userCtx.name, cookie, (err, _res) ->
+    if err
+      statusCode = err.statusCode ? err.status_code ? 500
+      res.json(statusCode, err)
+    else
+      res.send(201)
 
 app.delete '/messages/:id', (req, res) ->
   id = req.params?.id
@@ -364,14 +373,21 @@ app.delete '/messages/:id', (req, res) ->
   res.send(403)   # cannot delete sent messages
 
 app.get '/messages', (req, res) ->
+  debug "GET /messages"
   userCtx =  req.userCtx
   cookie = req.headers.cookie
   getMessages userCtx.name, cookie, (err, events) ->
     if err
-      statusCode = err.status_code ? 500
+      statusCode = err.statusCode ? err.status_code ? 500
       res.json(statusCode, err)
     else
       res.json(200, events)
+
+## TODO:
+#   * PUT /messages/:id = allow 'marking' as read/unread
+#   * GET /messages/:id
+#   * other endpoints:
+#     * cards, email_addresses, phone_numbers
 
 ###
 # OLD ROUTES
