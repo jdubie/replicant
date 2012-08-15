@@ -343,7 +343,10 @@ app.put '/messages/:id', (req, res) ->
   id = req.params?.id
   debug "PUT /messages/#{id}"
   res.send(403)   # cannot modify sent messages
-
+app.delete '/messages/:id', (req, res) ->
+  id = req.params?.id
+  debug "DELETE /messages/#{id}"
+  res.send(403)   # cannot delete sent messages
 
 
 
