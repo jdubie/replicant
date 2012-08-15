@@ -7,7 +7,7 @@ request = require('request')
 {getUserDbName} = require('lib/helpers')
 
 
-describe 'POST /messages', () ->
+describe 'PUT /messages/:id', () ->
 
   ## from the test/toy data
   _userId = 'user2'
@@ -18,15 +18,14 @@ describe 'POST /messages', () ->
   _allUsers.push(user) for user in ADMINS
 
   _message =
-    _id: 'postmessage'
+    _id: 'putmessageid'
     type: 'message'
     message: 'Hey bro'
-    event_id: 'postmessageeventid'
+    event_id: 'putmessageeventid'
     author: _userId
 
   mainDb = nanoAdmin.db.use('lifeswap')
   mapperDb = nanoAdmin.db.use('mapper')
-
 
   describe 'correctness:', () ->
 
@@ -46,13 +45,21 @@ describe 'POST /messages', () ->
           _id: _message.event_id
           users: _members
         mapperDb.insert(mapperDoc, mapperDoc._id, cb)
+      ## put message into user DBs
+      insertMessage = (userId, cb) ->
+        userDb = nanoAdmin.db.use(getUserDbName({userId}))
+        userDb.insert _message, _message._id, (err, res) ->
+          if not err then _message._rev = res.rev
+          cb()
+      ## in parallel
       async.parallel [
         authUser
         insertMapping
+        (cb) -> async.map(_allUsers, insertMessage, cb)
       ], ready
 
     after (finished) ->
-      ## destroy message (in both user's DBs)
+      ## destroy message (in all users' DBs)
       destroyEventUser = (userId, cb) ->
         userDb = nanoAdmin.db.use(getUserDbName({userId}))
         #userDb.destroy(_message._id, _message._rev, cb)
@@ -73,21 +80,21 @@ describe 'POST /messages', () ->
       ], finished
 
 
-    it 'should POST without failure', (done) ->
+    it 'should respond with 403 to PUT /messages', (done) ->
+      oldMessage = _message.message
+      _message.message = 'blaggedy'
       opts =
-        method: 'POST'
-        url: "http://localhost:3001/messages"
+        method: 'PUT'
+        url: "http://localhost:3001/messages/#{_message._id}"
         json: _message
         headers: cookie: cookie
       request opts, (err, res, body) ->
         should.not.exist(err)
-        res.statusCode.should.eql(201)
-        body.should.have.keys(['_rev', 'ctime'])
-        for key, val of body
-          _message[key] = val
+        res.statusCode.should.eql(403)
+        _message.message = oldMessage
         done()
 
-    it 'should replicate the message to all involved users', (done) ->
+    it 'should not change message for any involved users', (done) ->
       checkMessageDoc = (userId, callback) ->
         userDbName = getUserDbName({userId})
         userDb = nanoAdmin.db.use(userDbName)

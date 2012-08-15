@@ -295,7 +295,7 @@ app.put '/events/:id', (req, res) ->
 
 app.delete '/events/:id', (req, res) ->
   id = req.params?.id
-  debug "DELETE /#{model}/#{id}"
+  debug "DELETE /events/#{id}"
   res.send(403)
 
 
@@ -337,6 +337,14 @@ app.post '/messages', (req, res) ->
   ], (err, resp) ->
     if err then res.json(err.statusCode ? 500, err)
     else res.json(201, {_rev, ctime})
+
+
+app.put '/messages/:id', (req, res) ->
+  id = req.params?.id
+  debug "PUT /messages/#{id}"
+  res.send(403)   # cannot modify sent messages
+
+
 
 
 ###
