@@ -293,6 +293,28 @@ replicant.getMessages = (userId, cookie, callback) ->
     else async.map(res.rows, getMessageDoc, callback)  # messages
 
 
+## gets a message and tacks on its 'read' status (true/false)
+replicant.getMessage = (messageId, userId, cookie, callback) ->
+  userDbName = getUserDbName(userId: userId)
+  nanoOpts =
+    url: "#{dbUrl}/#{userDbName}"
+    cookie: cookie
+  db = require('nano')(nanoOpts)
+  message = null
+  async.waterfall [
+    (next) -> db.get(messageId, next)
+    (_message, headers, next) ->
+      message = _message
+      opts = key: [message.event_id, message._id]
+      db.view('userddoc', 'messages', opts, next)
+    (res, headers, next) ->
+      if res.rows.length < 1 then next(statusCode: 404)
+      else
+        message.read = if res.rows[0].value is 1 then false else true
+        next(null, message)
+  ], callback   # (err, message)
+
+
 module.exports = replicant
 
 # shut down SMTP connection

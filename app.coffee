@@ -6,7 +6,7 @@ request = require('request')
 util = require('util')
 
 {getUserIdFromSession, getUserCtxFromSession, hash, getUserDbName} = require('./lib/helpers')
-{auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate, getMessages, markReadStatus} = require('./lib/replicant')
+{auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate, getMessages, getMessage, markReadStatus} = require('./lib/replicant')
 adminNotifications = require('./lib/adminNotifications')
 config = require('./config')
 
@@ -376,18 +376,28 @@ app.get '/messages', (req, res) ->
   debug "GET /messages"
   userCtx =  req.userCtx
   cookie = req.headers.cookie
-  getMessages userCtx.name, cookie, (err, events) ->
+  getMessages userCtx.name, cookie, (err, messages) ->
     if err
       statusCode = err.statusCode ? err.status_code ? 500
       res.json(statusCode, err)
     else
-      res.json(200, events)
+      res.json(200, messages)
+
+app.get '/messages/:id', (req, res) ->
+  id = req.params?.id
+  debug "GET /messages/#{id}"
+  userCtx =  req.userCtx
+  cookie = req.headers.cookie
+  getMessage id, userCtx.name, cookie, (err, message) ->
+    if err
+      statusCode = err.statusCode ? err.status_code ? 500
+      res.json(statusCode, err)
+    else
+      res.json(200, message)
+
 
 ## TODO:
-#   * PUT /messages/:id = allow 'marking' as read/unread
-#   * GET /messages/:id
-#   * other endpoints:
-#     * cards, email_addresses, phone_numbers
+#   * cards, email_addresses, phone_numbers
 
 ###
 # OLD ROUTES
