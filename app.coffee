@@ -37,7 +37,7 @@ app.use (req, res, next) ->
     express.bodyParser()(req, res, next)
   else next()
 
-userCtxRegExp = /^\/(events|messages|cards|email_addressses)(\/.*)?$/
+userCtxRegExp = /^\/(events|messages|cards|email_addresses)(\/.*)?$/
 app.all userCtxRegExp, (req, res, next) ->
   getUserCtxFromSession headers: req.headers, (err, _res) ->
     if err then res.send(403)
@@ -235,7 +235,7 @@ app.post '/events', (req, res) ->
     /events
     /cards
 ###
-_.each ['events', 'cards'], (model) ->
+_.each ['events', 'cards', 'email_addresses'], (model) ->
   ## GET /model
   app.get "/#{model}", (req, res) ->
     debug "GET /#{model}"
@@ -264,58 +264,59 @@ _.each ['events', 'cards'], (model) ->
     /cards
     /messages
 ###
-_.each ['events', 'cards', 'messages'], (model) ->
+_.each ['events', 'cards', 'messages', 'email_addresses'], (model) ->
   app.delete "/#{model}/:id", (req, res) ->
     id = req.params?.id
     debug "DELETE /#{model}/#{id}"
     res.send(403)
 
 ###
-  PUT /cards/:id
+  /cards/:id
+  /email_addresses/:id
 ###
-app.put "/cards/:id", (req, res) ->
-  id = req.params?.id
-  debug "PUT /cards/#{id}"
-  userCtx = req.userCtx   # from the app.all route
-  userDbName = getUserDbName(userId: userCtx.name)
-  card = req.body
-  mtime = Date.now()
-  card.mtime = mtime
-  opts =
-    method: 'PUT'
-    url: "#{config.dbUrl}/#{userDbName}/#{id}"
-    headers: req.headers
-    json: card
-  request opts, (err, resp, body) ->
-    statusCode = resp.statusCode
-    if statusCode isnt 201 then res.send(statusCode)
-    else
-      _rev = body.rev
-      res.json(statusCode, {_rev, mtime})
+_.each ['cards', 'email_addresses'], (model) ->
+  ## POST /models
+  app.post "/#{model}", (req, res) ->
+    debug "PUT /#{model}"
+    userCtx = req.userCtx   # from the app.all route
+    userDbName = getUserDbName(userId: userCtx.name)
+    doc = req.body
+    ctime = Date.now()
+    mtime = ctime
+    doc.ctime = ctime
+    doc.mtime = mtime
+    opts =
+      method: 'POST'
+      url: "#{config.dbUrl}/#{userDbName}"
+      headers: req.headers
+      json: doc
+    request opts, (err, resp, body) ->
+      statusCode = resp.statusCode
+      if statusCode isnt 201 then res.send(statusCode)
+      else
+        _rev = body.rev
+        res.json(statusCode, {_rev, mtime, ctime})
+  ## PUT /models/:id
+  app.put "/#{model}/:id", (req, res) ->
+    id = req.params?.id
+    debug "PUT /#{model}/#{id}"
+    userCtx = req.userCtx   # from the app.all route
+    userDbName = getUserDbName(userId: userCtx.name)
+    doc = req.body
+    mtime = Date.now()
+    doc.mtime = mtime
+    opts =
+      method: 'PUT'
+      url: "#{config.dbUrl}/#{userDbName}/#{id}"
+      headers: req.headers
+      json: doc
+    request opts, (err, resp, body) ->
+      statusCode = resp.statusCode
+      if statusCode isnt 201 then res.send(statusCode)
+      else
+        _rev = body.rev
+        res.json(statusCode, {_rev, mtime})
 
-###
-  POST /cards/:id
-###
-app.post "/cards", (req, res) ->
-  debug "PUT /cards"
-  userCtx = req.userCtx   # from the app.all route
-  userDbName = getUserDbName(userId: userCtx.name)
-  card = req.body
-  ctime = Date.now()
-  mtime = ctime
-  card.ctime = ctime
-  card.mtime = mtime
-  opts =
-    method: 'POST'
-    url: "#{config.dbUrl}/#{userDbName}"
-    headers: req.headers
-    json: card
-  request opts, (err, resp, body) ->
-    statusCode = resp.statusCode
-    if statusCode isnt 201 then res.send(statusCode)
-    else
-      _rev = body.rev
-      res.json(statusCode, {_rev, mtime, ctime})
 
 ###
   PUT /events/:id

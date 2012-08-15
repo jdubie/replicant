@@ -7,17 +7,16 @@ request = require('request')
 {getUserDbName} = require('lib/helpers')
 
 
-describe 'DELETE /cards/:id', () ->
+describe 'DELETE /email_addresses/:id', () ->
 
   ## simple test - for now should just 403 (forbidden)
   _userId = 'user2'
   _password = 'pass2'
   cookie = null
-  _card =
-    _id: 'deletecardid'
-    type: 'card'
+  _email =
+    _id: 'deleteemailid'
+    type: 'email_address'
 
-  mainDb = nanoAdmin.db.use('lifeswap')
   userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
 
   before (ready) ->
@@ -30,27 +29,27 @@ describe 'DELETE /cards/:id', () ->
         should.exist(headers and headers['set-cookie'])
         cookie = headers['set-cookie'][0]
         callback()
-    ## insert card
-    insertCard = (cb) ->
-      userDb.insert _card, _card._id, (err, res) ->
-        _card._rev = res.rev
+    ## insert email
+    insertEmail = (cb) ->
+      userDb.insert _email, _email._id, (err, res) ->
+        _email._rev = res.rev
         cb()
 
     async.parallel [
       authUser
-      insertCard
+      insertEmail
     ], ready
 
 
   after (finished) ->
-    ## destroy card
-    userDb.destroy(_card._id, _card._rev, finished)
+    ## destroy email
+    userDb.destroy(_email._id, _email._rev, finished)
 
 
   it 'should return a 403 (forbidden)', (done) ->
     opts =
       method: 'DELETE'
-      url: "http://localhost:3001/cards/#{_userId}"
+      url: "http://localhost:3001/email_addresses/#{_userId}"
       json: true
       headers: cookie: cookie
     request opts, (err, res, body) ->
@@ -59,8 +58,8 @@ describe 'DELETE /cards/:id', () ->
       done()
 
 
-  it 'should not delete \'card\' type entry in user db', (done) ->
-    userDb.get _card._id, (err, card) ->
+  it 'should not delete \'email_address\' type entry in user db', (done) ->
+    userDb.get _email._id, (err, email) ->
       should.not.exist(err)
-      card.should.eql(_card)
+      email.should.eql(_email)
       done()

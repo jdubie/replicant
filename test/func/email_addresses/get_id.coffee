@@ -7,60 +7,57 @@ request = require('request')
 {getUserDbName} = require('lib/helpers')
 
 
-describe 'DELETE /cards/:id', () ->
+describe 'GET /email_addresses/:id', () ->
 
-  ## simple test - for now should just 403 (forbidden)
+  ## from the test/toy data
   _userId = 'user2'
   _password = 'pass2'
   cookie = null
-  _card =
-    _id: 'deletecardid'
-    type: 'card'
+  _email =
+    _id: 'emailid'
+    type: 'email_address'
 
   mainDb = nanoAdmin.db.use('lifeswap')
+  usersDb = nanoAdmin.db.use('_users')
   userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
+
 
   before (ready) ->
     ## start webserver
     app = require('app')
     ## authenticate user
-    authUser = (callback) ->
+    authUser = (cb) ->
       nano.auth _userId, _password, (err, body, headers) ->
         should.not.exist(err)
         should.exist(headers and headers['set-cookie'])
         cookie = headers['set-cookie'][0]
-        callback()
-    ## insert card
-    insertCard = (cb) ->
-      userDb.insert _card, _card._id, (err, res) ->
-        _card._rev = res.rev
         cb()
-
+    ## insert email
+    insertCard = (cb) ->
+      userDb.insert _email, _email._id, (err, res) ->
+        _email._rev = res.rev
+        cb()
+    ## in parallel
     async.parallel [
       authUser
       insertCard
-    ], ready
+    ], (err, res) ->
+      ready()
 
 
   after (finished) ->
-    ## destroy card
-    userDb.destroy(_card._id, _card._rev, finished)
+    ## destroy email
+    userDb.destroy(_email._id, _email._rev, finished)
 
 
-  it 'should return a 403 (forbidden)', (done) ->
+  it 'should GET the email_address', (done) ->
     opts =
-      method: 'DELETE'
-      url: "http://localhost:3001/cards/#{_userId}"
+      method: 'GET'
+      url: "http://localhost:3001/email_addresses/#{_email._id}"
       json: true
       headers: cookie: cookie
-    request opts, (err, res, body) ->
+    request opts, (err, res, email) ->
       should.not.exist(err)
-      res.should.have.property('statusCode', 403)
-      done()
-
-
-  it 'should not delete \'card\' type entry in user db', (done) ->
-    userDb.get _card._id, (err, card) ->
-      should.not.exist(err)
-      card.should.eql(_card)
+      res.statusCode.should.eql(200)
+      email.should.eql(_email)
       done()

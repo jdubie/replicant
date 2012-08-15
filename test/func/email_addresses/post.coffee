@@ -6,13 +6,13 @@ request = require('request')
 {getUserDbName} = require('lib/helpers')
 
 
-describe 'POST /cards', () ->
+describe 'POST /email_addresses', () ->
 
   _userId = 'user2'
   _password = 'pass2'
-  _card =
-    _id: 'postcardsid'
-    type: 'card'
+  _email =
+    _id: 'postemailaddressesid'
+    type: 'email_address'
     baz: 'bar'
 
   cookie = null
@@ -30,19 +30,19 @@ describe 'POST /cards', () ->
 
 
   after (finished) ->
-    ## destroy card
-    userDb.get _card._id, (err, card) ->
+    ## destroy email
+    userDb.get _email._id, (err, email) ->
       should.not.exist(err)
-      userDb.destroy(card._id, card._rev, finished)
+      userDb.destroy(email._id, email._rev, finished)
 
-  it 'should POST the card correctly', (done) ->
+  it 'should POST the email address correctly', (done) ->
     opts =
       method: 'POST'
-      url: "http://localhost:3001/cards"
-      json: _card
+      url: "http://localhost:3001/email_addresses"
+      json: _email
       headers: cookie: cookie
-    request opts, (err, res, card) ->
+    request opts, (err, res, email) ->
       should.not.exist(err)
       res.statusCode.should.eql(201)
-      card.should.have.keys(['_rev', 'mtime', 'ctime'])
+      email.should.have.keys(['_rev', 'mtime', 'ctime'])
       done()
