@@ -169,9 +169,10 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
   opts =
     create_target: true
     query_params: {eventId}
-    filter: "#{userDdocName}/eventFilter"
+    filter: "#{userDdocName}/event_filter"
   params = _.map dsts, (dst) ->
     return {src, dst, opts}
+  debug 'replicating', src, dsts
   replicateEach = ({src,dst,opts}, cb) ->
     nanoAdmin.db.replicate(src, dst, opts, cb)
   async.map params, replicateEach, (err, res) ->
@@ -202,7 +203,6 @@ replicant.getType = (type, callback) ->
   db = nanoAdmin.db.use('lifeswap')
   opts = include_docs: true
   db.view 'lifeswap', type, opts, (err, res) ->
-    debug err, res
     if not err then docs = (row.doc for row in res.rows)
     callback(err, docs)
 

@@ -18,6 +18,7 @@ shouldParseBody = (req) ->
   if req.url is '/users' and req.method is 'POST' then return true
   if req.url is '/swaps' and req.method is 'POST' then return true
   if req.url is '/events' and req.method is 'POST' then return true
+  if req.url is '/messages' and req.method is 'POST' then return true
   if /^\/swaps\/.*$/.test(req.url) and req.method is 'PUT' then return true
   if /^\/users\/.*$/.test(req.url) and req.method is 'PUT' then return true
   if /^\/events\/.*$/.test(req.url) and req.method is 'PUT' then return true
@@ -30,7 +31,7 @@ app.use (req, res, next) ->
   else next()
 
 
-app.all /^\/events(\/.*)?$/, (req, res, next) ->
+app.all /^\/(events|messages)(\/.*)?$/, (req, res, next) ->
   getUserCtxFromSession headers: req.headers, (err, _res) ->
     if err then res.send(403)
     else
@@ -296,6 +297,47 @@ app.delete '/events/:id', (req, res) ->
   id = req.params?.id
   debug "DELETE /#{model}/#{id}"
   res.send(403)
+
+
+app.post '/messages', (req, res) ->
+  debug "POST /message"
+  userCtx = req.userCtx   # from the app.all route
+  userDbName = getUserDbName(userId: userCtx.name)
+  message = req.body
+  ctime = Date.now()
+  message.ctime = ctime
+  _rev = null
+  eventId = message.event_id
+
+  async.waterfall [
+    (next) ->
+      debug 'post message'
+      opts =
+        method: 'POST'
+        url: "#{config.dbUrl}/#{userDbName}"
+        headers: req.headers
+        json: message
+      request(opts, next) # (err, resp, body)
+    (resp, body, next) ->
+      debug 'get users'
+      statusCode = resp.statusCode
+      if statusCode isnt 201 then next(statusCode: statusCode)
+      else
+        _rev = body.rev
+        getEventUsers({eventId}, next)  # (err, users)
+    (users, next) ->
+      debug 'replicate'
+      src = userCtx.name
+      if not (src in users) and not (src in config.ADMINS)
+        next(statusCode: 403, reason: "Not authorized to write messages to this event")
+      else
+        users.push(admin) for admin in config.ADMINS
+        dsts = _.without(users, src)
+        replicate({src, dsts, eventId}, next)   # (err, resp)
+  ], (err, resp) ->
+    if err then res.json(err.statusCode ? 500, err)
+    else res.json(201, {_rev, ctime})
+
 
 ###
 # OLD ROUTES
