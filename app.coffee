@@ -55,7 +55,7 @@ app.post '/events', (req, res) ->
       createEvent({event, userId}, next)
   ], (err, _res) ->
     if err then res.send(err.statusCode)
-    else res.send(201, {})
+    else res.send(201, _res)    # {_rev, mtime}
 
 
 ## TODO: have createEvent do _everything_

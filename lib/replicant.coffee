@@ -91,13 +91,17 @@ replicant.createUserDb = ({userId, name}, callback) ->
 ###
 replicant.createEvent = ({event, userId}, callback) ->
 
+  _rev = null
+  mtime = Date.now()
+  event.mtime = mtime
+
   createEventDoc = (userId, cb) ->
     # @todo replace with getting this from cookies
     userDbName = getUserDbName(userId: userId)
     userDb = nanoAdmin.db.use(userDbName)
     userDb.insert(event, event._id, cb)
 
-  getMembers = (res, hdr, next) ->
+  getMembers = (next) ->
     debug 'getMembers'
     db = nanoAdmin.db.use('lifeswap')
     db.get event.swap_id, (err, swapDoc) ->
@@ -105,6 +109,7 @@ replicant.createEvent = ({event, userId}, callback) ->
       otherUsers.push(admin) for admin in ADMINS
       next(err, otherUsers)
 
+  ## OR could just replicate from original user to these users
   createDocs = (otherUsers, next) ->
     ## create doc in mapping DB
     createMapping = (cb) ->
@@ -123,12 +128,17 @@ replicant.createEvent = ({event, userId}, callback) ->
     async.parallel([createMapping, createEventDocs], next)
 
   async.waterfall [
-    (next) -> createEventDoc(userId, next)
+    (next) -> createEventDoc userId, (err, res) ->
+      _rev = res.rev
+      next()
     getMembers
     createDocs
   ], (err, res) ->
-    if err then err.statusCode = err.status_code if err.status_code else 500
-    callback(err, res)
+    if err
+      err.statusCode = err.status_code if err.status_code else 500
+      callback(err)
+    else
+      callback(null, {_rev, mtime})
 
 
 ###

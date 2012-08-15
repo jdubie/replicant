@@ -72,7 +72,9 @@ describe 'POST /events', () ->
       request opts, (err, res, body) ->
         should.not.exist(err)
         res.statusCode.should.eql(201)
-        body.should.eql({})
+        body.should.have.keys(['_rev', 'mtime'])
+        _event._rev = body._rev
+        _event.mtime = body.mtime
         done()
 
     it 'should create an event in the \'mapper\' DB', (done) ->
@@ -88,7 +90,6 @@ describe 'POST /events', () ->
         userDb = nanoAdmin.db.use(userDbName)
         userDb.get eventId, (err, eventDoc) ->
           should.not.exist(err)
-          _event._rev = eventDoc._rev
           eventDoc.should.eql(_event)
           callback()
       async.map _members, checkEventDoc, (err, res) ->
