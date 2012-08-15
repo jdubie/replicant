@@ -36,5 +36,7 @@ describe 'POST /swaps', () ->
       json: _swapDoc
     request opts, (err, res, body) ->
       should.not.exist(err)
-      _swapDoc._rev = body.rev
+      body.should.have.keys(['_rev', 'mtime', 'ctime'])
+      for key, val of body
+        _swapDoc[key] = val
       done()

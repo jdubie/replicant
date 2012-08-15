@@ -12,11 +12,17 @@ config = require('./config')
 
 app = express()
 app.use(express.static(__dirname + '/public'))
+
+shouldParseBody = (req) ->
+  if req.url is '/user_ctx' then return true
+  if req.url is '/users' and req.method in ['POST'] then return true
+  if req.url is '/events' then return true
+  if req.url is '/swaps' and req.method in ['POST'] then return true
+  return false
+
 app.use (req, res, next) ->
-  if req.url is '/user_ctx' or (req.url is '/users' and req.method is 'POST') or req.url is '/events'
-    express.bodyParser()(req, res, next)
-  else
-    next()
+  if shouldParseBody(req) then express.bodyParser()(req, res, next)
+  else next()
 
 ###
   POST /events
@@ -216,10 +222,23 @@ app.post '/users', (req, res) ->
 ###
 app.post '/swaps', (req, res) ->
   debug 'POST /swaps'
-  endpoint = request.post("#{config.dbUrl}/lifeswap")
-  req.pipe(endpoint)
-  endpoint.pipe(res)
-
+  swap = req.body
+  swap.ctime = Date.now()
+  swap.mtime = swap.ctime
+  opts =
+    method: 'POST'
+    url: "#{config.dbUrl}/lifeswap"
+    headers: req.headers
+    json: swap
+  request opts, (err, resp, body) ->
+    statusCode = resp.statusCode
+    if statusCode isnt 201 then res.send(statusCode)
+    else
+      _rev = body.rev
+      ctime = swap.ctime
+      mtime = swap.mtime
+      res.json(statusCode, {_rev, ctime, mtime})    # 201
+  ## pass back _rev
 
 _.each ['users', 'swaps'], (model) ->
   ## GET /model
