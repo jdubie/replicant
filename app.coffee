@@ -31,15 +31,12 @@ app.use (req, res, next) ->
 ###
   POST /events
   CreateEvent
-    This service creates a swapEventId and initializes involed users 
-    @param swapId {string} swap for which swapEvent is being created
-    @param session {cookie} authenicates user
+    This service creates a swap event and initializes involved users 
+    @body event {object} event to create
+    @headers cookie {cookie} authenicates user
     @method POST
 
-    hosts = GET /lifeswap/swapId
-    guest = getIdFromSession()
-    swapEventId = POST /mapper {guest,hosts}
-    return swapEventId
+    return {_rev, ctime, mtime}
 ###
 app.post '/events', (req, res) ->
   event = req.body    # {_id, type, state, swap_id}
@@ -55,7 +52,7 @@ app.post '/events', (req, res) ->
       createEvent({event, userId}, next)
   ], (err, _res) ->
     if err then res.send(err.statusCode)
-    else res.send(201, _res)    # {_rev, mtime}
+    else res.send(201, _res)    # {_rev, mtime, ctime}
 
 
 ## TODO: have createEvent do _everything_

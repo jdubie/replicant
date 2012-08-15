@@ -72,9 +72,9 @@ describe 'POST /events', () ->
       request opts, (err, res, body) ->
         should.not.exist(err)
         res.statusCode.should.eql(201)
-        body.should.have.keys(['_rev', 'mtime'])
-        _event._rev = body._rev
-        _event.mtime = body.mtime
+        body.should.have.keys(['_rev', 'mtime', 'ctime'])
+        for key, val of body
+          _event[key] = val
         done()
 
     it 'should create an event in the \'mapper\' DB', (done) ->

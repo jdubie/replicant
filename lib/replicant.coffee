@@ -92,7 +92,9 @@ replicant.createUserDb = ({userId, name}, callback) ->
 replicant.createEvent = ({event, userId}, callback) ->
 
   _rev = null
-  mtime = Date.now()
+  ctime = Date.now()
+  mtime = ctime
+  event.ctime = ctime
   event.mtime = mtime
 
   createEventDoc = (userId, cb) ->
@@ -138,7 +140,7 @@ replicant.createEvent = ({event, userId}, callback) ->
       err.statusCode = err.status_code if err.status_code else 500
       callback(err)
     else
-      callback(null, {_rev, mtime})
+      callback(null, {_rev, mtime, ctime})
 
 
 ###
