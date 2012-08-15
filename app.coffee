@@ -19,10 +19,12 @@ shouldParseBody = (req) ->
   if req.url is '/swaps' and req.method is 'POST' then return true
   if req.url is '/events' and req.method is 'POST' then return true
   if req.url is '/messages' and req.method is 'POST' then return true
+  if req.url is '/cards' and req.method is 'POST' then return true
   if /^\/swaps\/.*$/.test(req.url) and req.method is 'PUT' then return true
   if /^\/users\/.*$/.test(req.url) and req.method is 'PUT' then return true
   if /^\/events\/.*$/.test(req.url) and req.method is 'PUT' then return true
   if /^\/messages\/.*$/.test(req.url) and req.method is 'PUT' then return true
+  if /^\/cards\/.*$/.test(req.url) and req.method is 'PUT' then return true
   return false
 
 app.use (req, res, next) ->
@@ -263,6 +265,29 @@ _.each ['events', 'cards', 'messages'], (model) ->
     id = req.params?.id
     debug "DELETE /#{model}/#{id}"
     res.send(403)
+
+###
+  PUT /cards/:id
+###
+app.put "/cards/:id", (req, res) ->
+  id = req.params?.id
+  debug "PUT /cards/#{id}"
+  userCtx = req.userCtx   # from the app.all route
+  userDbName = getUserDbName(userId: userCtx.name)
+  card = req.body
+  mtime = Date.now()
+  card.mtime = mtime
+  opts =
+    method: 'PUT'
+    url: "#{config.dbUrl}/#{userDbName}/#{id}"
+    headers: req.headers
+    json: card
+  request opts, (err, resp, body) ->
+    statusCode = resp.statusCode
+    if statusCode isnt 201 then res.send(statusCode)
+    else
+      _rev = body.rev
+      res.json(statusCode, {_rev, mtime})
 
 ###
   PUT /events/:id
