@@ -133,8 +133,9 @@ app.post '/users', (req, res) ->
     if err
       debug '   ERROR', err
       res.json(err.status ? 500, err)
-    ## TODO: also res.set(cookie)
-    else res.json(201, response)       # {name, roles, id}
+    else
+      res.set('Set-Cookie', cookie)
+      res.json(201, response)       # {name, roles, id}
 
 
 ###
