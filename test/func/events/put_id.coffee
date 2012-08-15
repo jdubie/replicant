@@ -14,6 +14,8 @@ describe 'PUT /events/:id', () ->
   _userId = 'user1'
   _password = 'pass1'
   _members = ['user1', 'user2']   # dependent on toy data
+  _allUsers = (user for user in _members)
+  _allUsers.push(user) for user in ADMINS
   cookie = null
   _event =
     _id: 'puteventid'
@@ -39,7 +41,7 @@ describe 'PUT /events/:id', () ->
       userDb.insert _event, _event._id, (err, res) ->
         _event._rev = res.rev
         cb()
-    insertEvents = (cb) -> async.map(_members, insertEvent, cb)
+    insertEvents = (cb) -> async.map(_allUsers, insertEvent, cb)
     ##
     insertIntoMapper = (cb) ->
       mapperDb = nanoAdmin.db.use('mapper')
@@ -67,7 +69,7 @@ describe 'PUT /events/:id', () ->
         mapperDb.destroy(mapperDoc._id, mapperDoc._rev, cb)
     ## in parallel
     async.parallel [
-      (cb) -> async.map(_members, destroyEvent, cb)
+      (cb) -> async.map(_allUsers, destroyEvent, cb)
       destroyMapperEvent
     ], finished
 
@@ -85,3 +87,12 @@ describe 'PUT /events/:id', () ->
       for key, val of body
         _event[key] = val
       done()
+
+  it 'should reflect the change in all users DBs', (done) ->
+    getEvent = (userId, cb) ->
+      userDb = nanoAdmin.db.use(getUserDbName({userId}))
+      userDb.get _event._id, (err, event) ->
+        should.not.exist(err)
+        event.should.eql(_event)
+        cb()
+    async.map(_allUsers, getEvent, done)
