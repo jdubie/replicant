@@ -31,23 +31,21 @@ app.use (req, res, next) ->
     swapEventId = POST /mapper {guest,hosts}
     return swapEventId
 ###
-app.post  '/events', (req, res) ->
-  swapId = req.body.swapId
+app.post '/events', (req, res) ->
+  event = req.body    # {_id, type, state, swap_id}
+  ## TODO: validate that event has _id, type, state, swap_id
   debug "POST /events"
-  debug "   swapId: #{swapId}"
+  debug "   event: #{event}"
   async.waterfall [
     (next) ->
       getUserIdFromSession headers: req.headers, (err, _res) ->
-        if err
-          err.statusCode = 403
-          err.reason = 'User must be logged in'
-          next(err)
+        if err then next(statusCode: 403)
         else next(null, _res.userId)
     (userId, next) ->
-      createEvent({swapId, userId}, next)
+      createEvent({event, userId}, next)
   ], (err, _res) ->
-    if err then res.json(err.statusCode, _res)
-    else res.json(201, _res)
+    if err then res.send(err.statusCode)
+    else res.send(201, {})
 
 
 ## TODO: have createEvent do _everything_

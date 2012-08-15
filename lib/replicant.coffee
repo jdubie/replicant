@@ -3,7 +3,7 @@ request = require('request')
 _ = require('underscore')
 async = require('async')
 debug = require('debug')('replicant:lib')
-{nanoAdmin, dbUrl} = require('config')
+{nanoAdmin, dbUrl, ADMINS} = require('config')
 {getUserDbName, getStatusFromCouchError, hash} = require('lib/helpers')
 
 {EVENT_STATE} = require('../../lifeswap/userdb/shared/constants')
@@ -89,45 +89,43 @@ replicant.createUserDb = ({userId, name}, callback) ->
   @param userId {string}
   @param callback {function}
 ###
-replicant.createEvent = ({swapId, userId}, callback) ->
+replicant.createEvent = ({event, userId}, callback) ->
 
-  getMembers = (next) ->
-    members = [userId]  # @todo replace with getting this from cookies
+  createEventDoc = (userId, cb) ->
+    # @todo replace with getting this from cookies
+    userDbName = getUserDbName(userId: userId)
+    userDb = nanoAdmin.db.use(userDbName)
+    userDb.insert(event, event._id, cb)
+
+  getMembers = (res, hdr, next) ->
+    debug 'getMembers'
     db = nanoAdmin.db.use('lifeswap')
-    db.get swapId, (err, swapDoc) ->
-      if not err then members.push(swapDoc.host)  # @todo swapDoc.host will be array in future
-      debug 'getMembers', members
-      next(err, members)
+    db.get event.swap_id, (err, swapDoc) ->
+      if not err then otherUsers = [swapDoc.host] # @todo swapDoc.host will be array in future
+      otherUsers.push(admin) for admin in ADMINS
+      next(err, otherUsers)
 
-  createMapping = (users, next) ->
-    mapper = nanoAdmin.db.use('mapper')
-    mapper.insert {users}, (err, res) ->
-      eventId = res.id
-      ok = true
-      debug 'createMapping', eventId, users, ok
-      next(err, {eventId, users, ok})
-
-
-  createEventDocs = ({eventId, users, ok}, next) ->
-    eventDoc =
-      _id: eventId
-      type: 'event'
-      state: EVENT_STATE.requested
-      swap_id: swapId
-
-    createEventDoc = (userId, cb) ->
-      userDbName = getUserDbName(userId: userId)
-      userDb = nanoAdmin.db.use(userDbName)
-      userDb.insert(eventDoc, eventDoc._id, cb)
-
-    async.map users, createEventDoc, (err, res) ->
-      debug 'createEventDocs', users
-      next(err, {eventId, users, ok})
+  createDocs = (otherUsers, next) ->
+    ## create doc in mapping DB
+    createMapping = (cb) ->
+      mapper = nanoAdmin.db.use('mapper')
+      debug 'createMapping', event._id, userId, otherUsers
+      mapperDoc =
+        _id: event._id
+        users: [userId]
+      mapperDoc.users.push(user) for user in otherUsers
+      mapper.insert(mapperDoc, event._id, cb)
+    ## create docs in other user DBs
+    createEventDocs = (cb) ->
+      debug 'createEventDocs', otherUsers
+      async.map(otherUsers, createEventDoc, cb)
+    ## in parallel
+    async.parallel([createMapping, createEventDocs], next)
 
   async.waterfall [
+    (next) -> createEventDoc(userId, next)
     getMembers
-    createMapping
-    createEventDocs
+    createDocs
   ], (err, res) ->
     if err then err.statusCode = err.status_code if err.status_code else 500
     callback(err, res)

@@ -3,7 +3,7 @@ async = require('async')
 util = require('util')
 request = require('request')
 
-{nanoAdmin, nano, dbUrl} = require('config')
+{nanoAdmin, nano, dbUrl, ADMINS} = require('config')
 {getUserDbName} = require('lib/helpers')
 {EVENT_STATE} = require('../../../../lifeswap/userdb/shared/constants')
 
@@ -13,13 +13,14 @@ describe 'POST /events', () ->
   ## from the test/toy data
   _userId = 'user2'
   _members = ['user2', 'user1']
+  _members.push(admin) for admin in ADMINS
   _password = 'pass2'
   _swapId = 'swap1'
 
   cookie = null
-  eventId = null
-  _eventDoc =
-    _id: null       # filled in later
+  eventId = 'eventid'
+  _event =
+    _id: eventId
     type: 'event'
     state: EVENT_STATE.requested
     swap_id: _swapId
@@ -57,24 +58,21 @@ describe 'POST /events', () ->
           mapperDb.destroy(eventId, mapperDoc._rev, callback)
 
       async.parallel [
-        (cb) -> async.map(['user1', 'user2'], destroyEventUser, cb)
+        (cb) -> async.map(_members, destroyEventUser, cb)
         destroyEventMapper
       ], finished
 
 
-    it 'should pass back the eventId, users, ok', (done) ->
+    it 'should POST without failure', (done) ->
       opts =
         method: 'POST'
         url: "http://localhost:3001/events"
-        json: swapId: _swapId
+        json: _event
         headers: cookie: cookie
       request opts, (err, res, body) ->
         should.not.exist(err)
         res.statusCode.should.eql(201)
-        body.users.should.eql(['user2', 'user1'])
-        body.should.have.property('eventId')
-        eventId = body.eventId
-        _eventDoc._id = eventId
+        body.should.eql({})
         done()
 
     it 'should create an event in the \'mapper\' DB', (done) ->
@@ -90,8 +88,8 @@ describe 'POST /events', () ->
         userDb = nanoAdmin.db.use(userDbName)
         userDb.get eventId, (err, eventDoc) ->
           should.not.exist(err)
-          _eventDoc._rev = eventDoc._rev
-          eventDoc.should.eql(_eventDoc)
+          _event._rev = eventDoc._rev
+          eventDoc.should.eql(_event)
           callback()
       async.map _members, checkEventDoc, (err, res) ->
         should.not.exist(err)
