@@ -6,7 +6,7 @@ request = require('request')
 util = require('util')
 
 {getUserIdFromSession, getUserCtxFromSession, hash, getUserDbName} = require('./lib/helpers')
-{auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate} = require('./lib/replicant')
+{auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate, getMessages} = require('./lib/replicant')
 adminNotifications = require('./lib/adminNotifications')
 config = require('./config')
 
@@ -133,6 +133,7 @@ app.post '/users', (req, res) ->
     if err
       debug '   ERROR', err
       res.json(err.status ? 500, err)
+    ## TODO: also res.set(cookie)
     else res.json(201, response)       # {name, roles, id}
 
 
@@ -300,6 +301,7 @@ app.delete '/events/:id', (req, res) ->
 
 
 app.post '/messages', (req, res) ->
+  ## TODO: write 'read' message to self
   debug "POST /message"
   userCtx = req.userCtx   # from the app.all route
   userDbName = getUserDbName(userId: userCtx.name)
@@ -340,15 +342,25 @@ app.post '/messages', (req, res) ->
 
 
 app.put '/messages/:id', (req, res) ->
+  ## _allow_ change only when read => true (write 'read' doc)
   id = req.params?.id
   debug "PUT /messages/#{id}"
   res.send(403)   # cannot modify sent messages
+
 app.delete '/messages/:id', (req, res) ->
   id = req.params?.id
   debug "DELETE /messages/#{id}"
   res.send(403)   # cannot delete sent messages
 
-
+app.get '/messages', (req, res) ->
+  userCtx =  req.userCtx
+  cookie = req.headers.cookie
+  getMessages userCtx.name, cookie, (err, events) ->
+    if err
+      statusCode = err.status_code ? 500
+      res.json(statusCode, err)
+    else
+      res.json(200, events)
 
 ###
 # OLD ROUTES

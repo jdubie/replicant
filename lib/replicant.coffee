@@ -218,6 +218,24 @@ replicant.getTypeUserDb = (type, userId, cookie, callback) ->
     if not err then docs = (row.doc for row in res.rows)
     callback(err, docs)
 
+## gets all messages and tacks on 'read' status (true/false)
+replicant.getMessages = (userId, cookie, callback) ->
+  userDbName = getUserDbName(userId: userId)
+  nanoOpts =
+    url: "#{dbUrl}/#{userDbName}"
+    cookie: cookie
+  db = require('nano')(nanoOpts)
+  opts = group_level: 2
+  db.view 'userddoc', 'messages', opts, (err, res) ->
+    getMessageDoc = (row, cb) ->
+      messageId = row.key[1]
+      db.get messageId, (err, message) ->
+        if not err
+          message.read = if row.value is 1 then false else true
+        cb(err, message)
+    if err then callback(err)
+    else async.map(res.rows, getMessageDoc, callback)  # messages
+
 
 module.exports = replicant
 
