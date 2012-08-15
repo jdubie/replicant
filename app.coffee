@@ -290,6 +290,30 @@ app.put "/cards/:id", (req, res) ->
       res.json(statusCode, {_rev, mtime})
 
 ###
+  POST /cards/:id
+###
+app.post "/cards", (req, res) ->
+  debug "PUT /cards"
+  userCtx = req.userCtx   # from the app.all route
+  userDbName = getUserDbName(userId: userCtx.name)
+  card = req.body
+  ctime = Date.now()
+  mtime = ctime
+  card.ctime = ctime
+  card.mtime = mtime
+  opts =
+    method: 'POST'
+    url: "#{config.dbUrl}/#{userDbName}"
+    headers: req.headers
+    json: card
+  request opts, (err, resp, body) ->
+    statusCode = resp.statusCode
+    if statusCode isnt 201 then res.send(statusCode)
+    else
+      _rev = body.rev
+      res.json(statusCode, {_rev, mtime, ctime})
+
+###
   PUT /events/:id
 ###
 app.put '/events/:id', (req, res) ->
