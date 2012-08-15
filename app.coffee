@@ -6,7 +6,7 @@ request = require('request')
 util = require('util')
 
 {getUserIdFromSession, getUserCtxFromSession, hash, getUserDbName} = require('./lib/helpers')
-{auth, getType, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate} = require('./lib/replicant')
+{auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate} = require('./lib/replicant')
 adminNotifications = require('./lib/adminNotifications')
 config = require('./config')
 
@@ -17,7 +17,7 @@ shouldParseBody = (req) ->
   if req.url is '/user_ctx' then return true
   if req.url is '/users' and req.method is 'POST' then return true
   if req.url is '/swaps' and req.method is 'POST' then return true
-  if /^\/events(\/.*)?$/.test(req.url) then return true
+  if req.url is '/events' and req.method is 'POST' then return true
   if /^\/swaps\/.*$/.test(req.url) and req.method is 'PUT' then return true
   if /^\/users\/.*$/.test(req.url) and req.method is 'PUT' then return true
   return false
@@ -29,7 +29,7 @@ app.use (req, res, next) ->
   else next()
 
 
-app.all /^\/events(\/.*)?$/, (req, res, next) ->
+app.all '/events', (req, res, next) ->
   getUserCtxFromSession headers: req.headers, (err, _res) ->
     if err then res.send(403)
     else
@@ -158,7 +158,6 @@ _.each ['users', 'swaps'], (model) ->
   app.get "/#{model}", (req, res) ->
     debug "GET /#{model}"
     getType model, (err, docs) ->
-      debug err, docs
       res.json(200, docs)
       res.end()
 
@@ -216,6 +215,20 @@ app.post '/events', (req, res) ->
   createEvent {event, userId: userCtx.name}, (err, _res) ->
     if err then res.send(err.statusCode)
     else res.send(201, _res)    # {_rev, mtime, ctime}
+
+
+app.get '/events', (req, res) ->
+  debug "GET /events"
+  userCtx = req.userCtx   # from the app.all route
+  cookie = req.headers?.cookie
+  if not cookie then res.send(403)
+  else
+    getTypeUserDb 'events', userCtx.name, cookie, (err, events) ->
+      if err
+        statusCode = err.status_code ? 500
+        res.json(statusCode, err)
+      else
+        res.json(200, events)
 
 
 ###

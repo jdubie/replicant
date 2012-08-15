@@ -206,6 +206,18 @@ replicant.getType = (type, callback) ->
     if not err then docs = (row.doc for row in res.rows)
     callback(err, docs)
 
+## gets all of a type from a user DB
+replicant.getTypeUserDb = (type, userId, cookie, callback) ->
+  userDbName = getUserDbName(userId: userId)
+  nanoOpts =
+    url: "#{dbUrl}/#{userDbName}"
+    cookie: cookie
+  db = require('nano')(nanoOpts)
+  opts = include_docs: true
+  db.view 'userddoc', type, opts, (err, res) ->
+    if not err then docs = (row.doc for row in res.rows)
+    callback(err, docs)
+
 
 module.exports = replicant
 
