@@ -195,9 +195,8 @@ _.each ['users', 'swaps'], (model) ->
 
   ## DELETE /model/:id
   app.delete "/#{model}/:id", (req, res) ->
-    debug "DELETE /#{model}/:id"
-    id = req.params.id
-    debug "   id = #{id}"
+    id = req.params?.id
+    debug "DELETE /#{model}/#{id}"
     res.send(403)
 
 ###
@@ -233,6 +232,9 @@ app.get '/events', (req, res) ->
       res.json(200, events)
 
 
+###
+  GET /events/:id
+###
 app.get '/events/:id', (req, res) ->
   id = req.params?.id
   debug "GET /events/#{id}"
@@ -245,6 +247,9 @@ app.get '/events/:id', (req, res) ->
   request(endpoint).pipe(res)
 
 
+###
+  PUT /events/:id
+###
 app.put '/events/:id', (req, res) ->
   id = req.params?.id
   debug "PUT /events/#{id}"
@@ -285,6 +290,12 @@ app.put '/events/:id', (req, res) ->
   ], (err, resp) ->
     if err then res.json(err.statusCode ? 500, err)
     else res.json(201, {_rev, mtime})
+
+
+app.delete '/events/:id', (req, res) ->
+  id = req.params?.id
+  debug "DELETE /#{model}/#{id}"
+  res.send(403)
 
 ###
 # OLD ROUTES

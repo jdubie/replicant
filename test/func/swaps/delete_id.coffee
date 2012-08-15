@@ -80,7 +80,7 @@ describe 'DELETE /swaps/:id', () ->
   it 'should return a 403 (forbidden)', (done) ->
     opts =
       method: 'DELETE'
-      url: "http://localhost:3001/swaps/#{_userId}"
+      url: "http://localhost:3001/swaps/#{_swapDoc._id}"
       json: true
       headers: cookie: cookie
     request opts, (err, res, body) ->
