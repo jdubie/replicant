@@ -225,10 +225,11 @@ app.post '/events', (req, res) ->
 
 
 ###
-  GET /events
-  GET /cards
+  /events
+  /cards
 ###
 _.each ['events', 'cards'], (model) ->
+  ## GET /model
   app.get "/#{model}", (req, res) ->
     debug "GET /#{model}"
     userCtx = req.userCtx   # from the app.all route
@@ -239,21 +240,16 @@ _.each ['events', 'cards'], (model) ->
         res.json(statusCode, err)
       else
         res.json(200, docs)
-
-
-###
-  GET /events/:id
-###
-app.get '/events/:id', (req, res) ->
-  id = req.params?.id
-  debug "GET /events/#{id}"
-  userCtx = req.userCtx   # from the app.all route
-  userDbName = getUserDbName(userId: userCtx.name)
-
-  endpoint =
-    url: "#{config.dbUrl}/#{userDbName}/#{id}"
-    headers: req.headers
-  request(endpoint).pipe(res)
+  ## GET /model/:id
+  app.get "/#{model}/:id", (req, res) ->
+    id = req.params?.id
+    debug "GET /#{model}/#{id}"
+    userCtx = req.userCtx   # from the app.all route
+    userDbName = getUserDbName(userId: userCtx.name)
+    endpoint =
+      url: "#{config.dbUrl}/#{userDbName}/#{id}"
+      headers: req.headers
+    request(endpoint).pipe(res)
 
 
 ###
