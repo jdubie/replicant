@@ -15,16 +15,20 @@ app.use(express.static(__dirname + '/public'))
 
 shouldParseBody = (req) ->
   if req.url is '/user_ctx' then return true
-  if req.url is '/users' and req.method is 'POST' then return true
-  if req.url is '/swaps' and req.method is 'POST' then return true
-  if req.url is '/events' and req.method is 'POST' then return true
-  if req.url is '/messages' and req.method is 'POST' then return true
-  if req.url is '/cards' and req.method is 'POST' then return true
-  if /^\/swaps\/.*$/.test(req.url) and req.method is 'PUT' then return true
-  if /^\/users\/.*$/.test(req.url) and req.method is 'PUT' then return true
-  if /^\/events\/.*$/.test(req.url) and req.method is 'PUT' then return true
-  if /^\/messages\/.*$/.test(req.url) and req.method is 'PUT' then return true
-  if /^\/cards\/.*$/.test(req.url) and req.method is 'PUT' then return true
+  if req.method is 'POST'
+    if req.url is '/users' then return true
+    if req.url is '/swaps' then return true
+    if req.url is '/events' then return true
+    if req.url is '/messages' then return true
+    if req.url is '/cards' then return true
+    if req.url is '/email_addresses' then return true
+  if req.method is 'PUT'
+    if /^\/swaps\/.*$/.test(req.url) then return true
+    if /^\/users\/.*$/.test(req.url) then return true
+    if /^\/events\/.*$/.test(req.url) then return true
+    if /^\/messages\/.*$/.test(req.url) then return true
+    if /^\/cards\/.*$/.test(req.url) then return true
+    if /^\/email_addresses\/.*$/.test(req.url) then return true
   return false
 
 app.use (req, res, next) ->
@@ -33,8 +37,8 @@ app.use (req, res, next) ->
     express.bodyParser()(req, res, next)
   else next()
 
-
-app.all /^\/(events|messages|cards)(\/.*)?$/, (req, res, next) ->
+userCtxRegExp = /^\/(events|messages|cards|email_addressses)(\/.*)?$/
+app.all userCtxRegExp, (req, res, next) ->
   getUserCtxFromSession headers: req.headers, (err, _res) ->
     if err then res.send(403)
     else
