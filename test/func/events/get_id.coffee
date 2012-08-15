@@ -25,44 +25,43 @@ describe 'GET /events/:id', () ->
   usersDb = nanoAdmin.db.use('_users')
   userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
 
-  describe 'correctness:', () ->
 
-    before (ready) ->
-      ## start webserver
-      app = require('app')
-      ## authenticate user
-      authUser = (cb) ->
-        nano.auth _userId, _password, (err, body, headers) ->
-          should.not.exist(err)
-          should.exist(headers and headers['set-cookie'])
-          cookie = headers['set-cookie'][0]
-          cb()
-      ## insert event
-      insertEvent = (cb) ->
-        userDb.insert _event, _event._id, (err, res) ->
-          _event._rev = res.rev
-          cb()
-      ## in parallel
-      async.parallel [
-        authUser
-        insertEvent
-      ], (err, res) ->
-        ready()
-
-
-    after (finished) ->
-      ## destroy event
-      userDb.destroy(_event._id, _event._rev, finished)
-
-
-    it 'should GET the event', (done) ->
-      opts =
-        method: 'GET'
-        url: "http://localhost:3001/events/#{_event._id}"
-        json: true
-        headers: cookie: cookie
-      request opts, (err, res, body) ->
+  before (ready) ->
+    ## start webserver
+    app = require('app')
+    ## authenticate user
+    authUser = (cb) ->
+      nano.auth _userId, _password, (err, body, headers) ->
         should.not.exist(err)
-        res.statusCode.should.eql(200)
-        body.should.eql(_event)
-        done()
+        should.exist(headers and headers['set-cookie'])
+        cookie = headers['set-cookie'][0]
+        cb()
+    ## insert event
+    insertEvent = (cb) ->
+      userDb.insert _event, _event._id, (err, res) ->
+        _event._rev = res.rev
+        cb()
+    ## in parallel
+    async.parallel [
+      authUser
+      insertEvent
+    ], (err, res) ->
+      ready()
+
+
+  after (finished) ->
+    ## destroy event
+    userDb.destroy(_event._id, _event._rev, finished)
+
+
+  it 'should GET the event', (done) ->
+    opts =
+      method: 'GET'
+      url: "http://localhost:3001/events/#{_event._id}"
+      json: true
+      headers: cookie: cookie
+    request opts, (err, res, body) ->
+      should.not.exist(err)
+      res.statusCode.should.eql(200)
+      body.should.eql(_event)
+      done()

@@ -20,6 +20,7 @@ shouldParseBody = (req) ->
   if req.url is '/events' and req.method is 'POST' then return true
   if /^\/swaps\/.*$/.test(req.url) and req.method is 'PUT' then return true
   if /^\/users\/.*$/.test(req.url) and req.method is 'PUT' then return true
+  if /^\/events\/.*$/.test(req.url) and req.method is 'PUT' then return true
   return false
 
 app.use (req, res, next) ->
@@ -243,6 +244,47 @@ app.get '/events/:id', (req, res) ->
     headers: req.headers
   request(endpoint).pipe(res)
 
+
+app.put '/events/:id', (req, res) ->
+  id = req.params?.id
+  debug "PUT /events/#{id}"
+  userCtx = req.userCtx   # from the app.all route
+  userDbName = getUserDbName(userId: userCtx.name)
+  event = req.body
+  mtime = Date.now()
+  event.mtime = mtime
+  _rev = null
+  
+  async.waterfall [
+    (next) ->
+      debug 'put event'
+      opts =
+        method: 'PUT'
+        url: "#{config.dbUrl}/#{userDbName}/#{id}"
+        headers: req.headers
+        json: event
+      request(opts, next) # (err, resp, body)
+    (resp, body, next) ->
+      debug 'get users'
+      statusCode = resp.statusCode
+      if statusCode isnt 201 then next(statusCode: statusCode)
+      else
+        _rev = body.rev
+        getEventUsers({eventId: event._id}, next)   # (err, users)
+    (users, next) ->
+      debug 'replicate'
+      src = userCtx.name
+      eventId = event._id
+      if not (src in users) and not (src in config.ADMINS)
+        next(statusCode: 403, reason: "Not authorized to write messages to this event")
+      else
+        for admin in config.ADMINS
+          users.push(admin)
+        dsts = _.without(users, src)
+        replicate({src, dsts, eventId}, next)   # (err, resp)
+  ], (err, resp) ->
+    if err then res.json(err.statusCode ? 500, err)
+    else res.json(201, {_rev, mtime})
 
 ###
 # OLD ROUTES

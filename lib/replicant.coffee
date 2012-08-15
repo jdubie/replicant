@@ -149,14 +149,12 @@ replicant.createEvent = ({event, userId}, callback) ->
 ###
 replicant.getEventUsers = ({eventId}, callback) ->
   mapper = nanoAdmin.db.use('mapper')
-  mapper.get eventId, (err, eventDoc) ->
+  mapper.get eventId, (err, mapperDoc) ->
     if err
-      if err.error is 'not_found'
-        callback(status: 404, reason: "No such event")
-      else
-        callback(status: 500, reason: "Internal Server Error")
+      err.statusCode = err.status_code ? 500
+      callback(err)
     else
-      callback(null, {ok: true, status: 200, users: eventDoc.users})
+      callback(null, mapperDoc.users)
 
 
 ###
@@ -176,7 +174,9 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
     return {src, dst, opts}
   replicateEach = ({src,dst,opts}, cb) ->
     nanoAdmin.db.replicate(src, dst, opts, cb)
-  async.map(params, replicateEach, callback)
+  async.map params, replicateEach, (err, res) ->
+    if err then err.statusCode = err.status_code ? 500
+    callback(err, res)
 
   # send emails
   #replicant.sendNotifications({dsts, eventId})
