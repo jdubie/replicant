@@ -32,7 +32,7 @@ app.use (req, res, next) ->
   else next()
 
 
-app.all /^\/(events|messages)(\/.*)?$/, (req, res, next) ->
+app.all /^\/(events|messages|cards)(\/.*)?$/, (req, res, next) ->
   getUserCtxFromSession headers: req.headers, (err, _res) ->
     if err then res.send(403)
     else
@@ -224,16 +224,21 @@ app.post '/events', (req, res) ->
     else res.send(201, _res)    # {_rev, mtime, ctime}
 
 
-app.get '/events', (req, res) ->
-  debug "GET /events"
-  userCtx = req.userCtx   # from the app.all route
-  cookie = req.headers.cookie
-  getTypeUserDb 'events', userCtx.name, cookie, (err, events) ->
-    if err
-      statusCode = err.status_code ? 500
-      res.json(statusCode, err)
-    else
-      res.json(200, events)
+###
+  GET /events
+  GET /cards
+###
+_.each ['events', 'cards'], (model) ->
+  app.get "/#{model}", (req, res) ->
+    debug "GET /#{model}"
+    userCtx = req.userCtx   # from the app.all route
+    cookie = req.headers.cookie
+    getTypeUserDb model, userCtx.name, cookie, (err, docs) ->
+      if err
+        statusCode = err.status_code ? 500
+        res.json(statusCode, err)
+      else
+        res.json(200, docs)
 
 
 ###
@@ -394,7 +399,6 @@ app.get '/messages/:id', (req, res) ->
       res.json(statusCode, err)
     else
       res.json(200, message)
-
 
 ## TODO:
 #   * cards, email_addresses, phone_numbers
