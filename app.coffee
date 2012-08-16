@@ -22,6 +22,7 @@ shouldParseBody = (req) ->
     if req.url is '/messages' then return true
     if req.url is '/cards' then return true
     if req.url is '/email_addresses' then return true
+    if req.url is '/phone_numbers' then return true
   if req.method is 'PUT'
     if /^\/swaps\/.*$/.test(req.url) then return true
     if /^\/users\/.*$/.test(req.url) then return true
@@ -29,6 +30,7 @@ shouldParseBody = (req) ->
     if /^\/messages\/.*$/.test(req.url) then return true
     if /^\/cards\/.*$/.test(req.url) then return true
     if /^\/email_addresses\/.*$/.test(req.url) then return true
+    if /^\/phone_numbers\/.*$/.test(req.url) then return true
   return false
 
 app.use (req, res, next) ->
@@ -37,7 +39,7 @@ app.use (req, res, next) ->
     express.bodyParser()(req, res, next)
   else next()
 
-userCtxRegExp = /^\/(events|messages|cards|email_addresses)(\/.*)?$/
+userCtxRegExp = /^\/(events|messages|cards|email_addresses|phone_numbers)(\/.*)?$/
 app.all userCtxRegExp, (req, res, next) ->
   getUserCtxFromSession headers: req.headers, (err, _res) ->
     if err then res.send(403)
@@ -235,7 +237,7 @@ app.post '/events', (req, res) ->
     /events
     /cards
 ###
-_.each ['events', 'cards', 'email_addresses'], (model) ->
+_.each ['events', 'cards', 'email_addresses', 'phone_numbers'], (model) ->
   ## GET /model
   app.get "/#{model}", (req, res) ->
     debug "GET /#{model}"
@@ -263,8 +265,9 @@ _.each ['events', 'cards', 'email_addresses'], (model) ->
     /events
     /cards
     /messages
+    /email_addresses
 ###
-_.each ['events', 'cards', 'messages', 'email_addresses'], (model) ->
+_.each ['events', 'cards', 'messages', 'email_addresses', 'phone_numbers'], (model) ->
   app.delete "/#{model}/:id", (req, res) ->
     id = req.params?.id
     debug "DELETE /#{model}/#{id}"
@@ -274,7 +277,7 @@ _.each ['events', 'cards', 'messages', 'email_addresses'], (model) ->
   /cards/:id
   /email_addresses/:id
 ###
-_.each ['cards', 'email_addresses'], (model) ->
+_.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
   ## POST /models
   app.post "/#{model}", (req, res) ->
     debug "PUT /#{model}"
