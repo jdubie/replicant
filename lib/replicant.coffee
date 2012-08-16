@@ -219,6 +219,102 @@ replicant.getTypeUserDb = (type, userId, cookie, callback) ->
     callback(err, docs)
 
 
+## marks a message read/unread if specified
+replicant.markReadStatus = (message, userId, cookie, callback) ->
+  markRead = message.read   # true/false
+  debug 'markReadStatus', markRead
+  delete message.read
+  userDbName = getUserDbName(userId: userId)
+  nanoOpts =
+    url: "#{dbUrl}/#{userDbName}"
+    cookie: cookie
+  db = require('nano')(nanoOpts)
+
+  ## mark a message read
+  markMessageRead = (callback) ->
+    readDoc =
+      type: 'read'
+      message_id: message._id
+      event_id: message.event_id
+    db.insert(readDoc, callback)
+  ## destroy 'read' document
+  destroyReadDoc = (row, callback) ->
+    doc = row.doc
+    if doc.type is 'read'
+      db.destroy(doc._id, doc._rev, callback)
+    else callback()
+  ## mark a message unread
+  markMessageUnread = (callback) ->
+    opts =
+      include_docs: true
+      reduce: false
+      key: [message.event_id, message._id]
+    db.view 'userddoc', 'messages', opts, (err, res) ->
+      async.map(res.rows, destroyReadDoc, callback)
+
+  async.waterfall [
+    (next) ->
+      if not markRead?
+        next(statusCode: 403, reason: "Read/unread status undefined")
+      else
+        opts = key: [message.event_id, message._id]
+        db.view('userddoc', 'messages', opts, next) # (err, res, hdr)
+    (res, hdr, next) ->
+      if res.rows.length < 1
+        next(statusCode: 404, reason: "Too many messages found.")
+      else
+        row = res.rows[0]
+        isRead = if row.value is 1 then false else true
+        if markRead isnt isRead then next()
+        else
+          next(statusCode: 403, reason: "Can only change read/unread status of message")
+    (next) ->
+      if markRead then markMessageRead(next)
+      else markMessageUnread(next)
+  ], callback
+
+
+## gets all messages and tacks on 'read' status (true/false)
+replicant.getMessages = (userId, cookie, callback) ->
+  userDbName = getUserDbName(userId: userId)
+  nanoOpts =
+    url: "#{dbUrl}/#{userDbName}"
+    cookie: cookie
+  db = require('nano')(nanoOpts)
+  opts = group_level: 2
+  db.view 'userddoc', 'messages', opts, (err, res) ->
+    getMessageDoc = (row, cb) ->
+      messageId = row.key[1]
+      db.get messageId, (err, message) ->
+        if not err
+          message.read = if row.value is 1 then false else true
+        cb(err, message)
+    if err then callback(err)
+    else async.map(res.rows, getMessageDoc, callback)  # messages
+
+
+## gets a message and tacks on its 'read' status (true/false)
+replicant.getMessage = (messageId, userId, cookie, callback) ->
+  userDbName = getUserDbName(userId: userId)
+  nanoOpts =
+    url: "#{dbUrl}/#{userDbName}"
+    cookie: cookie
+  db = require('nano')(nanoOpts)
+  message = null
+  async.waterfall [
+    (next) -> db.get(messageId, next)
+    (_message, headers, next) ->
+      message = _message
+      opts = key: [message.event_id, message._id]
+      db.view('userddoc', 'messages', opts, next)
+    (res, headers, next) ->
+      if res.rows.length < 1 then next(statusCode: 404)
+      else
+        message.read = if res.rows[0].value is 1 then false else true
+        next(null, message)
+  ], callback   # (err, message)
+
+
 module.exports = replicant
 
 # shut down SMTP connection

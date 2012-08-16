@@ -67,9 +67,24 @@ describe 'POST /messages', () ->
           if err then cb()
           else mapperDb.destroy(_message.event_id, mapperDoc._rev, cb)
 
+      ## destroy read document
+      destroyReadDocs = (cb) ->
+        userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
+        destroyReadDoc = (row, _cb) ->
+          doc = row.doc
+          if doc.type isnt 'read' then _cb()
+          else userDb.destroy(doc._id, doc._rev, _cb)
+        opts =
+          reduce: false
+          include_docs: true
+        userDb.view 'userddoc', 'messages', opts, (err, res) ->
+          if err then cb()
+          else async.map(res.rows, destroyReadDoc, cb)
+
       async.parallel [
         (cb) -> async.map(_allUsers, destroyEventUser, cb)
         destroyEventMapper
+        destroyReadDocs
       ], finished
 
 
@@ -88,13 +103,26 @@ describe 'POST /messages', () ->
         done()
 
     it 'should replicate the message to all involved users', (done) ->
-      checkMessageDoc = (userId, callback) ->
+      checkMessageDoc = (userId, cb) ->
         userDbName = getUserDbName({userId})
         userDb = nanoAdmin.db.use(userDbName)
         userDb.get _message._id, (err, messageDoc) ->
           should.not.exist(err)
           messageDoc.should.eql(_message)
-          callback()
-      async.map _allUsers, checkMessageDoc, (err, res) ->
-        should.not.exist(err)
-        done()
+          cb()
+      async.map(_allUsers, checkMessageDoc, done)
+
+    it 'should mark the message as read for the author', (done) ->
+      checkMessageReadStatus = (userId, cb) ->
+        userDbName = getUserDbName({userId})
+        userDb = nanoAdmin.db.use(userDbName)
+        opts = key: [_message.event_id, _message._id]
+        userDb.view 'userddoc', 'messages', opts, (err, res) ->
+          should.not.exist(err)
+          res.should.have.property('rows').with.lengthOf(1)
+          if userId is _userId
+            res.rows[0].should.have.property('value', 0)
+          else
+            res.rows[0].should.have.property('value', 1)
+          cb()
+      async.map(_allUsers, checkMessageReadStatus, done)

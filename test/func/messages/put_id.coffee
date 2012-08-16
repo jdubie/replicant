@@ -80,9 +80,10 @@ describe 'PUT /messages/:id', () ->
       ], finished
 
 
-    it 'should respond with 403 to PUT /messages', (done) ->
+    it 'should return 403 when not changing read/unread status', (done) ->
       oldMessage = _message.message
       _message.message = 'blaggedy'
+      _message.read = false
       opts =
         method: 'PUT'
         url: "http://localhost:3001/messages/#{_message._id}"
@@ -92,6 +93,53 @@ describe 'PUT /messages/:id', () ->
         should.not.exist(err)
         res.statusCode.should.eql(403)
         _message.message = oldMessage
+        delete _message.read
+        done()
+
+    it 'should return 201 when marking read', (done) ->
+      _message.read = true
+      opts =
+        method: 'PUT'
+        url: "http://localhost:3001/messages/#{_message._id}"
+        json: _message
+        headers: cookie: cookie
+      request opts, (err, res, body) ->
+        should.not.exist(err)
+        res.statusCode.should.eql(201)
+        delete _message.read
+        done()
+
+    it 'should mark the message as \'read\'', (done) ->
+      userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
+      opts =
+        key: [_message.event_id, _message._id]
+      userDb.view 'userddoc', 'messages', opts, (err, res) ->
+        should.not.exist(err)
+        res.should.have.property('rows').with.lengthOf(1)
+        res.rows[0].should.have.property('value', 0)
+        done()
+
+    it 'should return 201 when marking unread', (done) ->
+      _message.read = false
+      opts =
+        method: 'PUT'
+        url: "http://localhost:3001/messages/#{_message._id}"
+        json: _message
+        headers: cookie: cookie
+      request opts, (err, res, body) ->
+        should.not.exist(err)
+        res.statusCode.should.eql(201)
+        delete _message.read
+        done()
+
+    it 'should mark the message as \'unread\'', (done) ->
+      userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
+      opts =
+        key: [_message.event_id, _message._id]
+      userDb.view 'userddoc', 'messages', opts, (err, res) ->
+        should.not.exist(err)
+        res.should.have.property('rows').with.lengthOf(1)
+        res.rows[0].should.have.property('value', 1)
         done()
 
     it 'should not change message for any involved users', (done) ->

@@ -18,10 +18,10 @@ describe 'DELETE /messages/:id', () ->
   _allUsers.push(user) for user in ADMINS
 
   _message =
-    _id: 'putmessageid'
+    _id: 'deletemessageid'
     type: 'message'
     message: 'Hey bro'
-    event_id: 'putmessageeventid'
+    event_id: 'deletemessageeventid'
     author: _userId
 
   mainDb = nanoAdmin.db.use('lifeswap')

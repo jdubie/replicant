@@ -8,7 +8,7 @@ util = require('util')
 
 helpers = require('./lib/helpers')
 {getUserIdFromSession, getUserCtxFromSession, hash, getUserDbName} = require('./lib/helpers')
-{auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate} = require('./lib/replicant')
+{auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate, getMessages, getMessage, markReadStatus} = require('./lib/replicant')
 adminNotifications = require('./lib/adminNotifications')
 config = require('./config')
 
@@ -17,13 +17,22 @@ app.use(express.static(__dirname + '/public'))
 
 shouldParseBody = (req) ->
   if req.url is '/user_ctx' then return true
-  if req.url is '/users' and req.method is 'POST' then return true
-  if req.url is '/swaps' and req.method is 'POST' then return true
-  if req.url is '/events' and req.method is 'POST' then return true
-  if req.url is '/messages' and req.method is 'POST' then return true
-  if /^\/swaps\/.*$/.test(req.url) and req.method is 'PUT' then return true
-  if /^\/users\/.*$/.test(req.url) and req.method is 'PUT' then return true
-  if /^\/events\/.*$/.test(req.url) and req.method is 'PUT' then return true
+  if req.method is 'POST'
+    if req.url is '/users' then return true
+    if req.url is '/swaps' then return true
+    if req.url is '/events' then return true
+    if req.url is '/messages' then return true
+    if req.url is '/cards' then return true
+    if req.url is '/email_addresses' then return true
+    if req.url is '/phone_numbers' then return true
+  if req.method is 'PUT'
+    if /^\/swaps\/.*$/.test(req.url) then return true
+    if /^\/users\/.*$/.test(req.url) then return true
+    if /^\/events\/.*$/.test(req.url) then return true
+    if /^\/messages\/.*$/.test(req.url) then return true
+    if /^\/cards\/.*$/.test(req.url) then return true
+    if /^\/email_addresses\/.*$/.test(req.url) then return true
+    if /^\/phone_numbers\/.*$/.test(req.url) then return true
   return false
 
 app.use (req, res, next) ->
@@ -32,8 +41,8 @@ app.use (req, res, next) ->
     express.bodyParser()(req, res, next)
   else next()
 
-
-app.all /^\/(events|messages)(\/.*)?$/, (req, res, next) ->
+userCtxRegExp = /^\/(events|messages|cards|email_addresses|phone_numbers)(\/.*)?$/
+app.all userCtxRegExp, (req, res, next) ->
   getUserCtxFromSession headers: req.headers, (err, _res) ->
     if err then res.send(403)
     else
@@ -168,7 +177,9 @@ app.post '/users', (req, res) ->
     if err
       debug '   ERROR', err
       res.json(err.status ? 500, err)
-    else res.json(201, response)       # {name, roles, id}
+    else
+      res.set('Set-Cookie', cookie)
+      res.json(201, response)       # {name, roles, id}
 
 
 ###
@@ -256,31 +267,93 @@ app.post '/events', (req, res) ->
     else res.send(201, _res)    # {_rev, mtime, ctime}
 
 
-app.get '/events', (req, res) ->
-  debug "GET /events"
-  userCtx = req.userCtx   # from the app.all route
-  cookie = req.headers.cookie
-  getTypeUserDb 'events', userCtx.name, cookie, (err, events) ->
-    if err
-      statusCode = err.status_code ? 500
-      res.json(statusCode, err)
-    else
-      res.json(200, events)
-
+###
+  Some routes for:
+    /events
+    /cards
+###
+_.each ['events', 'cards', 'email_addresses', 'phone_numbers'], (model) ->
+  ## GET /model
+  app.get "/#{model}", (req, res) ->
+    debug "GET /#{model}"
+    userCtx = req.userCtx   # from the app.all route
+    cookie = req.headers.cookie
+    getTypeUserDb model, userCtx.name, cookie, (err, docs) ->
+      if err
+        statusCode = err.status_code ? 500
+        res.json(statusCode, err)
+      else
+        res.json(200, docs)
+  ## GET /model/:id
+  app.get "/#{model}/:id", (req, res) ->
+    id = req.params?.id
+    debug "GET /#{model}/#{id}"
+    userCtx = req.userCtx   # from the app.all route
+    userDbName = getUserDbName(userId: userCtx.name)
+    endpoint =
+      url: "#{config.dbUrl}/#{userDbName}/#{id}"
+      headers: req.headers
+    request(endpoint).pipe(res)
 
 ###
-  GET /events/:id
+  DELETE
+    /events
+    /cards
+    /messages
+    /email_addresses
 ###
-app.get '/events/:id', (req, res) ->
-  id = req.params?.id
-  debug "GET /events/#{id}"
-  userCtx = req.userCtx   # from the app.all route
-  userDbName = getUserDbName(userId: userCtx.name)
+_.each ['events', 'cards', 'messages', 'email_addresses', 'phone_numbers'], (model) ->
+  app.delete "/#{model}/:id", (req, res) ->
+    id = req.params?.id
+    debug "DELETE /#{model}/#{id}"
+    res.send(403)
 
-  endpoint =
-    url: "#{config.dbUrl}/#{userDbName}/#{id}"
-    headers: req.headers
-  request(endpoint).pipe(res)
+###
+  /cards/:id
+  /email_addresses/:id
+###
+_.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
+  ## POST /models
+  app.post "/#{model}", (req, res) ->
+    debug "PUT /#{model}"
+    userCtx = req.userCtx   # from the app.all route
+    userDbName = getUserDbName(userId: userCtx.name)
+    doc = req.body
+    ctime = Date.now()
+    mtime = ctime
+    doc.ctime = ctime
+    doc.mtime = mtime
+    opts =
+      method: 'POST'
+      url: "#{config.dbUrl}/#{userDbName}"
+      headers: req.headers
+      json: doc
+    request opts, (err, resp, body) ->
+      statusCode = resp.statusCode
+      if statusCode isnt 201 then res.send(statusCode)
+      else
+        _rev = body.rev
+        res.json(statusCode, {_rev, mtime, ctime})
+  ## PUT /models/:id
+  app.put "/#{model}/:id", (req, res) ->
+    id = req.params?.id
+    debug "PUT /#{model}/#{id}"
+    userCtx = req.userCtx   # from the app.all route
+    userDbName = getUserDbName(userId: userCtx.name)
+    doc = req.body
+    mtime = Date.now()
+    doc.mtime = mtime
+    opts =
+      method: 'PUT'
+      url: "#{config.dbUrl}/#{userDbName}/#{id}"
+      headers: req.headers
+      json: doc
+    request opts, (err, resp, body) ->
+      statusCode = resp.statusCode
+      if statusCode isnt 201 then res.send(statusCode)
+      else
+        _rev = body.rev
+        res.json(statusCode, {_rev, mtime})
 
 
 ###
@@ -328,12 +401,6 @@ app.put '/events/:id', (req, res) ->
     else res.json(201, {_rev, mtime})
 
 
-app.delete '/events/:id', (req, res) ->
-  id = req.params?.id
-  debug "DELETE /events/#{id}"
-  res.send(403)
-
-
 app.post '/messages', (req, res) ->
   debug "POST /message"
   userCtx = req.userCtx   # from the app.all route
@@ -354,12 +421,23 @@ app.post '/messages', (req, res) ->
         json: message
       request(opts, next) # (err, resp, body)
     (resp, body, next) ->
-      debug 'get users'
+      debug 'mark message read'
       statusCode = resp.statusCode
       if statusCode isnt 201 then next(statusCode: statusCode)
       else
         _rev = body.rev
-        getEventUsers({eventId}, next)  # (err, users)
+        opts =
+          method: 'POST'
+          url: "#{config.dbUrl}/#{userDbName}"
+          headers: req.headers
+          json:
+            type: 'read'
+            message_id: message._id
+            event_id: message.event_id
+        request(opts, next) # (err, resp, body)
+    (resp, body, next) ->
+      debug 'get users'
+      getEventUsers({eventId}, next)  # (err, users)
     (users, next) ->
       debug 'replicate'
       src = userCtx.name
@@ -375,40 +453,68 @@ app.post '/messages', (req, res) ->
 
 
 app.put '/messages/:id', (req, res) ->
+  ## TODO: _allow_ change only when read => true (write 'read' doc)
   id = req.params?.id
   debug "PUT /messages/#{id}"
-  res.send(403)   # cannot modify sent messages
-app.delete '/messages/:id', (req, res) ->
+  userCtx = req.userCtx
+  cookie = req.headers.cookie
+  message = req.body
+  markReadStatus message, userCtx.name, cookie, (err, _res) ->
+    if err
+      statusCode = err.statusCode ? err.status_code ? 500
+      res.json(statusCode, err)
+    else
+      res.send(201)
+
+app.get '/messages', (req, res) ->
+  debug "GET /messages"
+  userCtx =  req.userCtx
+  cookie = req.headers.cookie
+  getMessages userCtx.name, cookie, (err, messages) ->
+    if err
+      statusCode = err.statusCode ? err.status_code ? 500
+      res.json(statusCode, err)
+    else
+      res.json(200, messages)
+
+app.get '/messages/:id', (req, res) ->
   id = req.params?.id
-  debug "DELETE /messages/#{id}"
-  res.send(403)   # cannot delete sent messages
+  debug "GET /messages/#{id}"
+  userCtx =  req.userCtx
+  cookie = req.headers.cookie
+  getMessage id, userCtx.name, cookie, (err, message) ->
+    if err
+      statusCode = err.statusCode ? err.status_code ? 500
+      res.json(statusCode, err)
+    else
+      res.json(200, message)
 
-
+## TODO:
+#   * cards, email_addresses, phone_numbers
 
 ###
 # OLD ROUTES
 ###
 
 # GET /events/members
-app.get '/events/members', (req, res) ->
-  # TODO: do we want it as a GET?
-  eventId = req.query.eventId
-  debug "GET /events/members"
-  debug "   eventId: #{eventId}"
-  getUserIdFromSession headers: req.headers, (err, r) ->
-    if err
-      res.json({status: 403, reason: 'User must be logged in'}, 403)
-    else
-      userId = r.userId
-      getEventUsers {eventId}, (e, r) ->
-        # there should only be responses, no errors
-        if e
-          res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
-        else
-          if not (userId in r.users) and not (userId in config.ADMINS)
-            res.json({status: 403, reason: "Not authorized to view this event"}, 403)
-          else
-            res.json(r, 200)
+#app.get '/events/members', (req, res) ->
+#  eventId = req.query.eventId
+#  debug "GET /events/members"
+#  debug "   eventId: #{eventId}"
+#  getUserIdFromSession headers: req.headers, (err, r) ->
+#    if err
+#      res.json({status: 403, reason: 'User must be logged in'}, 403)
+#    else
+#      userId = r.userId
+#      getEventUsers {eventId}, (e, r) ->
+#        # there should only be responses, no errors
+#        if e
+#          res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
+#        else
+#          if not (userId in r.users) and not (userId in config.ADMINS)
+#            res.json({status: 403, reason: "Not authorized to view this event"}, 403)
+#          else
+#            res.json(r, 200)
 
 ###
   POST /events/message
@@ -426,31 +532,31 @@ app.get '/events/members', (req, res) ->
     ids.each (dst) -
     replicate src, dst, filter(swapEventId)
 ###
-app.post '/events/replicate', (req, res) ->
-  eventId = req.body.eventId
-  debug "POST /events/replicate"
-  debug "   eventId: #{eventId}"
-  getUserIdFromSession headers: req.headers, (err, r) ->
-    if err
-      res.json({status: 403, reason: 'User must be logged in'}, 403)
-    else
-      src = r.userId
-      getEventUsers {eventId}, (e, r) ->
-        # 404 or 500
-        if e then res.json(e, e.status)
-        else
-          if not (src in r.users) and not (src in config.ADMINS)
-            res.json({status: 403, reason: "Not authorized to write messages to this event"}, 403)
-          else
-            dsts = r.users
-            for admin in config.ADMINS
-              dsts.push(admin)
-            dsts = _.without(r.users, src)
-            replicate {src, dsts, eventId}, (e, r) ->
-              if e
-                res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
-              else
-                res.json(r, 201)
+#app.post '/events/replicate', (req, res) ->
+#  eventId = req.body.eventId
+#  debug "POST /events/replicate"
+#  debug "   eventId: #{eventId}"
+#  getUserIdFromSession headers: req.headers, (err, r) ->
+#    if err
+#      res.json({status: 403, reason: 'User must be logged in'}, 403)
+#    else
+#      src = r.userId
+#      getEventUsers {eventId}, (e, r) ->
+#        # 404 or 500
+#        if e then res.json(e, e.status)
+#        else
+#          if not (src in r.users) and not (src in config.ADMINS)
+#            res.json({status: 403, reason: "Not authorized to write messages to this event"}, 403)
+#          else
+#            dsts = r.users
+#            for admin in config.ADMINS
+#              dsts.push(admin)
+#            dsts = _.without(r.users, src)
+#            replicate {src, dsts, eventId}, (e, r) ->
+#              if e
+#                res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
+#              else
+#                res.json(r, 201)
 
 ###
 # END OLD ROUTES
