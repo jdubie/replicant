@@ -69,6 +69,19 @@ helpers.hash = (message) ->
   shasum.update(message)
   return shasum.digest('hex')
 
+###
+  gets login
+###
+helpers.getUserId = ({cookie, userCtx}, callback) ->
+  nanoOpts =
+    url: "#{config.dbUrl}/_users"
+    cookie: cookie
+  userPrivateNano = require('nano')(nanoOpts)
+  userPrivateNano.get "org.couchdb.user:#{userCtx.name}", (err, _userDoc) ->
+    userCtx.roles = _userDoc.roles
+    userCtx.user_id = _userDoc.user_id
+    callback(err, userCtx)
+
 
 ###
   @param error {string}

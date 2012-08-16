@@ -1,10 +1,12 @@
 express = require('express')
+path = require('path')
 async = require('async')
 _ = require('underscore')
 debug = require('debug')('replicant:app')
 request = require('request')
 util = require('util')
 
+helpers = require('./lib/helpers')
 {getUserIdFromSession, getUserCtxFromSession, hash, getUserDbName} = require('./lib/helpers')
 {auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate} = require('./lib/replicant')
 adminNotifications = require('./lib/adminNotifications')
@@ -55,7 +57,40 @@ app.post '/user_ctx', (req, res) ->
       res.send(403, 'Invalid credentials')
     else
       res.set('Set-Cookie', cookie)
-      res.end()
+      helpers.getUserId {cookie, userCtx: name: username}, (err, userCtx) ->
+        res.json(userCtx)
+
+###
+  Logout
+###
+app.delete '/user_ctx', (req, res) ->
+  opts =
+    url: "#{config.dbUrl}/_session"
+    method: 'DELETE'
+  request(opts).pipe(res)
+
+###
+  Get user session
+###
+app.get '/user_ctx', (req, res) ->
+  opts =
+    headers: req.headers
+    url: "#{config.dbUrl}/_session"
+    json: true
+  debug opts.url
+  request opts, (err, headers, body) ->
+    # todo handle err
+    debug util.inspect body
+    userCtx = body.userCtx
+    unless userCtx.name?
+      debug 'user is not logged in'
+      res.json({})
+    else
+      debug 'user is logged in', userCtx
+      cookie = req.headers.cookie
+      helpers.getUserId {cookie, userCtx}, (err, userCtx) ->
+        # todo handle error
+        res.json(userCtx)
 
 ###
   POST /users
