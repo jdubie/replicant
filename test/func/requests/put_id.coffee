@@ -3,21 +3,20 @@ async = require('async')
 util = require('util')
 request = require('request')
 
-{nano, nanoAdmin} = require('config')
+{nanoAdmin, nano} = require('config')
 
 
-describe 'DELETE /wishlists/:id', () ->
-
-  ## simple test - for now should just 403 (forbidden)
+describe 'PUT /requests/:id', () ->
 
   ## from toy data
   _userId = 'user2'
   _password = 'pass2'
-  _wishlist =
-    _id: 'deletewishlist'
-    type: 'wishlist'
+  _request =
+    _id: 'putrequestsid'
+    type: 'request'
     name: _userId
     foo: 'bar'
+
   cookie = null
 
   mainDb = nanoAdmin.db.use('lifeswap')
@@ -25,7 +24,6 @@ describe 'DELETE /wishlists/:id', () ->
   before (ready) ->
     ## start webserver
     app = require('../../../app')
-
     ## authenticate user
     authUser = (callback) ->
       nano.auth _userId, _password, (err, body, headers) ->
@@ -33,41 +31,41 @@ describe 'DELETE /wishlists/:id', () ->
         should.exist(headers and headers['set-cookie'])
         cookie = headers['set-cookie'][0]
         callback()
-
-    ## insert wishlist
-    insertWishlist = (callback) ->
-      mainDb.insert _wishlist, (err, res) ->
+    ## insert request
+    insertReview = (callback) ->
+      mainDb.insert _request, (err, res) ->
         should.not.exist(err)
-        _wishlist._rev = res.rev
+        _request._rev = res.rev
         callback()
-
+    ## in parallel
     async.series [
       authUser
-      insertWishlist
+      insertReview
     ], ready
 
 
   after (finished) ->
-    ## destroy wishlist
-    mainDb.get _wishlist._id, (err, wishlist) ->
-      should.not.exist(err)
-      mainDb.destroy(wishlist._id, wishlist._rev, finished)
+    ## destroy request
+    mainDb.destroy(_request._id, _request._rev, finished)
 
 
-  it 'should return a 403 (forbidden)', (done) ->
+  it 'should return _rev and mtime', (done) ->
+    _request.foo = 'c3p0'
     opts =
-      method: 'DELETE'
-      url: "http://localhost:3001/wishlists/#{_wishlist._id}"
-      json: true
+      method: 'PUT'
+      url: "http://localhost:3001/requests/#{_request._id}"
+      json: _request
       headers: cookie: cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
-      res.should.have.property('statusCode', 403)
+      res.statusCode.should.eql(201)
+      body.should.have.keys(['_rev', 'mtime'])
+      for key, val of body
+        _request[key] = val
       done()
 
-
-  it 'should not delete \'wishlist\' type entry in lifeswap db', (done) ->
-    mainDb.get _wishlist._id, (err, wishlist) ->
+  it 'should modify the document in the DB', (done) ->
+    mainDb.get _request._id, (err, requestDoc) ->
       should.not.exist(err)
-      wishlist.should.eql(_wishlist)
+      requestDoc.should.eql(_request)
       done()

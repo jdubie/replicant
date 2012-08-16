@@ -6,16 +6,16 @@ request = require('request')
 {nano, nanoAdmin} = require('config')
 
 
-describe 'DELETE /wishlists/:id', () ->
+describe 'DELETE /requests/:id', () ->
 
   ## simple test - for now should just 403 (forbidden)
 
   ## from toy data
   _userId = 'user2'
   _password = 'pass2'
-  _wishlist =
-    _id: 'deletewishlist'
-    type: 'wishlist'
+  _request =
+    _id: 'deleterequest'
+    type: 'request'
     name: _userId
     foo: 'bar'
   cookie = null
@@ -34,30 +34,28 @@ describe 'DELETE /wishlists/:id', () ->
         cookie = headers['set-cookie'][0]
         callback()
 
-    ## insert wishlist
-    insertWishlist = (callback) ->
-      mainDb.insert _wishlist, (err, res) ->
+    ## insert request
+    insertRequest = (callback) ->
+      mainDb.insert _request, (err, res) ->
         should.not.exist(err)
-        _wishlist._rev = res.rev
+        _request._rev = res.rev
         callback()
 
     async.series [
       authUser
-      insertWishlist
+      insertRequest
     ], ready
 
 
   after (finished) ->
-    ## destroy wishlist
-    mainDb.get _wishlist._id, (err, wishlist) ->
-      should.not.exist(err)
-      mainDb.destroy(wishlist._id, wishlist._rev, finished)
+    ## destroy request
+    mainDb.destroy(_request._id, _request._rev, finished)
 
 
   it 'should return a 403 (forbidden)', (done) ->
     opts =
       method: 'DELETE'
-      url: "http://localhost:3001/wishlists/#{_wishlist._id}"
+      url: "http://localhost:3001/requests/#{_request._id}"
       json: true
       headers: cookie: cookie
     request opts, (err, res, body) ->
@@ -66,8 +64,8 @@ describe 'DELETE /wishlists/:id', () ->
       done()
 
 
-  it 'should not delete \'wishlist\' type entry in lifeswap db', (done) ->
-    mainDb.get _wishlist._id, (err, wishlist) ->
+  it 'should not delete \'request\' type entry in lifeswap db', (done) ->
+    mainDb.get _request._id, (err, requestDoc) ->
       should.not.exist(err)
-      wishlist.should.eql(_wishlist)
+      requestDoc.should.eql(_request)
       done()
