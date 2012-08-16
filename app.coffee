@@ -133,6 +133,7 @@ app.post '/users', (req, res) ->
   # delete private data
   delete user.password
   delete user.email
+  email = email.toString().toLowerCase()
   debug "   email: #{email}"
 
   name = hash(email)
