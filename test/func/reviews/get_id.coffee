@@ -5,7 +5,7 @@ request = require('request')
 {nanoAdmin} = require('config')
 
 
-describe 'GET /swaps/:id', () ->
+describe 'GET /reviews/:id', () ->
 
   _review =
     _id: 'getreviewid'

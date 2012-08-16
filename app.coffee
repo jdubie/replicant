@@ -22,6 +22,7 @@ shouldParseBody = (req) ->
     if req.url is '/users' then return true
     if req.url is '/swaps' then return true
     if req.url is '/reviews' then return true
+    if req.url is '/wishlists' then return true
     # user db
     if req.url is '/events' then return true
     if req.url is '/messages' then return true
@@ -33,6 +34,7 @@ shouldParseBody = (req) ->
     if /^\/users\/.*$/.test(req.url) then return true
     if /^\/swaps\/.*$/.test(req.url) then return true
     if /^\/reviews\/.*$/.test(req.url) then return true
+    if /^\/wishlists\/.*$/.test(req.url) then return true
     # user db
     if /^\/events\/.*$/.test(req.url) then return true
     if /^\/messages\/.*$/.test(req.url) then return true
@@ -192,8 +194,9 @@ app.post '/users', (req, res) ->
   POST
     /swaps
     /reviews
+    /wishlists
 ###
-_.each ['swaps', 'reviews'], (model) ->
+_.each ['swaps', 'reviews', 'wishlists'], (model) ->
   app.post "/#{model}", (req, res) ->
     debug "POST /#{model}"
     doc = req.body
@@ -213,7 +216,14 @@ _.each ['swaps', 'reviews'], (model) ->
         mtime = doc.mtime
         res.json(statusCode, {_rev, ctime, mtime})
 
-_.each ['users', 'swaps', 'reviews'], (model) ->
+###
+  GET, GET/:id, PUT
+    /users
+    /swaps
+    /reviews
+    /wishlists
+###
+_.each ['users', 'swaps', 'reviews', 'wishlists'], (model) ->
   ## GET /model
   app.get "/#{model}", (req, res) ->
     debug "GET /#{model}"
