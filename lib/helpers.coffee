@@ -83,6 +83,38 @@ helpers.getUserId = ({cookie, userCtx}, callback) ->
     callback(err, userCtx)
 
 
+helpers.singularizeModel = (model) ->
+  mapping =
+    # lifeswap db
+    swaps:      'swap'
+    users:      'user'
+    reviews:    'review'
+    wishlists:  'wishlist'
+    requests:   'request'
+    # user db
+    events:           'event'
+    messages:         'message'
+    cards:            'card'
+    email_addresses:  'email_address'
+    phone_numbers:    'phone_number'
+  return mapping[model]
+
+helpers.pluralizeType = (type) ->
+  mapping =
+    # lifeswap db
+    swap:       'swaps'
+    user:       'users'
+    review:     'reviews'
+    wishlist:   'wishlists'
+    request:    'requests'
+    # user db
+    event:          'events'
+    message:        'messages'
+    card:           'cards'
+    email_address:  'email_addresses'
+    phone_number:   'phone_numbers'
+  return mapping[type]
+
 ###
   @param error {string}
   @return {number}
@@ -94,5 +126,6 @@ helpers.getStatusFromCouchError = (error) ->
     when "forbidden" then return 403
     when "conflict" then return 409
     when "file_exists" then return 409      # database already exists
+    else return 500
 
 module.exports = helpers

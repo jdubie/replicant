@@ -198,11 +198,13 @@ replicant.auth = ({username, password}, callback) ->
       callback(null, headers['set-cookie'])
 
 
-## gets all of a type (e.g. type = 'users' or 'swaps')
+## gets all of a type (e.g. type = 'user' or 'swap')
 replicant.getType = (type, callback) ->
   db = nanoAdmin.db.use('lifeswap')
-  opts = include_docs: true
-  db.view 'lifeswap', type, opts, (err, res) ->
+  opts =
+    key: type
+    include_docs: true
+  db.view 'lifeswap', 'docs_by_type', opts, (err, res) ->
     if not err then docs = (row.doc for row in res.rows)
     callback(err, docs)
 
@@ -213,8 +215,10 @@ replicant.getTypeUserDb = (type, userId, cookie, callback) ->
     url: "#{dbUrl}/#{userDbName}"
     cookie: cookie
   db = require('nano')(nanoOpts)
-  opts = include_docs: true
-  db.view 'userddoc', type, opts, (err, res) ->
+  opts =
+    key: type
+    include_docs: true
+  db.view 'userddoc', 'docs_by_type', opts, (err, res) ->
     if not err then docs = (row.doc for row in res.rows)
     callback(err, docs)
 

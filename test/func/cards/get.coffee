@@ -25,7 +25,6 @@ describe 'GET /cards', () ->
   ]
 
   mainDb = nanoAdmin.db.use('lifeswap')
-  usersDb = nanoAdmin.db.use('_users')
   userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
 
   describe 'correctness:', () ->

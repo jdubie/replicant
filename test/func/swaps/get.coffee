@@ -10,9 +10,6 @@ describe 'GET /swaps', () ->
 
   swapsNano = []
 
-  ###
-    Make sure that user's db doesn't exist
-  ###
   before (ready) ->
     # start webserver
     app = require('../../../app')

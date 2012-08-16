@@ -7,7 +7,7 @@ request = require('request')
 util = require('util')
 
 helpers = require('./lib/helpers')
-{getUserIdFromSession, getUserCtxFromSession, hash, getUserDbName} = require('./lib/helpers')
+{getUserIdFromSession, getUserCtxFromSession, hash, getUserDbName, singularizeModel} = require('./lib/helpers')
 {auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate, getMessages, getMessage, markReadStatus} = require('./lib/replicant')
 adminNotifications = require('./lib/adminNotifications')
 config = require('./config')
@@ -18,16 +18,22 @@ app.use(express.static(__dirname + '/public'))
 shouldParseBody = (req) ->
   if req.url is '/user_ctx' then return true
   if req.method is 'POST'
+    # lifeswap db
     if req.url is '/users' then return true
     if req.url is '/swaps' then return true
+    if req.url is '/reviews' then return true
+    # user db
     if req.url is '/events' then return true
     if req.url is '/messages' then return true
     if req.url is '/cards' then return true
     if req.url is '/email_addresses' then return true
     if req.url is '/phone_numbers' then return true
   if req.method is 'PUT'
-    if /^\/swaps\/.*$/.test(req.url) then return true
+    # lifeswap db
     if /^\/users\/.*$/.test(req.url) then return true
+    if /^\/swaps\/.*$/.test(req.url) then return true
+    if /^\/reviews\/.*$/.test(req.url) then return true
+    # user db
     if /^\/events\/.*$/.test(req.url) then return true
     if /^\/messages\/.*$/.test(req.url) then return true
     if /^\/cards\/.*$/.test(req.url) then return true
@@ -183,32 +189,35 @@ app.post '/users', (req, res) ->
 
 
 ###
-  POST /swaps
+  POST
+    /swaps
+    /reviews
 ###
-app.post '/swaps', (req, res) ->
-  debug 'POST /swaps'
-  swap = req.body
-  swap.ctime = Date.now()
-  swap.mtime = swap.ctime
-  opts =
-    method: 'POST'
-    url: "#{config.dbUrl}/lifeswap"
-    headers: req.headers
-    json: swap
-  request opts, (err, resp, body) ->
-    statusCode = resp.statusCode
-    if statusCode isnt 201 then res.send(statusCode)
-    else
-      _rev = body.rev
-      ctime = swap.ctime
-      mtime = swap.mtime
-      res.json(statusCode, {_rev, ctime, mtime})
+_.each ['swaps', 'reviews'], (model) ->
+  app.post "/#{model}", (req, res) ->
+    debug "POST /#{model}"
+    doc = req.body
+    doc.ctime = Date.now()
+    doc.mtime = doc.ctime
+    opts =
+      method: 'POST'
+      url: "#{config.dbUrl}/lifeswap"
+      headers: req.headers
+      json: doc
+    request opts, (err, resp, body) ->
+      statusCode = resp.statusCode
+      if statusCode isnt 201 then res.send(statusCode)
+      else
+        _rev = body.rev
+        ctime = doc.ctime
+        mtime = doc.mtime
+        res.json(statusCode, {_rev, ctime, mtime})
 
-_.each ['users', 'swaps'], (model) ->
+_.each ['users', 'swaps', 'reviews'], (model) ->
   ## GET /model
   app.get "/#{model}", (req, res) ->
     debug "GET /#{model}"
-    getType model, (err, docs) ->
+    getType singularizeModel(model), (err, docs) ->
       res.json(200, docs)
       res.end()
 
@@ -235,7 +244,7 @@ _.each ['users', 'swaps'], (model) ->
       json: doc
     request opts, (err, resp, body) ->
       statusCode = resp.statusCode
-      if statusCode isnt 201 then res.send(statusCode)
+      if statusCode isnt 201 then res.json(statusCode, body)
       else
         _rev = body.rev
         res.json(statusCode, {_rev, mtime})
@@ -278,7 +287,8 @@ _.each ['events', 'cards', 'email_addresses', 'phone_numbers'], (model) ->
     debug "GET /#{model}"
     userCtx = req.userCtx   # from the app.all route
     cookie = req.headers.cookie
-    getTypeUserDb model, userCtx.name, cookie, (err, docs) ->
+    type = singularizeModel(model)
+    getTypeUserDb type, userCtx.name, cookie, (err, docs) ->
       if err
         statusCode = err.status_code ? 500
         res.json(statusCode, err)
