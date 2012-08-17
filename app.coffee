@@ -209,8 +209,9 @@ _.each ['swaps', 'reviews', 'likes', 'requests'], (model) ->
   app.post "/#{model}", (req, res) ->
     debug "POST /#{model}"
     doc = req.body
-    doc.ctime = Date.now()
-    doc.mtime = doc.ctime
+    ctime = mtime = Date.now()
+    doc.ctime = ctime
+    doc.mtime = mtime
     opts =
       method: 'POST'
       url: "#{config.dbUrl}/lifeswap"
@@ -221,8 +222,6 @@ _.each ['swaps', 'reviews', 'likes', 'requests'], (model) ->
       if statusCode isnt 201 then res.send(statusCode)
       else
         _rev = body.rev
-        ctime = doc.ctime
-        mtime = doc.mtime
         res.json(statusCode, {_rev, ctime, mtime})
 
 ###
@@ -349,8 +348,7 @@ _.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
     userCtx = req.userCtx   # from the app.all route
     userDbName = getUserDbName(userId: userCtx.name)
     doc = req.body
-    ctime = Date.now()
-    mtime = ctime
+    ctime = mtime = Date.now()
     doc.ctime = ctime
     doc.mtime = mtime
     opts =
@@ -436,8 +434,9 @@ app.post '/messages', (req, res) ->
   userCtx = req.userCtx   # from the app.all route
   userDbName = getUserDbName(userId: userCtx.name)
   message = req.body
-  ctime = Date.now()
+  ctime = mtime = Date.now()
   message.ctime = ctime
+  message.mtime = mtime
   _rev = null
   eventId = message.event_id
 
@@ -479,7 +478,7 @@ app.post '/messages', (req, res) ->
         replicate({src, dsts, eventId}, next)   # (err, resp)
   ], (err, resp) ->
     if err then res.json(err.statusCode ? 500, err)
-    else res.json(201, {_rev, ctime})
+    else res.json(201, {_rev, ctime, mtime})
 
 
 app.put '/messages/:id', (req, res) ->

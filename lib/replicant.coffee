@@ -240,6 +240,7 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
       type: 'read'
       message_id: message._id
       event_id: message.event_id
+      ctime: Date.now()
     db.insert(readDoc, callback)
   ## destroy 'read' document
   destroyReadDoc = (row, callback) ->

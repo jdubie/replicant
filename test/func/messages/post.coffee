@@ -97,7 +97,7 @@ describe 'POST /messages', () ->
       request opts, (err, res, body) ->
         should.not.exist(err)
         res.statusCode.should.eql(201)
-        body.should.have.keys(['_rev', 'ctime'])
+        body.should.have.keys(['_rev', 'ctime', 'mtime'])
         for key, val of body
           _message[key] = val
         done()
