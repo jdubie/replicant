@@ -62,7 +62,7 @@ describe 'POST /users', () ->
       ], finished
 
 
-    it 'should pass back the correct name, roles, user_id', (done) ->
+    it 'should pass back name, roles, user_id, ctime, mtime, _rev', (done) ->
       opts =
         url: 'http://localhost:3001/users'
         method: 'POST'
@@ -70,10 +70,13 @@ describe 'POST /users', () ->
       request opts, (err, res, body) ->
         should.not.exist(err)
         res.statusCode.should.eql(201)
-        body.should.have.keys(['name', 'roles', 'user_id'])
+        body.should.have.keys(['name', 'roles', 'user_id', 'ctime', 'mtime', '_rev'])
         body.name.should.eql(_emailHash)
         body.roles.should.eql([])
         body.user_id.should.eql(_userId)
+        _userDoc.ctime = body.ctime
+        _userDoc.mtime = body.mtime
+        _userDoc._rev = body._rev
         res.headers.should.have.property('set-cookie')
         done()
 
@@ -87,11 +90,9 @@ describe 'POST /users', () ->
     it 'should create a user type document in lifeswap DB', (done) ->
       mainDb.get _userId, (err, userDoc) ->
         should.not.exist(err)
-        _userDocInDb = _userDoc
-        delete _userDocInDb.email
-        delete _userDocInDb.password
-        _userDocInDb._rev = userDoc._rev
-        userDoc.should.eql(_userDocInDb)
+        delete _userDoc.email
+        delete _userDoc.password
+        userDoc.should.eql(_userDoc)
         done()
 
     it 'should create user database', (done) ->

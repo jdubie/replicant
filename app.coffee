@@ -137,10 +137,15 @@ app.post '/users', (req, res) ->
   debug "   email: #{email}"
 
   name = hash(email)
+  ctime = mtime = Date.now()
+  user.ctime = ctime
+  user.mtime = mtime
   response =
     name: name
     roles: []
     user_id: user_id
+    ctime: ctime
+    mtime: mtime
   cookie = null
 
   async.waterfall [
@@ -155,9 +160,9 @@ app.post '/users', (req, res) ->
       auth({username: name, password: password}, next)
 
     (_cookie, next) ->
+      cookie = _cookie
       ## create user database
       debug '   create user database'
-      cookie = _cookie
       createUserDb({userId: user_id, name: name}, next)
 
     (_res, next) ->
@@ -171,8 +176,8 @@ app.post '/users', (req, res) ->
       userNano.insert(user, user_id, next)
 
     (_res, headers, next) ->
+      response._rev = _res?.rev    # add _rev to response
       ## create 'email_address' type private document
-      #debug JSON.stringify(_res), headers
       debug "   create 'email_address' type private document"
       nanoOpts =
         url: "#{config.dbUrl}/#{getUserDbName(userId: user_id)}"
