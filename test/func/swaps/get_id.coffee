@@ -12,7 +12,7 @@ describe 'GET /swaps/:id', () ->
 
   before (ready) ->
     ## start webserver
-    app = require('../../../app')
+    app = require('app')
 
     ## get one of the swaps (the first from the 'swaps' view)
     db = nano.db.use('lifeswap')

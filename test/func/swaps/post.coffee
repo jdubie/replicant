@@ -2,41 +2,54 @@ should = require('should')
 util = require('util')
 request = require('request')
 
-{nanoAdmin} = require('config')
-{createUser} = require('lib/replicant')
-
-
-mainDb = nanoAdmin.db.use('lifeswap')
+{nanoAdmin, nano} = require('config')
+{hash} = require('lib/helpers')
 
 
 describe 'POST /swaps', () ->
 
-  _swapDoc =
+  _username = hash('user2@test.com')
+  _userId = 'user2_id'
+  _password = 'pass2'
+  _ctime = _mtime = 12345
+  _swap =
     _id: 'postswaps'
     type: 'swap'
+    name: _username
+    user_id: _userId
+    status: 'pending'
+    title: 'Posted Swap'
+    zipcode: '94305'
+    industry: 'Agriculture'
+    ctime: _ctime
+    mtime: _mtime
+    foo: 'bar'
+  cookie = null
+
+  mainDb = nanoAdmin.db.use('lifeswap')
 
   before (ready) ->
     ## start webserver
-    app = require('../../../app')
-    ready()
-
+    app = require('app')
+    nano.auth _username, _password, (err, body, headers) ->
+      should.not.exist(err)
+      should.exist(headers and headers['set-cookie'])
+      cookie = headers['set-cookie'][0]
+      ready()
 
   after (finished) ->
-    mainDb.get _swapDoc._id, (err, swapDoc) ->
-      should.not.exist(err)
-      swapDoc.should.eql(_swapDoc)
-      mainDb.destroy swapDoc._id, swapDoc._rev, (err, res) ->
-        should.not.exist(err)
-        finished()
+    mainDb.destroy(_swap._id, _swap._rev, finished)
+
 
   it 'should POST the swap correctly', (done) ->
     opts =
       method: 'POST'
       url: "http://localhost:3001/swaps"
-      json: _swapDoc
+      json: _swap
+      headers: {cookie}
     request opts, (err, res, body) ->
       should.not.exist(err)
       body.should.have.keys(['_rev', 'mtime', 'ctime'])
       for key, val of body
-        _swapDoc[key] = val
+        _swap[key] = val
       done()

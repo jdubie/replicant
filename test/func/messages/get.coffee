@@ -4,31 +4,37 @@ util = require('util')
 request = require('request')
 
 {nanoAdmin, nano, dbUrl, ADMINS} = require('config')
-{getUserDbName} = require('lib/helpers')
+{getUserDbName, hash} = require('lib/helpers')
 
 
 describe 'GET /messages', () ->
 
   ## from the test/toy data
-  _userId = 'user2'
+  _username = hash('user2@test.com')
+  _userId = 'user2_id'
   _password = 'pass2'
   cookie = null
+  ctime = mtime = 12345
   _messages = [
     {
-      _id: "getmessages1",
-      event_id: "getmessagesevent",
-      swap_id: "swap1",
-      message: "bro",
-      author: "user2",
+      _id: "getmessages1"
       type: "message"
+      name: _username
+      user_id: "user2_id"
+      event_id: "getmessagesevent"
+      message: "bro"
+      ctime: ctime
+      mtime: mtime
     }
     {
-      _id: "getmessages2",
-      event_id: "getmessagesevent",
-      swap_id: "swap1",
-      message: "booger",
-      author: "user1",
+      _id: "getmessages2"
       type: "message"
+      name: hash('user1@test.com')
+      user_id: "user1_id"
+      event_id: "getmessagesevent"
+      message: "booger"
+      ctime: ctime
+      mtime: mtime
     }
   ]
   _readDoc =
@@ -36,6 +42,7 @@ describe 'GET /messages', () ->
     type: "read"
     message_id: "getmessages1"
     event_id: _messages[0].event_id
+    ctime: ctime
 
   mainDb = nanoAdmin.db.use('lifeswap')
 
@@ -54,7 +61,7 @@ describe 'GET /messages', () ->
     app = require('app')
     ## authenticate user
     authUser = (cb) ->
-      nano.auth _userId, _password, (err, body, headers) ->
+      nano.auth _username, _password, (err, body, headers) ->
         should.not.exist(err)
         should.exist(headers and headers['set-cookie'])
         cookie = headers['set-cookie'][0]

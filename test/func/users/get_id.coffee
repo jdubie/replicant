@@ -8,38 +8,29 @@ request = require('request')
 
 describe 'GET /users/:id', () ->
 
-  _userId = 'someuser'
-  _userDoc =
-    _id: _userId
-    type: 'user'
-    foo: 'bar'
+  someUser = null
 
   mainDb = nanoAdmin.db.use('lifeswap')
 
   before (ready) ->
     ## start webserver
-    app = require('../../../app')
-
-    ## insert user
-    mainDb.insert _userDoc, _userId, (err, res) ->
+    app = require('app')
+    ## get one of the users
+    opts =
+      key: 'user'
+      include_docs: true
+    mainDb.view 'lifeswap', 'docs_by_type', opts, (err, res) ->
       should.not.exist(err)
-      _userDoc._rev = res.rev
+      someUser = res.rows?[0]?.doc
       ready()
-
-
-  after (finished) ->
-    ## delete the user
-    mainDb.destroy _userId, _userDoc._rev, (err, res) ->
-      should.not.exist(err)
-      finished()
 
 
   it 'should get the correct user\'s document', (done) ->
     opts =
       method: 'GET'
-      url: "http://localhost:3001/users/#{_userId}"
+      url: "http://localhost:3001/users/#{someUser._id}"
       json: true
-    request opts, (err, res, userDoc) ->
+    request opts, (err, res, user) ->
       should.not.exist(err)
-      userDoc.should.eql(_userDoc)
+      user.should.eql(someUser)
       done()

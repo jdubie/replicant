@@ -3,19 +3,40 @@ util = require('util')
 async = require('async')
 request = require('request')
 
-{nanoAdmin, nano} = require('config')
+{nanoAdmin} = require('config')
+{hash} = require('lib/helpers')
 
 
 describe 'GET /reviews', () ->
 
+  _ctime = _mtime = 12345
   _reviews = [
     {
       _id: 'getreviews1'
       type: 'review'
+      name: hash('user1@test.com')
+      user_id: 'user1_id'
+      review_type: 'guest'
+      reviewee_id: 'user2_id'
+      rating: 1
+      review: "NOT a chill person."
+      ctime: _ctime
+      mtime: _mtime
+      foo: 'bar'
     }
     {
       _id: 'getreviews2'
       type: 'review'
+      name: hash('user2@test.com')
+      user_id: 'user2_id'
+      review_type: 'swap'
+      reviewee_id: 'user1_id'
+      swap_id: 'swap1'
+      rating: 1
+      review: "NOT a buttery swap."
+      ctime: _ctime
+      mtime: _mtime
+      baz: 'bag'
     }
   ]
 

@@ -100,6 +100,7 @@ replicant.createEvent = ({event, userId}, callback) ->
   createEventDoc = (userId, cb) ->
     # @todo replace with getting this from cookies
     userDbName = getUserDbName(userId: userId)
+    debug 'userDbName:', userDbName
     userDb = nanoAdmin.db.use(userDbName)
     userDb.insert(event, event._id, cb)
 
@@ -107,8 +108,10 @@ replicant.createEvent = ({event, userId}, callback) ->
     debug 'getMembers'
     db = nanoAdmin.db.use('lifeswap')
     db.get event.swap_id, (err, swapDoc) ->
-      if not err then otherUsers = [swapDoc.host] # @todo swapDoc.host will be array in future
-      otherUsers.push(admin) for admin in ADMINS
+      if not err
+        otherUsers = [swapDoc.user_id] # @todo swapDoc.user_id will be array in future
+        otherUsers.push(admin) for admin in ADMINS
+      else debug 'error!', err
       next(err, otherUsers)
 
   ## OR could just replicate from original user to these users
@@ -131,13 +134,14 @@ replicant.createEvent = ({event, userId}, callback) ->
 
   async.waterfall [
     (next) -> createEventDoc userId, (err, res) ->
-      _rev = res.rev
+      if err then debug 'createEventDoc error', err
+      _rev = res?.rev
       next()
     getMembers
     createDocs
   ], (err, res) ->
     if err
-      err.statusCode = err.status_code if err.status_code else 500
+      err.statusCode = err.status_code ? 500
       callback(err)
     else
       callback(null, {_rev, mtime, ctime})

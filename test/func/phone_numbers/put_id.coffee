@@ -3,17 +3,24 @@ async = require('async')
 util = require('util')
 request = require('request')
 
-{nanoAdmin, nano, dbUrl} = require('config')
-{getUserDbName} = require('lib/helpers')
+{nanoAdmin, nano} = require('config')
+{getUserDbName, hash} = require('lib/helpers')
 
 
 describe 'PUT /phone_numbers/:id', () ->
 
-  _userId = 'user2'
+  _username = hash('user2@test.com')
+  _userId = 'user2_id'
   _password = 'pass2'
+  _ctime = _mtime = 12345
   _phone =
     _id: 'putphoneid'
     type: 'phone_number'
+    name: _username
+    user_id: _userId
+    phone_number: 5552097765
+    ctime: _ctime
+    mtime: _mtime
     foo: 'bar'
 
   cookie = null
@@ -25,7 +32,7 @@ describe 'PUT /phone_numbers/:id', () ->
     app = require('app')
     ## authenticate user
     authUser = (callback) ->
-      nano.auth _userId, _password, (err, body, headers) ->
+      nano.auth _username, _password, (err, body, headers) ->
         should.not.exist(err)
         should.exist(headers and headers['set-cookie'])
         cookie = headers['set-cookie'][0]

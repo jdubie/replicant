@@ -3,12 +3,13 @@ util = require('util')
 request = require('request')
 
 {nanoAdmin, nano} = require('config')
-{getUserDbName} = require('lib/helpers')
+{getUserDbName, hash} = require('lib/helpers')
 
 
 describe 'POST /cards', () ->
 
-  _userId = 'user2'
+  _username = hash('user2@test.com')
+  _userId = 'user2_id'
   _password = 'pass2'
   _card =
     _id: 'postcardsid'
@@ -22,7 +23,7 @@ describe 'POST /cards', () ->
     ## start webserver
     app = require('app')
     ## authenticate user
-    nano.auth _userId, _password, (err, body, headers) ->
+    nano.auth _username, _password, (err, body, headers) ->
       should.not.exist(err)
       should.exist(headers and headers['set-cookie'])
       cookie = headers['set-cookie'][0]

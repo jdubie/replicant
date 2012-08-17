@@ -4,18 +4,30 @@ async = require('async')
 request = require('request')
 
 {nanoAdmin} = require('config')
+{hash} = require('lib/helpers')
 
 
 describe 'GET /requests', () ->
 
+  _ctime = _mtime = 12345
   _requests = [
     {
       _id: 'getrequests1'
       type: 'request'
+      name: hash('user1@test.com')
+      user_id: 'user1_id'
+      ctime: _ctime
+      mtime: _mtime
+      foo: 'bar'
     }
     {
       _id: 'getrequests2'
       type: 'request'
+      name: hash('user2@test.com')
+      user_id: 'user2_id'
+      ctime: _ctime
+      mtime: _mtime
+      foo: 'bar'
     }
   ]
 

@@ -7,7 +7,7 @@ request = require('request')
 util = require('util')
 
 helpers = require('./lib/helpers')
-{getUserIdFromSession, getUserCtxFromSession, hash, getUserDbName, singularizeModel} = require('./lib/helpers')
+{hash, getUserDbName} = require('./lib/helpers')
 {auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate, getMessages, getMessage, markReadStatus} = require('./lib/replicant')
 adminNotifications = require('./lib/adminNotifications')
 config = require('./config')
@@ -53,14 +53,11 @@ app.use (req, res, next) ->
 
 userCtxRegExp = /^\/(events|messages|cards|email_addresses|phone_numbers)(\/.*)?$/
 app.all userCtxRegExp, (req, res, next) ->
-  getUserCtxFromSession headers: req.headers, (err, _res) ->
-    if err then res.send(403)
+  helpers.getUserCtxFromSession req, (err, userCtx) ->
+    if err then res.json(err.statusCode ? err.status_code ? 500, err)
     else
-      userCtx = _res.userCtx
-      if not userCtx or not userCtx.name then res.send(403)
-      else
-        req.userCtx = userCtx
-        next()
+      req.userCtx = userCtx
+      next()
 
 
 ###
@@ -103,13 +100,13 @@ app.get '/user_ctx', (req, res) ->
     userCtx = body.userCtx
     unless userCtx.name?
       debug 'user is not logged in'
-      res.json({})
+      res.json(statusCode: 401, {})
     else
       debug 'user is logged in', userCtx
       cookie = req.headers.cookie
       helpers.getUserId {cookie, userCtx}, (err, userCtx) ->
-        # todo handle error
-        res.json(userCtx)
+        if err then res.json(err.statusCode ? 401, err)
+        else res.json(statusCode: 200, userCtx)
 
 ###
   POST /users
@@ -218,8 +215,8 @@ _.each ['swaps', 'reviews', 'likes', 'requests'], (model) ->
       headers: req.headers
       json: doc
     request opts, (err, resp, body) ->
-      statusCode = resp.statusCode
-      if statusCode isnt 201 then res.send(statusCode)
+      statusCode = resp.statusCode ? 500
+      if statusCode isnt 201 then res.json(statusCode, body)
       else
         _rev = body.rev
         res.json(statusCode, {_rev, ctime, mtime})
@@ -236,7 +233,8 @@ _.each ['users', 'swaps', 'reviews', 'likes', 'requests'], (model) ->
   ## GET /model
   app.get "/#{model}", (req, res) ->
     debug "GET /#{model}"
-    getType singularizeModel(model), (err, docs) ->
+    type = helpers.singularizeModel(model)
+    getType type, (err, docs) ->
       res.json(200, docs)
       res.end()
 
@@ -290,9 +288,9 @@ app.post '/events', (req, res) ->
   ## TODO: validate that event has _id, type, state, swap_id
   debug "POST /events"
   debug "   event: #{event}"
-  createEvent {event, userId: userCtx.name}, (err, _res) ->
-    if err then res.send(err.statusCode)
-    else res.send(201, _res)    # {_rev, mtime, ctime}
+  createEvent {event, userId: userCtx.user_id}, (err, _res) ->
+    if err then res.json(err.statusCode, err)
+    else res.json(201, _res)    # {_rev, mtime, ctime}
 
 
 ###
@@ -306,8 +304,9 @@ _.each ['events', 'cards', 'email_addresses', 'phone_numbers'], (model) ->
     debug "GET /#{model}"
     userCtx = req.userCtx   # from the app.all route
     cookie = req.headers.cookie
-    type = singularizeModel(model)
-    getTypeUserDb type, userCtx.name, cookie, (err, docs) ->
+    type = helpers.singularizeModel(model)
+    debug 'userCtx', userCtx
+    getTypeUserDb type, userCtx.user_id, cookie, (err, docs) ->
       if err
         statusCode = err.status_code ? 500
         res.json(statusCode, err)
@@ -318,7 +317,7 @@ _.each ['events', 'cards', 'email_addresses', 'phone_numbers'], (model) ->
     id = req.params?.id
     debug "GET /#{model}/#{id}"
     userCtx = req.userCtx   # from the app.all route
-    userDbName = getUserDbName(userId: userCtx.name)
+    userDbName = getUserDbName(userId: userCtx.user_id)
     endpoint =
       url: "#{config.dbUrl}/#{userDbName}/#{id}"
       headers: req.headers
@@ -346,7 +345,7 @@ _.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
   app.post "/#{model}", (req, res) ->
     debug "PUT /#{model}"
     userCtx = req.userCtx   # from the app.all route
-    userDbName = getUserDbName(userId: userCtx.name)
+    userDbName = getUserDbName(userId: userCtx.user_id)
     doc = req.body
     ctime = mtime = Date.now()
     doc.ctime = ctime
@@ -367,7 +366,7 @@ _.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
     id = req.params?.id
     debug "PUT /#{model}/#{id}"
     userCtx = req.userCtx   # from the app.all route
-    userDbName = getUserDbName(userId: userCtx.name)
+    userDbName = getUserDbName(userId: userCtx.user_id)
     doc = req.body
     mtime = Date.now()
     doc.mtime = mtime
@@ -391,7 +390,7 @@ app.put '/events/:id', (req, res) ->
   id = req.params?.id
   debug "PUT /events/#{id}"
   userCtx = req.userCtx   # from the app.all route
-  userDbName = getUserDbName(userId: userCtx.name)
+  userDbName = getUserDbName(userId: userCtx.user_id)
   event = req.body
   mtime = Date.now()
   event.mtime = mtime
@@ -415,10 +414,10 @@ app.put '/events/:id', (req, res) ->
         getEventUsers({eventId: event._id}, next)   # (err, users)
     (users, next) ->
       debug 'replicate'
-      src = userCtx.name
+      src = userCtx.user_id
       eventId = event._id
       if not (src in users) and not (src in config.ADMINS)
-        next(statusCode: 403, reason: "Not authorized to write messages to this event")
+        next(statusCode: 403, reason: "Not authorized to modify this event")
       else
         for admin in config.ADMINS
           users.push(admin)
@@ -432,7 +431,7 @@ app.put '/events/:id', (req, res) ->
 app.post '/messages', (req, res) ->
   debug "POST /message"
   userCtx = req.userCtx   # from the app.all route
-  userDbName = getUserDbName(userId: userCtx.name)
+  userDbName = getUserDbName(userId: userCtx.user_id)
   message = req.body
   ctime = mtime = Date.now()
   message.ctime = ctime
@@ -469,7 +468,7 @@ app.post '/messages', (req, res) ->
       getEventUsers({eventId}, next)  # (err, users)
     (users, next) ->
       debug 'replicate'
-      src = userCtx.name
+      src = userCtx.user_id
       if not (src in users) and not (src in config.ADMINS)
         next(statusCode: 403, reason: "Not authorized to write messages to this event")
       else
@@ -488,7 +487,7 @@ app.put '/messages/:id', (req, res) ->
   userCtx = req.userCtx
   cookie = req.headers.cookie
   message = req.body
-  markReadStatus message, userCtx.name, cookie, (err, _res) ->
+  markReadStatus message, userCtx.user_id, cookie, (err, _res) ->
     if err
       statusCode = err.statusCode ? err.status_code ? 500
       res.json(statusCode, err)
@@ -499,7 +498,7 @@ app.get '/messages', (req, res) ->
   debug "GET /messages"
   userCtx =  req.userCtx
   cookie = req.headers.cookie
-  getMessages userCtx.name, cookie, (err, messages) ->
+  getMessages userCtx.user_id, cookie, (err, messages) ->
     if err
       statusCode = err.statusCode ? err.status_code ? 500
       res.json(statusCode, err)
@@ -511,86 +510,12 @@ app.get '/messages/:id', (req, res) ->
   debug "GET /messages/#{id}"
   userCtx =  req.userCtx
   cookie = req.headers.cookie
-  getMessage id, userCtx.name, cookie, (err, message) ->
+  getMessage id, userCtx.user_id, cookie, (err, message) ->
     if err
       statusCode = err.statusCode ? err.status_code ? 500
       res.json(statusCode, err)
     else
       res.json(200, message)
-
-## TODO:
-#   * cards, email_addresses, phone_numbers
-
-###
-# OLD ROUTES
-###
-
-# GET /events/members
-#app.get '/events/members', (req, res) ->
-#  eventId = req.query.eventId
-#  debug "GET /events/members"
-#  debug "   eventId: #{eventId}"
-#  getUserIdFromSession headers: req.headers, (err, r) ->
-#    if err
-#      res.json({status: 403, reason: 'User must be logged in'}, 403)
-#    else
-#      userId = r.userId
-#      getEventUsers {eventId}, (e, r) ->
-#        # there should only be responses, no errors
-#        if e
-#          res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
-#        else
-#          if not (userId in r.users) and not (userId in config.ADMINS)
-#            res.json({status: 403, reason: "Not authorized to view this event"}, 403)
-#          else
-#            res.json(r, 200)
-
-###
-  POST /events/message
-  ReplicateEventMessage swapEventId, session
-    This service triggers replications between users databases
-    @todo make PUT
-    @possibleName Replicant
-    @param swapEventId {string} id of swap event to filter on
-    @param session {cookie} authenicates user
-    @method POST
-    @url /events/message
-
-    ids = GET /mapper/swapEventId
-    src = getIdFromSession()
-    ids.each (dst) -
-    replicate src, dst, filter(swapEventId)
-###
-#app.post '/events/replicate', (req, res) ->
-#  eventId = req.body.eventId
-#  debug "POST /events/replicate"
-#  debug "   eventId: #{eventId}"
-#  getUserIdFromSession headers: req.headers, (err, r) ->
-#    if err
-#      res.json({status: 403, reason: 'User must be logged in'}, 403)
-#    else
-#      src = r.userId
-#      getEventUsers {eventId}, (e, r) ->
-#        # 404 or 500
-#        if e then res.json(e, e.status)
-#        else
-#          if not (src in r.users) and not (src in config.ADMINS)
-#            res.json({status: 403, reason: "Not authorized to write messages to this event"}, 403)
-#          else
-#            dsts = r.users
-#            for admin in config.ADMINS
-#              dsts.push(admin)
-#            dsts = _.without(r.users, src)
-#            replicate {src, dsts, eventId}, (e, r) ->
-#              if e
-#                res.json({status: 500, reason: "Internal Server Error: #{e}"}, 500)
-#              else
-#                res.json(r, 201)
-
-###
-# END OLD ROUTES
-###
-
 
 # fire up HTTP server
 app.listen(config.port)

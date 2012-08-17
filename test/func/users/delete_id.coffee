@@ -4,22 +4,26 @@ util = require('util')
 request = require('request')
 
 {nano, nanoAdmin, dbUrl} = require('config')
-
-getUserDbName = ({userId}) -> return "users_#{userId}"
+{getUserDbName, hash} = require('lib/helpers')
 
 
 describe 'DELETE /users/:id', () ->
 
   ## simple test - for now should just 403 (forbidden)
 
+  _username = hash('deleteuser@test.com')
   _userId = 'deleteuser'
-  _password = 'sekr1t'
+  _password = 'deletepass'
+  _ctime = _mtime = 12345
   _userDoc =
     _id: _userId
     type: 'user'
-    foo: 'bar'
-
+    name: _username
+    ctime: _ctime
+    mtime: _mtime
+    foo: 'delete bar'
   cookie = null
+  couchUser = "org.couchdb.user:#{_username}"
 
   mainDb = nanoAdmin.db.use('lifeswap')
   usersDb = nanoAdmin.db.use('_users')
@@ -28,17 +32,17 @@ describe 'DELETE /users/:id', () ->
   before (ready) ->
     ## start webserver
     app = require('../../../app')
-
     ## insert user
     insertUser = (callback) ->
       async.parallel [
         (cb) ->
           userDoc =
-            _id: "org.couchdb.user:#{_userId}"
+            _id: couchUser
             type: 'user'
-            name: _userId
+            name: _username
             password: _password
             roles: []
+            user_id: _userId
           usersDb.insert userDoc, (err, res) ->
             should.not.exist(err)
             cb()
@@ -55,7 +59,7 @@ describe 'DELETE /users/:id', () ->
 
     ## authenticate user
     authUser = (callback) ->
-      nano.auth _userId, _password, (err, body, headers) ->
+      nano.auth _username, _password, (err, body, headers) ->
         should.not.exist(err)
         should.exist(headers and headers['set-cookie'])
         cookie = headers['set-cookie'][0]
@@ -66,7 +70,6 @@ describe 'DELETE /users/:id', () ->
 
   after (finished) ->
     destroyUser = (callback) ->
-      couchUser = "org.couchdb.user:#{_userId}"
       usersDb.get couchUser, (err, userDoc) ->
         should.not.exist(err)
         usersDb.destroy(couchUser, userDoc._rev, callback)
@@ -93,7 +96,7 @@ describe 'DELETE /users/:id', () ->
       method: 'DELETE'
       url: "http://localhost:3001/users/#{_userId}"
       json: true
-      headers: cookie: cookie
+      headers: {cookie}
     request opts, (err, res, body) ->
       should.not.exist(err)
       res.should.have.property('statusCode', 403)
@@ -101,7 +104,7 @@ describe 'DELETE /users/:id', () ->
 
 
   it 'should not delete _users entry', (done) ->
-    couchUser = "org.couchdb.user:#{_userId}"
+    couchUser = "org.couchdb.user:#{_username}"
     usersDb.get couchUser, (err, userDoc) ->
       should.not.exist(err)
       userDoc.should.have.property('_id', couchUser)

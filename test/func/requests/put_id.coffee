@@ -4,17 +4,23 @@ util = require('util')
 request = require('request')
 
 {nanoAdmin, nano} = require('config')
+{hash} = require('lib/helpers')
 
 
 describe 'PUT /requests/:id', () ->
 
   ## from toy data
-  _userId = 'user2'
+  _username = hash('user2@test.com')
+  _userId = 'user2_id'
   _password = 'pass2'
+  _ctime = _mtime = 12345
   _request =
     _id: 'putrequestsid'
     type: 'request'
-    name: _userId
+    name: _username
+    user_id: _userId
+    ctime: _ctime
+    mtime: _mtime
     foo: 'bar'
 
   cookie = null
@@ -23,16 +29,16 @@ describe 'PUT /requests/:id', () ->
 
   before (ready) ->
     ## start webserver
-    app = require('../../../app')
+    app = require('app')
     ## authenticate user
     authUser = (callback) ->
-      nano.auth _userId, _password, (err, body, headers) ->
+      nano.auth _username, _password, (err, body, headers) ->
         should.not.exist(err)
         should.exist(headers and headers['set-cookie'])
         cookie = headers['set-cookie'][0]
         callback()
     ## insert request
-    insertReview = (callback) ->
+    insertRequest = (callback) ->
       mainDb.insert _request, (err, res) ->
         should.not.exist(err)
         _request._rev = res.rev
@@ -40,7 +46,7 @@ describe 'PUT /requests/:id', () ->
     ## in parallel
     async.series [
       authUser
-      insertReview
+      insertRequest
     ], ready
 
 

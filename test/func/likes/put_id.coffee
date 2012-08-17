@@ -4,18 +4,20 @@ util = require('util')
 request = require('request')
 
 {nanoAdmin, nano} = require('config')
+{hash} = require('lib/helpers')
 
 
 describe 'PUT /likes/:id', () ->
 
   ## from toy data
-  _userId = 'user2'
+  _username = hash('user2@test.com')
+  _userId = 'user2_id'
   _password = 'pass2'
   ctime = mtime = 12345
   _like =
     _id: 'putlikesid'
     type: 'like'
-    name: _userId
+    name: _username
     user_id: 'user2'
     swap_id: 'swap1'
     ctime: ctime
@@ -31,7 +33,7 @@ describe 'PUT /likes/:id', () ->
     app = require('app')
     ## authenticate user
     authUser = (callback) ->
-      nano.auth _userId, _password, (err, body, headers) ->
+      nano.auth _username, _password, (err, body, headers) ->
         should.not.exist(err)
         should.exist(headers and headers['set-cookie'])
         cookie = headers['set-cookie'][0]

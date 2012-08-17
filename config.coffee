@@ -23,7 +23,7 @@ module.exports.nanoAdmin = require('nano')(url.format({protocol,hostname,port,au
 if process.env.PROD
   ADMINS = ['shawntuteja', 'jdubie', 'mike', 'bastiaan', 'aotimme']
 else
-  ADMINS = ['tester']
+  ADMINS = ['tester_id']    # the user_id!
 
 module.exports.ADMINS = ADMINS
 

@@ -12,37 +12,38 @@ getUserDbName = ({userId}) -> return "users_#{userId}"
 describe 'POST /users', () ->
 
   _email = 'newuser@gmail.com'
-  _emailHash = hash(_email)
+  _username = hash(_email)
   _password = 'sekr1t'
   _userId = '1234567890'
   _userDbName = getUserDbName(userId: _userId)
-
-  app = null
-  cookie = null
-
-  usersDb = nanoAdmin.db.use('_users')
-  mainDb = nanoAdmin.db.use('lifeswap')
-  userDb = nanoAdmin.db.use(_userDbName)
+  _ctime = _mtime = 12345
   _userDoc =
     email: _email
     password: _password
     _id: _userId
     type: 'user'
+    name: _username
+    ctime: _ctime
+    mtime: _mtime
     hobo: 'foo'   # make sure 'user' doc is just this
+  cookie = null
 
+  usersDb = nanoAdmin.db.use('_users')
+  mainDb = nanoAdmin.db.use('lifeswap')
+  userDb = nanoAdmin.db.use(_userDbName)
+  couchUser = "org.couchdb.user:#{_username}"
 
   describe 'correctness:', () ->
 
     ##  Start the app
     before (ready) ->
       # start webserver
-      app = require('../../../app')
+      app = require('app')
       ready()
 
 
     after (finished) ->
       destroyUser = (callback) ->
-        couchUser = "org.couchdb.user:#{_emailHash}"
         usersDb.get couchUser, (err, userDoc) ->
           should.not.exist(err)
           usersDb.destroy(couchUser, userDoc._rev, callback)
@@ -71,7 +72,7 @@ describe 'POST /users', () ->
         should.not.exist(err)
         res.statusCode.should.eql(201)
         body.should.have.keys(['name', 'roles', 'user_id', 'ctime', 'mtime', '_rev'])
-        body.name.should.eql(_emailHash)
+        body.name.should.eql(_username)
         body.roles.should.eql([])
         body.user_id.should.eql(_userId)
         _userDoc.ctime = body.ctime
@@ -81,7 +82,6 @@ describe 'POST /users', () ->
         done()
 
     it 'should create user in _users with name hash(email)', (done) ->
-      couchUser = "org.couchdb.user:#{_emailHash}"
       usersDb.get couchUser, (err, userDoc) ->
         should.not.exist(err)
         userDoc.should.have.property('user_id', _userId)
@@ -101,8 +101,10 @@ describe 'POST /users', () ->
         done()
 
     it 'should create email_address type private document', (done) ->
-      opts = include_docs: true
-      userDb.view 'userddoc', 'email_addresses', opts, (err, res) ->
+      opts =
+        key: 'email_address'
+        include_docs: true
+      userDb.view 'userddoc', 'docs_by_type', opts, (err, res) ->
         should.not.exist(err)
         res.rows.length.should.eql(1)
         doc = res.rows[0].doc

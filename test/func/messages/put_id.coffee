@@ -4,25 +4,30 @@ util = require('util')
 request = require('request')
 
 {nanoAdmin, nano, dbUrl, ADMINS} = require('config')
-{getUserDbName} = require('lib/helpers')
+{getUserDbName, hash} = require('lib/helpers')
 
 
 describe 'PUT /messages/:id', () ->
 
   ## from the test/toy data
-  _userId = 'user2'
+  _username = hash('user2@test.com')
+  _userId = 'user2_id'
   _password = 'pass2'
   cookie = null
-  _members = ['user2', 'user1']
+  _members = ['user2_id', 'user1_id']
   _allUsers = (user for user in _members)
   _allUsers.push(user) for user in ADMINS
+  _ctime = _mtime = 12345
 
   _message =
     _id: 'putmessageid'
     type: 'message'
-    message: 'Hey bro'
+    name: _username
+    user_id: _userId
     event_id: 'putmessageeventid'
-    author: _userId
+    message: 'Hey bro'
+    ctime: _ctime
+    mtime: _mtime
 
   mainDb = nanoAdmin.db.use('lifeswap')
   mapperDb = nanoAdmin.db.use('mapper')
@@ -34,7 +39,7 @@ describe 'PUT /messages/:id', () ->
       app = require('app')
       ## authenticate user
       authUser = (cb) ->
-        nano.auth _userId, _password, (err, body, headers) ->
+        nano.auth _username, _password, (err, body, headers) ->
           should.not.exist(err)
           should.exist(headers and headers['set-cookie'])
           cookie = headers['set-cookie'][0]

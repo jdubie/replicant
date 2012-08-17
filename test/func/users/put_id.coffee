@@ -3,35 +3,40 @@ async = require('async')
 util = require('util')
 request = require('request')
 
-{nanoAdmin, nano, dbUrl} = require('config')
+{nanoAdmin, nano} = require('config')
+{hash} = require('lib/helpers')
 
 
 describe 'PUT /users/:id', () ->
 
-  _userId = 'someuser'
-  _password = 'sekr1t'
+  _username = hash('putuser@test.com')
+  _userId = 'putuser'
+  _password = 'putpass'
+  _ctime = _mtime = 12345
   _userDoc =
     _id: _userId
     type: 'user'
-    foo: 'bar'
-
+    name: _username
+    ctime: _ctime
+    mtime: _mtime
+    foo: 'put bar'
   cookie = null
 
   mainDb = nanoAdmin.db.use('lifeswap')
   usersDb = nanoAdmin.db.use('_users')
+  couchUser = "org.couchdb.user:#{_username}"
 
   before (ready) ->
     ## start webserver
-    app = require('../../../app')
-
+    app = require('app')
     ## insert user
     insertUser = (callback) ->
       async.parallel [
         (cb) ->
           userDoc =
-            _id: "org.couchdb.user:#{_userId}"
+            _id: couchUser
             type: 'user'
-            name: _userId
+            name: _username
             password: _password
             roles: []
           usersDb.insert userDoc, (err, res) ->
@@ -43,21 +48,18 @@ describe 'PUT /users/:id', () ->
             _userDoc._rev = res.rev
             cb()
       ], callback
-
     ## authenticate user
     authUser = (callback) ->
-      nano.auth _userId, _password, (err, body, headers) ->
+      nano.auth _username, _password, (err, body, headers) ->
         should.not.exist(err)
         should.exist(headers and headers['set-cookie'])
         cookie = headers['set-cookie'][0]
         callback()
-
+    ## in series
     async.series([insertUser, authUser], ready)
-
 
   after (finished) ->
     destroyUser = (callback) ->
-      couchUser = "org.couchdb.user:#{_userId}"
       usersDb.get couchUser, (err, userDoc) ->
         should.not.exist(err)
         usersDb.destroy(couchUser, userDoc._rev, callback)
@@ -65,10 +67,8 @@ describe 'PUT /users/:id', () ->
       mainDb.get _userId, (err, userDoc) ->
         should.not.exist(err)
         mainDb.destroy(_userId, userDoc._rev, callback)
-    async.parallel [
-      destroyUser
-      destroyLifeswapUser
-    ], finished
+    ## in parallel
+    async.parallel([destroyUser, destroyLifeswapUser], finished)
 
 
   it 'should put the user\'s document correctly', (done) ->

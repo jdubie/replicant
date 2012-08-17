@@ -3,17 +3,19 @@ util = require('util')
 request = require('request')
 
 {nanoAdmin, nano} = require('config')
+{hash} = require('lib/helpers')
 
 
 describe 'POST /likes', () ->
 
-  _userId = 'user2'
+  _username = hash('user2@test.com')
+  _userId = 'user2_id'
   _password = 'pass2'
   ctime = mtime = 12345
   _like =
     _id: 'postlikes'
     type: 'like'
-    name: 'user2'
+    name: _username
     user_id: 'user2'
     swap_id: 'swap1'
     ctime: ctime
@@ -28,7 +30,7 @@ describe 'POST /likes', () ->
     app = require('../../../app')
 
     ## authenticate user
-    nano.auth _userId, _password, (err, body, headers) ->
+    nano.auth _username, _password, (err, body, headers) ->
       should.not.exist(err)
       should.exist(headers and headers['set-cookie'])
       cookie = headers['set-cookie'][0]
@@ -41,11 +43,12 @@ describe 'POST /likes', () ->
   it 'should return _rev, mtime, ctime', (done) ->
     opts =
       method: 'POST'
-      url: "http://localhost:3001/swaps"
+      url: "http://localhost:3001/likes"
       json: _like
       headers: cookie: cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
+      res.statusCode.should.eql(201)
       body.should.have.keys(['_rev', 'mtime', 'ctime'])
       for key, val of body
         _like[key] = val

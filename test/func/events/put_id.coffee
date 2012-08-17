@@ -3,25 +3,29 @@ async = require('async')
 util = require('util')
 request = require('request')
 
-{nanoAdmin, nano, dbUrl, ADMINS} = require('config')
-{getUserDbName} = require('lib/helpers')
+{nanoAdmin, nano, ADMINS} = require('config')
+{getUserDbName, hash} = require('lib/helpers')
 {EVENT_STATE} = require('../../../../lifeswap/userdb/shared/constants')
 
 
 describe 'PUT /events/:id', () ->
 
   ## from the test/toy data
-  _userId = 'user1'
-  _password = 'pass1'
-  _members = ['user1', 'user2']   # dependent on toy data
+  _username = hash('user2@test.com')
+  _userId = 'user2_id'
+  _password = 'pass2'
+  _members = ['user1_id', 'user2_id']   # dependent on toy data
   _allUsers = (user for user in _members)
   _allUsers.push(user) for user in ADMINS
   cookie = null
+  ctime = mtime = 12345
   _event =
     _id: 'puteventid'
     type: 'event'
     state: EVENT_STATE.requested
     swap_id: 'swap1'
+    ctime: ctime
+    mtime: mtime
 
   mainDb = nanoAdmin.db.use('lifeswap')
 
@@ -30,7 +34,7 @@ describe 'PUT /events/:id', () ->
     app = require('app')
     ## authenticate user (host of swap)
     authUser = (cb) ->
-      nano.auth _userId, _password, (err, body, headers) ->
+      nano.auth _username, _password, (err, body, headers) ->
         should.not.exist(err)
         should.exist(headers and headers['set-cookie'])
         cookie = headers['set-cookie'][0]

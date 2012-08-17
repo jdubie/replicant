@@ -12,12 +12,14 @@ describe 'GET /users', () ->
 
   before (ready) ->
     # start webserver
-    app = require('../../../app')
+    app = require('app')
 
     ## get the _correct_ list of users
     db = nano.db.use('lifeswap')
-    opts = include_docs: true
-    db.view 'lifeswap', 'users', opts, (err, res) ->
+    opts =
+      key: 'user'
+      include_docs: true
+    db.view 'lifeswap', 'docs_by_type', opts, (err, res) ->
       should.not.exist(err)
       usersNano = (row.doc for row in res.rows)
       ready()

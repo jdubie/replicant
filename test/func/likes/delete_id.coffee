@@ -4,6 +4,7 @@ util = require('util')
 request = require('request')
 
 {nano, nanoAdmin} = require('config')
+{hash} = require('lib/helpers')
 
 
 describe 'DELETE /likes/:id', () ->
@@ -11,7 +12,8 @@ describe 'DELETE /likes/:id', () ->
   ## simple test - for now should just 403 (forbidden)
 
   ## from toy data
-  _userId = 'user2'
+  _username = hash('user2@test.com')
+  _userId = 'user2_id'
   _password = 'pass2'
   ctime = mtime = 12345
   _like =
@@ -33,7 +35,7 @@ describe 'DELETE /likes/:id', () ->
 
     ## authenticate user
     authUser = (callback) ->
-      nano.auth _userId, _password, (err, body, headers) ->
+      nano.auth _username, _password, (err, body, headers) ->
         should.not.exist(err)
         should.exist(headers and headers['set-cookie'])
         cookie = headers['set-cookie'][0]

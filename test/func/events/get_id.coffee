@@ -3,15 +3,16 @@ async = require('async')
 util = require('util')
 request = require('request')
 
-{nanoAdmin, nano, dbUrl, ADMINS} = require('config')
-{getUserDbName} = require('lib/helpers')
+{nanoAdmin, nano} = require('config')
+{getUserDbName, hash} = require('lib/helpers')
 {EVENT_STATE} = require('../../../../lifeswap/userdb/shared/constants')
 
 
 describe 'GET /events/:id', () ->
 
   ## from the test/toy data
-  _userId = 'user2'
+  _username = hash('user2@test.com')
+  _userId = 'user2_id'
   _password = 'pass2'
   cookie = null
   _event =
@@ -31,7 +32,7 @@ describe 'GET /events/:id', () ->
     app = require('app')
     ## authenticate user
     authUser = (cb) ->
-      nano.auth _userId, _password, (err, body, headers) ->
+      nano.auth _username, _password, (err, body, headers) ->
         should.not.exist(err)
         should.exist(headers and headers['set-cookie'])
         cookie = headers['set-cookie'][0]

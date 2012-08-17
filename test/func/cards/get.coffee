@@ -3,14 +3,15 @@ async = require('async')
 util = require('util')
 request = require('request')
 
-{nanoAdmin, nano, dbUrl, ADMINS} = require('config')
-{getUserDbName} = require('lib/helpers')
+{nanoAdmin, nano} = require('config')
+{getUserDbName, hash} = require('lib/helpers')
 
 
 describe 'GET /cards', () ->
 
   ## from the test/toy data
-  _userId = 'user2'
+  _username = hash('user2@test.com')
+  _userId = 'user2_id'
   _password = 'pass2'
   cookie = null
   _cards = [
@@ -34,7 +35,7 @@ describe 'GET /cards', () ->
       app = require('app')
       ## authenticate user
       authUser = (cb) ->
-        nano.auth _userId, _password, (err, body, headers) ->
+        nano.auth _username, _password, (err, body, headers) ->
           should.not.exist(err)
           should.exist(headers and headers['set-cookie'])
           cookie = headers['set-cookie'][0]

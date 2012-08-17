@@ -4,25 +4,31 @@ util = require('util')
 request = require('request')
 
 {nanoAdmin, nano, dbUrl, ADMINS} = require('config')
-{getUserDbName} = require('lib/helpers')
+{getUserDbName, hash} = require('lib/helpers')
 
 
 describe 'DELETE /messages/:id', () ->
 
   ## from the test/toy data
-  _userId = 'user2'
+  _username = hash('user2@test.com')
+  _userId = 'user2_id'
   _password = 'pass2'
   cookie = null
-  _members = ['user2', 'user1']
+  _members = ['user2_id', 'user1_id']
   _allUsers = (user for user in _members)
   _allUsers.push(user) for user in ADMINS
+  ctime = mtime = 12345
 
   _message =
     _id: 'deletemessageid'
     type: 'message'
-    message: 'Hey bro'
+    name: _username
+    user_id: _userId
     event_id: 'deletemessageeventid'
-    author: _userId
+    message: 'Hey bro'
+    ctime: ctime
+    mtime: mtime
+
 
   mainDb = nanoAdmin.db.use('lifeswap')
   mapperDb = nanoAdmin.db.use('mapper')
@@ -34,7 +40,7 @@ describe 'DELETE /messages/:id', () ->
       app = require('app')
       ## authenticate user
       authUser = (cb) ->
-        nano.auth _userId, _password, (err, body, headers) ->
+        nano.auth _username, _password, (err, body, headers) ->
           should.not.exist(err)
           should.exist(headers and headers['set-cookie'])
           cookie = headers['set-cookie'][0]
