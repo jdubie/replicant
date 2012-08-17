@@ -12,10 +12,13 @@ describe 'DELETE /reviews/:id', () ->
 
   _userId = 'deletereviewsuser'
   _password = 'sekr1t'
+  ctime = mtime = 12345
   _reviewDoc =
     _id: 'deletereview'
     type: 'review'
     host: _userId
+    ctime: ctime
+    mtime: mtime
     foo: 'bar'
 
   cookie = null

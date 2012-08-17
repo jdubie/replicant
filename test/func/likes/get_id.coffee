@@ -7,9 +7,16 @@ request = require('request')
 
 describe 'GET /likes/:id', () ->
 
+  ctime = mtime = 12345
   _like =
     _id: 'getlikeid'
     type: 'like'
+    name: '-hash2-'
+    user_id: 'user2'
+    swap_id: 'swap1'
+    ctime: ctime
+    mtime: mtime
+    foo: 'bar'
 
   mainDb = nanoAdmin.db.use('lifeswap')
 

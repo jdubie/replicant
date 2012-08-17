@@ -8,14 +8,27 @@ request = require('request')
 
 describe 'GET /likes', () ->
 
+  ctime = mtime = 12345
   _likes = [
     {
       _id: 'getlikes1'
       type: 'like'
+      name: '-hash2-'
+      user_id: 'user2'
+      swap_id: 'swap1'
+      ctime: ctime
+      mtime: mtime
+      foo: 'bar'
     }
     {
       _id: 'getlikes2'
       type: 'like'
+      name: '-hash1-'
+      user_id: 'user1'
+      swap_id: 'swap1'
+      ctime: ctime
+      mtime: mtime
+      foo: 'bar'
     }
   ]
 

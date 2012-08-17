@@ -13,10 +13,15 @@ describe 'DELETE /likes/:id', () ->
   ## from toy data
   _userId = 'user2'
   _password = 'pass2'
+  ctime = mtime = 12345
   _like =
     _id: 'deletelike'
     type: 'like'
     name: _userId
+    user_id: 'user2'
+    swap_id: 'swap1'
+    ctime: ctime
+    mtime: mtime
     foo: 'bar'
   cookie = null
 

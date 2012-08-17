@@ -2,20 +2,37 @@ should = require('should')
 util = require('util')
 request = require('request')
 
-{nanoAdmin} = require('config')
+{nanoAdmin, nano} = require('config')
 
 
 describe 'POST /likes', () ->
 
+  _userId = 'user2'
+  _password = 'pass2'
+  ctime = mtime = 12345
   _like =
     _id: 'postlikes'
     type: 'like'
+    name: 'user2'
+    user_id: 'user2'
+    swap_id: 'swap1'
+    ctime: ctime
+    mtime: mtime
+    foo: 'bar'
+  cookie = null
+
   mainDb = nanoAdmin.db.use('lifeswap')
 
   before (ready) ->
     ## start webserver
     app = require('../../../app')
-    ready()
+
+    ## authenticate user
+    nano.auth _userId, _password, (err, body, headers) ->
+      should.not.exist(err)
+      should.exist(headers and headers['set-cookie'])
+      cookie = headers['set-cookie'][0]
+      ready()
 
 
   after (finished) ->
@@ -26,6 +43,7 @@ describe 'POST /likes', () ->
       method: 'POST'
       url: "http://localhost:3001/swaps"
       json: _like
+      headers: cookie: cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
       body.should.have.keys(['_rev', 'mtime', 'ctime'])

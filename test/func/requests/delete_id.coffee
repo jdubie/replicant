@@ -13,10 +13,13 @@ describe 'DELETE /requests/:id', () ->
   ## from toy data
   _userId = 'user2'
   _password = 'pass2'
+  ctime = mtime = 12345
   _request =
     _id: 'deleterequest'
     type: 'request'
     name: _userId
+    ctime: ctime
+    mtime: mtime
     foo: 'bar'
   cookie = null
 
