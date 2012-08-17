@@ -6,14 +6,14 @@ request = require('request')
 {nanoAdmin, nano, dbUrl} = require('config')
 
 
-describe 'PUT /wishlists/:id', () ->
+describe 'PUT /likes/:id', () ->
 
   ## from toy data
   _userId = 'user2'
   _password = 'pass2'
-  _wishlist =
-    _id: 'putwishlistsid'
-    type: 'wishlist'
+  _like =
+    _id: 'putlikesid'
+    type: 'like'
     name: _userId
     foo: 'bar'
 
@@ -31,41 +31,41 @@ describe 'PUT /wishlists/:id', () ->
         should.exist(headers and headers['set-cookie'])
         cookie = headers['set-cookie'][0]
         callback()
-    ## insert wishlist
-    insertReview = (callback) ->
-      mainDb.insert _wishlist, (err, res) ->
+    ## insert like
+    insertLike = (callback) ->
+      mainDb.insert _like, (err, res) ->
         should.not.exist(err)
-        _wishlist._rev = res.rev
+        _like._rev = res.rev
         callback()
     ## in parallel
     async.series [
       authUser
-      insertReview
+      insertLike
     ], ready
 
 
   after (finished) ->
-    ## destroy wishlist
-    mainDb.destroy(_wishlist._id, _wishlist._rev, finished)
+    ## destroy like
+    mainDb.destroy(_like._id, _like._rev, finished)
 
 
   it 'should return _rev and mtime', (done) ->
-    _wishlist.foo = 'c3p0'
+    _like.foo = 'c3p0'
     opts =
       method: 'PUT'
-      url: "http://localhost:3001/wishlists/#{_wishlist._id}"
-      json: _wishlist
+      url: "http://localhost:3001/likes/#{_like._id}"
+      json: _like
       headers: cookie: cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
       res.statusCode.should.eql(201)
       body.should.have.keys(['_rev', 'mtime'])
       for key, val of body
-        _wishlist[key] = val
+        _like[key] = val
       done()
 
   it 'should modify the document in the DB', (done) ->
-    mainDb.get _wishlist._id, (err, wishlist) ->
+    mainDb.get _like._id, (err, like) ->
       should.not.exist(err)
-      wishlist.should.eql(_wishlist)
+      like.should.eql(_like)
       done()

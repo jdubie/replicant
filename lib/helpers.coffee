@@ -89,7 +89,7 @@ helpers.singularizeModel = (model) ->
     swaps:      'swap'
     users:      'user'
     reviews:    'review'
-    wishlists:  'wishlist'
+    likes:      'like'
     requests:   'request'
     # user db
     events:           'event'
@@ -105,7 +105,7 @@ helpers.pluralizeType = (type) ->
     swap:       'swaps'
     user:       'users'
     review:     'reviews'
-    wishlist:   'wishlists'
+    like:       'likes'
     request:    'requests'
     # user db
     event:          'events'

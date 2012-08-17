@@ -22,7 +22,7 @@ shouldParseBody = (req) ->
     if req.url is '/users' then return true
     if req.url is '/swaps' then return true
     if req.url is '/reviews' then return true
-    if req.url is '/wishlists' then return true
+    if req.url is '/likes' then return true
     if req.url is '/requests' then return true
     # user db
     if req.url is '/events' then return true
@@ -35,7 +35,7 @@ shouldParseBody = (req) ->
     if /^\/users\/.*$/.test(req.url) then return true
     if /^\/swaps\/.*$/.test(req.url) then return true
     if /^\/reviews\/.*$/.test(req.url) then return true
-    if /^\/wishlists\/.*$/.test(req.url) then return true
+    if /^\/likes\/.*$/.test(req.url) then return true
     if /^\/requests\/.*$/.test(req.url) then return true
     # user db
     if /^\/events\/.*$/.test(req.url) then return true
@@ -197,10 +197,10 @@ app.post '/users', (req, res) ->
   POST
     /swaps
     /reviews
-    /wishlists
+    /likes
     /requests
 ###
-_.each ['swaps', 'reviews', 'wishlists', 'requests'], (model) ->
+_.each ['swaps', 'reviews', 'likes', 'requests'], (model) ->
   app.post "/#{model}", (req, res) ->
     debug "POST /#{model}"
     doc = req.body
@@ -225,10 +225,10 @@ _.each ['swaps', 'reviews', 'wishlists', 'requests'], (model) ->
     /users
     /swaps
     /reviews
-    /wishlists
+    /likes
     /requests
 ###
-_.each ['users', 'swaps', 'reviews', 'wishlists', 'requests'], (model) ->
+_.each ['users', 'swaps', 'reviews', 'likes', 'requests'], (model) ->
   ## GET /model
   app.get "/#{model}", (req, res) ->
     debug "GET /#{model}"

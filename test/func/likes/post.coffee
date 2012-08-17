@@ -5,11 +5,11 @@ request = require('request')
 {nanoAdmin} = require('config')
 
 
-describe 'POST /wishlists', () ->
+describe 'POST /likes', () ->
 
-  _wishlist =
-    _id: 'postwishlists'
-    type: 'wishlist'
+  _like =
+    _id: 'postlikes'
+    type: 'like'
   mainDb = nanoAdmin.db.use('lifeswap')
 
   before (ready) ->
@@ -19,22 +19,22 @@ describe 'POST /wishlists', () ->
 
 
   after (finished) ->
-    mainDb.destroy(_wishlist._id, _wishlist._rev, finished)
+    mainDb.destroy(_like._id, _like._rev, finished)
 
   it 'should return _rev, mtime, ctime', (done) ->
     opts =
       method: 'POST'
       url: "http://localhost:3001/swaps"
-      json: _wishlist
+      json: _like
     request opts, (err, res, body) ->
       should.not.exist(err)
       body.should.have.keys(['_rev', 'mtime', 'ctime'])
       for key, val of body
-        _wishlist[key] = val
+        _like[key] = val
       done()
 
   it 'should actually put the document in the DB', (done) ->
-    mainDb.get _wishlist._id, (err, wishlist) ->
+    mainDb.get _like._id, (err, like) ->
       should.not.exist(err)
-      wishlist.should.eql(_wishlist)
+      like.should.eql(_like)
       done()
