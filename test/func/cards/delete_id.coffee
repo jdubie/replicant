@@ -13,10 +13,16 @@ describe 'DELETE /cards/:id', () ->
   _username = hash('user2@test.com')
   _userId = 'user2_id'
   _password = 'pass2'
-  cookie = null
+  _ctime = _mtime = 12345
   _card =
     _id: 'deletecardid'
     type: 'card'
+    name: _username
+    user_id: _userId
+    balanced_url: 'balanced'
+    ctime: _ctime
+    mtime: _mtime
+  cookie = null
 
   mainDb = nanoAdmin.db.use('lifeswap')
   userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))

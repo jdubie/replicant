@@ -13,10 +13,16 @@ describe 'GET /email_addresses/:id', () ->
   _username = hash('user2@test.com')
   _userId = 'user2_id'
   _password = 'pass2'
-  cookie = null
+  _ctime = _mtime = 12345
   _email =
     _id: 'emailid'
     type: 'email_address'
+    name: _username
+    user_id: _userId
+    email_address: 'user2@test.com'
+    ctime: _ctime
+    mtime: _mtime
+  cookie = null
 
   mainDb = nanoAdmin.db.use('lifeswap')
   usersDb = nanoAdmin.db.use('_users')
@@ -45,11 +51,9 @@ describe 'GET /email_addresses/:id', () ->
     ], (err, res) ->
       ready()
 
-
   after (finished) ->
     ## destroy email
     userDb.destroy(_email._id, _email._rev, finished)
-
 
   it 'should GET the email_address', (done) ->
     opts =
@@ -59,6 +63,6 @@ describe 'GET /email_addresses/:id', () ->
       headers: cookie: cookie
     request opts, (err, res, email) ->
       should.not.exist(err)
-      res.statusCode.should.eql(200)
+      res.should.have.property('statusCode', 200)
       email.should.eql(_email)
       done()

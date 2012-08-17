@@ -12,9 +12,15 @@ describe 'PUT /email_addresses/:id', () ->
   _username = hash('user2@test.com')
   _userId = 'user2_id'
   _password = 'pass2'
+  _ctime = _mtime = 12345
   _email =
     _id: 'putemailid'
     type: 'email_address'
+    name: _username
+    user_id: _userId
+    email_address: 'user2@test.com'
+    ctime: _ctime
+    mtime: _mtime
     foo: 'bar'
 
   cookie = null
@@ -37,11 +43,8 @@ describe 'PUT /email_addresses/:id', () ->
         should.not.exist(err)
         _email._rev = res.rev
         callback()
-
-    async.series [
-      authUser
-      insertEmail
-    ], ready
+    ## in series
+    async.series([authUser, insertEmail], ready)
 
 
   after (finished) ->

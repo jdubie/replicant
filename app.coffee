@@ -182,8 +182,11 @@ app.post '/users', (req, res) ->
       userPrivateNano = require('nano')(nanoOpts)
       emailDoc =
         type: 'email_address'
-        email_address: email
+        name: name
         user_id: user_id
+        email_address: email
+        ctime: ctime
+        mtime: mtime
       userPrivateNano.insert(emailDoc, next)
 
   ], (err, body, headers) ->
@@ -462,6 +465,7 @@ app.post '/messages', (req, res) ->
             type: 'read'
             message_id: message._id
             event_id: message.event_id
+            ctime: ctime
         request(opts, next) # (err, resp, body)
     (resp, body, next) ->
       debug 'get users'

@@ -11,12 +11,18 @@ describe 'POST /cards', () ->
   _username = hash('user2@test.com')
   _userId = 'user2_id'
   _password = 'pass2'
+  _ctime = _mtime = 12345
   _card =
     _id: 'postcardsid'
     type: 'card'
+    name: _username
+    user_id: _userId
+    balanced_url: 'balanced1'
+    ctime: _ctime
+    mtime: _mtime
     baz: 'bar'
-
   cookie = null
+
   userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
 
   before (ready) ->

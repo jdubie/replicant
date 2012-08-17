@@ -12,9 +12,15 @@ describe 'PUT /cards/:id', () ->
   _username = hash('user2@test.com')
   _userId = 'user2_id'
   _password = 'pass2'
+  _ctime = _mtime = 12345
   _card =
     _id: 'putcardid'
     type: 'card'
+    name: _username
+    user_id: _userId
+    balanced_url: 'balanced1'
+    ctime: _ctime
+    mtime: _mtime
     foo: 'bar'
 
   cookie = null
@@ -46,20 +52,20 @@ describe 'PUT /cards/:id', () ->
 
   after (finished) ->
     ## destroy card
-    userDb.get _card._id, (err, card) ->
-      should.not.exist(err)
-      userDb.destroy(card._id, card._rev, finished)
+    userDb.destroy(_card._id, _card._rev, finished)
 
 
-  it 'should PUT the card document correctly', (done) ->
+  it 'should PUT the card correctly', (done) ->
     _card.foo = 'c3p0'
     opts =
       method: 'PUT'
       url: "http://localhost:3001/cards/#{_card._id}"
       json: _card
-      headers: cookie: cookie
+      headers: {cookie}
     request opts, (err, res, card) ->
       should.not.exist(err)
-      res.statusCode.should.eql(201)
+      res.should.have.property('statusCode', 201)
       card.should.have.keys(['_rev', 'mtime'])
+      for key, val of card
+        _card[key] = val
       done()

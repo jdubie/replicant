@@ -13,10 +13,16 @@ describe 'DELETE /email_addresses/:id', () ->
   _username = hash('user2@test.com')
   _userId = 'user2_id'
   _password = 'pass2'
-  cookie = null
+  _ctime = _mtime = 12345
   _email =
     _id: 'deleteemailid'
     type: 'email_address'
+    name: _username
+    user_id: _userId
+    email_address: 'user2@test.com'
+    ctime: _ctime
+    mtime: _mtime
+  cookie = null
 
   userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
 
@@ -35,7 +41,7 @@ describe 'DELETE /email_addresses/:id', () ->
       userDb.insert _email, _email._id, (err, res) ->
         _email._rev = res.rev
         cb()
-
+    ## in parrallel
     async.parallel [
       authUser
       insertEmail

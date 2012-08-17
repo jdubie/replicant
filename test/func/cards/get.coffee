@@ -13,17 +13,28 @@ describe 'GET /cards', () ->
   _username = hash('user2@test.com')
   _userId = 'user2_id'
   _password = 'pass2'
-  cookie = null
+  _ctime = _mtime = 12345
   _cards = [
     {
-      _id: 'cardid1'
+      _id: 'getcards1'
       type: 'card'
+      name: _username
+      user_id: _userId
+      balanced_url: 'balanced1'
+      ctime: _ctime
+      mtime: _mtime
     }
     {
-      _id: 'cardid2'
+      _id: 'getcards2'
       type: 'card'
+      name: _username
+      user_id: _userId
+      balanced_url: 'balanced2'
+      ctime: _ctime
+      mtime: _mtime
     }
   ]
+  cookie = null
 
   mainDb = nanoAdmin.db.use('lifeswap')
   userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))

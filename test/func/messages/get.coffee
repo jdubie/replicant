@@ -14,7 +14,7 @@ describe 'GET /messages', () ->
   _userId = 'user2_id'
   _password = 'pass2'
   cookie = null
-  ctime = mtime = 12345
+  _ctime = _mtime = 12345
   _messages = [
     {
       _id: "getmessages1"
@@ -23,8 +23,8 @@ describe 'GET /messages', () ->
       user_id: "user2_id"
       event_id: "getmessagesevent"
       message: "bro"
-      ctime: ctime
-      mtime: mtime
+      ctime: _ctime
+      mtime: _mtime
     }
     {
       _id: "getmessages2"
@@ -33,8 +33,8 @@ describe 'GET /messages', () ->
       user_id: "user1_id"
       event_id: "getmessagesevent"
       message: "booger"
-      ctime: ctime
-      mtime: mtime
+      ctime: _ctime
+      mtime: _mtime
     }
   ]
   _readDoc =
@@ -42,7 +42,7 @@ describe 'GET /messages', () ->
     type: "read"
     message_id: "getmessages1"
     event_id: _messages[0].event_id
-    ctime: ctime
+    ctime: _ctime
 
   mainDb = nanoAdmin.db.use('lifeswap')
 
@@ -54,7 +54,9 @@ describe 'GET /messages', () ->
       cb()
   destroyDocUser = (userId, doc, cb) ->
     userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
-    userDb.destroy(doc._id, doc._rev, cb)
+    userDb.destroy doc._id, doc._rev, (err, res) ->
+      if err then console.error err
+      cb(err, res)
 
   before (ready) ->
     ## start webserver
@@ -91,7 +93,7 @@ describe 'GET /messages', () ->
       method: 'GET'
       url: "http://localhost:3001/messages"
       json: true
-      headers: cookie: cookie
+      headers: {cookie}
     request opts, (err, res, messages) ->
       should.not.exist(err)
       res.statusCode.should.eql(200)

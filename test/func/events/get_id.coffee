@@ -14,12 +14,15 @@ describe 'GET /events/:id', () ->
   _username = hash('user2@test.com')
   _userId = 'user2_id'
   _password = 'pass2'
-  cookie = null
+  _ctime = _mtime = 12345
   _event =
     _id: 'eventid'
     type: 'event'
     state: EVENT_STATE.requested
     swap_id: 'swap1'
+    ctime: _ctime
+    mtime: _mtime
+  cookie = null
 
 
   mainDb = nanoAdmin.db.use('lifeswap')
