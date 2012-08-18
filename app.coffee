@@ -109,6 +109,20 @@ app.get '/user_ctx', (req, res) ->
         else res.json(statusCode: 200, userCtx)
 
 ###
+  Get zipcode mapping
+###
+app.get '/zipcodes/:id', (req, res) ->
+  db = config.nano.use('zipcodes')
+  db.view 'zipcodes', 'zipcodes', key: req.params.id, (err, body, headers) ->
+    debug util.inspect body
+    if headers['status-code'] != 200
+      res.json(headers['status-code'], err)
+    if body.rows.length == 0
+      res.json(404, reason: 'Not a valid zipcode')
+    else
+      res.json(body.rows[0].value)
+
+###
   POST /users
   CreateUser
     This creates a user database and preliminary doc after user signups on client
