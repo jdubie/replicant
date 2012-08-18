@@ -422,8 +422,7 @@ app.put '/events/:id', (req, res) ->
       if not (src in users) and not (src in config.ADMINS)
         next(statusCode: 403, reason: "Not authorized to modify this event")
       else
-        for admin in config.ADMINS
-          users.push(admin)
+        users.push(admin) for admin in config.ADMINS
         dsts = _.without(users, src)
         replicate({src, dsts, eventId}, next)   # (err, resp)
   ], (err, resp) ->

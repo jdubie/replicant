@@ -14,8 +14,10 @@ describe 'PUT /events/:id', () ->
   _username = hash('user2@test.com')
   _userId = 'user2_id'
   _password = 'pass2'
-  _members = ['user1_id', 'user2_id']   # dependent on toy data
-  _allUsers = (user for user in _members)
+  _hosts = ['user1_id']
+  _guests = ['user2_id']
+  _allUsers = (user for user in _hosts)
+  _allUsers.push(user) for user in _guests
   _allUsers.push(user) for user in ADMINS
   cookie = null
   ctime = mtime = 12345
@@ -51,7 +53,8 @@ describe 'PUT /events/:id', () ->
       mapperDb = nanoAdmin.db.use('mapper')
       mapperDoc =
         _id: _event._id
-        users: _members
+        guests: _guests
+        hosts: _hosts
       mapperDb.insert(mapperDoc, _event._id, cb)
     ## in parallel
     async.parallel [

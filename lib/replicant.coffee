@@ -109,24 +109,25 @@ replicant.createEvent = ({event, userId}, callback) ->
     db = nanoAdmin.db.use('lifeswap')
     db.get event.swap_id, (err, swapDoc) ->
       if not err
-        otherUsers = [swapDoc.user_id] # @todo swapDoc.user_id will be array in future
-        otherUsers.push(admin) for admin in ADMINS
+        hosts = [swapDoc.user_id] # @todo swapDoc.user_id will be array in future
       else debug 'error!', err
-      next(err, otherUsers)
+      next(err, hosts)
 
   ## OR could just replicate from original user to these users
-  createDocs = (otherUsers, next) ->
+  createDocs = (hosts, next) ->
     ## create doc in mapping DB
     createMapping = (cb) ->
       mapper = nanoAdmin.db.use('mapper')
-      debug 'createMapping', event._id, userId, otherUsers
+      debug 'createMapping', event._id, userId, hosts
       mapperDoc =
         _id: event._id
-        users: [userId]
-      mapperDoc.users.push(user) for user in otherUsers
+        guests: [userId]
+        hosts: hosts
       mapper.insert(mapperDoc, event._id, cb)
     ## create docs in other user DBs
     createEventDocs = (cb) ->
+      otherUsers = (admin for admin in ADMINS)
+      otherUsers.push(user) for user in hosts
       debug 'createEventDocs', otherUsers
       async.map(otherUsers, createEventDoc, cb)
     ## in parallel
@@ -158,7 +159,9 @@ replicant.getEventUsers = ({eventId}, callback) ->
       err.statusCode = err.status_code ? 500
       callback(err)
     else
-      callback(null, mapperDoc.users)
+      users = (user for user in mapperDoc.guests)
+      users.push(user) for user in mapperDoc.hosts
+      callback(null, users)
 
 
 ###

@@ -14,25 +14,7 @@ describe 'GET /events', () ->
   _username = hash('user2@test.com')
   _userId = 'user2_id'
   _password = 'pass2'
-  _ctime = _mtime = 12345
-  _events = [
-    {
-      _id: 'eventid1'
-      type: 'event'
-      state: EVENT_STATE.requested
-      swap_id: 'swap1'
-      ctime: _ctime
-      mtime: _mtime
-    }
-    {
-      _id: 'eventid2'
-      type: 'event'
-      state: EVENT_STATE.requested
-      swap_id: 'swap1'
-      ctime: _ctime
-      mtime: _mtime
-    }
-  ]
+  _eventsNano = []
   cookie = null
 
   mainDb = nanoAdmin.db.use('lifeswap')
@@ -51,16 +33,19 @@ describe 'GET /events', () ->
           should.exist(headers and headers['set-cookie'])
           cookie = headers['set-cookie'][0]
           cb()
-      ## insert event
-      insertEvent = (event, cb) ->
-        userDb.insert event, event._id, (err, res) ->
-          event._rev = res.rev
+      ## get events
+      getEvents = (cb) ->
+        opts =
+          key: 'event'
+          include_docs: true
+        userDb.view 'userddoc', 'docs_by_type', opts, (err, res) ->
+          _eventsNano = (row.doc for row in res.rows)
           cb()
       insertEvents = (cb) -> async.map(_events, insertEvent, cb)
       ## in parallel
       async.parallel [
         authUser
-        insertEvents
+        getEvents
       ], (err, res) ->
         ready()
 
@@ -70,7 +55,7 @@ describe 'GET /events', () ->
       destroyEvent = (event, callback) ->
         userDb.destroy(event._id, event._rev, callback)
       ## in parallel
-      async.map(_events, destroyEvent, finished)
+      async.map(_eventsNano, destroyEvent, finished)
 
 
     it 'should GET all events', (done) ->
@@ -82,5 +67,5 @@ describe 'GET /events', () ->
       request opts, (err, res, body) ->
         should.not.exist(err)
         res.statusCode.should.eql(200)
-        body.should.eql(_events)
+        body.should.eql(_eventsNano)
         done()

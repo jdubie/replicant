@@ -13,6 +13,8 @@ describe 'POST /events', () ->
   ## from the test/toy data
   _username = hash('user2@test.com')
   _userId = 'user2_id'
+  _guests = ['user2_id']
+  _hosts = ['user1_id']
   _members = ['user2_id', 'user1_id']
   _members.push(admin) for admin in ADMINS
   _password = 'pass2'
@@ -85,7 +87,10 @@ describe 'POST /events', () ->
       mapperDb = nanoAdmin.db.use('mapper')
       mapperDb.get eventId, (err, mapperDoc) ->
         should.not.exist(err)
-        mapperDoc.should.have.property('users')
+        mapperDoc.should.have.property('guests')
+        mapperDoc.guests.should.eql(_guests)
+        mapperDoc.should.have.property('hosts')
+        mapperDoc.hosts.should.eql(_hosts)
         done()
 
     it 'should create an event document for involved users', (done) ->

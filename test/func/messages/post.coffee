@@ -14,8 +14,10 @@ describe 'POST /messages', () ->
   _userId = 'user2_id'
   _password = 'pass2'
   cookie = null
-  _members = ['user2_id', 'user1_id']
-  _allUsers = (user for user in _members)
+  _guests = ['user2_id']
+  _hosts = ['user1_id']
+  _allUsers = (user for user in _guests)
+  _allUsers.push(user) for user in _hosts
   _allUsers.push(user) for user in ADMINS
   _ctime = _mtime = 12345
   _message =
@@ -48,7 +50,8 @@ describe 'POST /messages', () ->
       insertMapping = (cb) ->
         mapperDoc =
           _id: _message.event_id
-          users: _members
+          guests: _guests
+          hosts: _hosts
         mapperDb.insert(mapperDoc, mapperDoc._id, cb)
       async.parallel [
         authUser
