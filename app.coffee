@@ -360,7 +360,7 @@ _.each ['events', 'cards', 'messages', 'email_addresses', 'phone_numbers'], (mod
 _.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
   ## POST /models
   app.post "/#{model}", (req, res) ->
-    debug "PUT /#{model}"
+    debug "POST /#{model}"
     userCtx = req.userCtx   # from the app.all route
     userDbName = getUserDbName(userId: userCtx.user_id)
     doc = req.body
@@ -378,6 +378,7 @@ _.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
       else
         _rev = body.rev
         res.json(statusCode, {_rev, mtime, ctime})
+
   ## PUT /models/:id
   app.put "/#{model}/:id", (req, res) ->
     id = req.params?.id
