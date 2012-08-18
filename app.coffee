@@ -364,6 +364,7 @@ _.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
     userCtx = req.userCtx   # from the app.all route
     userDbName = getUserDbName(userId: userCtx.user_id)
     doc = req.body
+    _id = doc._id
     ctime = mtime = Date.now()
     doc.ctime = ctime
     doc.mtime = mtime
@@ -377,7 +378,7 @@ _.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
       if statusCode isnt 201 then res.send(statusCode)
       else
         _rev = body.rev
-        res.json(statusCode, {_rev, mtime, ctime})
+        res.json(statusCode, {_id, _rev, mtime, ctime})
 
   ## PUT /models/:id
   app.put "/#{model}/:id", (req, res) ->
