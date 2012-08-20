@@ -12,11 +12,13 @@ describe 'GET /swaps', () ->
 
   before (ready) ->
     # start webserver
-    app = require('../../../app')
+    app = require('app')
 
     db = nano.db.use('lifeswap')
-    opts = include_docs: true
-    db.view 'lifeswap', 'swaps', opts, (err, res) ->
+    opts =
+      key: 'swap'
+      include_docs: true
+    db.view 'lifeswap', 'docs_by_type', opts, (err, res) ->
       should.not.exist(err)
       swapsNano = (row.doc for row in res.rows)
       ready()
