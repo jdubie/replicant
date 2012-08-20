@@ -1,7 +1,7 @@
 debug = require('debug')('replicant:lib:adminNotifications')
 {nano, smtp} = require('../config')
 db = nano.db.use('lifeswap')
-{Mailer} = require('./mailer')
+#{Mailer} = require('./mailer')
 
 headers =
   to: ['admin@thelifeswap.com']

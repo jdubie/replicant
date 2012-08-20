@@ -3,11 +3,11 @@ async = require('async')
 util = require('util')
 request = require('request')
 
-{nanoAdmin, nano, dbUrl, ADMINS} = require('config')
+{jobs, nanoAdmin, nano, dbUrl, ADMINS} = require('config')
 {getUserDbName, hash} = require('lib/helpers')
 
 
-describe 'POST /messages', () ->
+describe 'zzzz POST /messages', () ->
 
   ## from the test/toy data
   _username = hash('user2@test.com')
@@ -133,3 +133,5 @@ describe 'POST /messages', () ->
             res.rows[0].should.have.property('value', 1)
           cb()
       async.map(_allUsers, checkMessageReadStatus, done)
+
+      #it 'should add email job to work queue', (done) ->

@@ -9,7 +9,7 @@ util = require('util')
 helpers = require('./lib/helpers')
 {hash, getUserDbName} = require('./lib/helpers')
 {auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, createEvent, getEventUsers, addEventHostsAndGuests, replicate, getMessages, getMessage, markReadStatus} = require('./lib/replicant')
-adminNotifications = require('./lib/adminNotifications')
+#adminNotifications = require('./lib/adminNotifications')
 config = require('./config')
 
 app = express()
@@ -502,7 +502,7 @@ app.post '/messages', (req, res) ->
 
   async.waterfall [
 
-    # write message dco to userdb
+    # write message doc to userdb
     (next) ->
       debug 'post message'
       opts =
@@ -530,7 +530,7 @@ app.post '/messages', (req, res) ->
             ctime: ctime
         request(opts, next) # (err, resp, body)
 
-    # getting users associate with event
+    # getting users associated with event
     (resp, body, next) ->
       debug 'get users'
       getEventUsers({eventId}, next)  # (err, users)
@@ -544,7 +544,13 @@ app.post '/messages', (req, res) ->
       else
         users.push(admin) for admin in config.ADMINS
         dsts = _.without(users, src)
-        replicate({src, dsts, eventId}, next)   # (err, resp)
+        replicate {src, dsts, eventId}, (err) ->
+          next(err, src, dsts, eventId)
+
+    # add email jobs to messaging queue
+    (src, dsts, eventId, next) ->
+      config.jobs.create('replicate request', {title: "event #{eventId}: message from #{src}", src, dsts, eventId}).save(next)
+
   ], (err, resp) ->
     if err then res.json(err.statusCode ? 500, err)
     else res.json(201, {_rev, ctime, mtime})

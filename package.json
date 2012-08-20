@@ -16,6 +16,8 @@
     "express": "*",
     "request": "*",
     "underscore": "*",
-    "mustache": "*"
+    "mustache": "*",
+    "kue": "*",
+    "redis": "*"
   }
 }
