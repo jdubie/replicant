@@ -64,7 +64,7 @@ app.all userCtxRegExp, (req, res, next) ->
   Login
 ###
 app.post '/user_ctx', (req, res) ->
-  username = req.body.username
+  username = hash(req.body.username)
   password = req.body.password
   debug "POST /user_ctx"
   debug "   username: #{username}"
@@ -107,6 +107,20 @@ app.get '/user_ctx', (req, res) ->
       helpers.getUserId {cookie, userCtx}, (err, userCtx) ->
         if err then res.json(err.statusCode ? 401, err)
         else res.json(statusCode: 200, userCtx)
+
+###
+  Get zipcode mapping
+###
+app.get '/zipcodes/:id', (req, res) ->
+  db = config.nano.use('zipcodes')
+  db.view 'zipcodes', 'zipcodes', key: req.params.id, (err, body, headers) ->
+    debug util.inspect body
+    if headers['status-code'] != 200
+      res.json(headers['status-code'], err)
+    if body.rows.length == 0
+      res.json(404, reason: 'Not a valid zipcode')
+    else
+      res.json(body.rows[0].value)
 
 ###
   POST /users
@@ -389,7 +403,7 @@ _.each ['events', 'cards', 'messages', 'email_addresses', 'phone_numbers'], (mod
 _.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
   ## POST /models
   app.post "/#{model}", (req, res) ->
-    debug "PUT /#{model}"
+    debug "POST /#{model}"
     userCtx = req.userCtx   # from the app.all route
     userDbName = getUserDbName(userId: userCtx.user_id)
     doc = req.body
@@ -407,6 +421,7 @@ _.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
       else
         _rev = body.rev
         res.json(statusCode, {_rev, mtime, ctime})
+
   ## PUT /models/:id
   app.put "/#{model}/:id", (req, res) ->
     id = req.params?.id
