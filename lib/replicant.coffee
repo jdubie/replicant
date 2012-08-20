@@ -96,25 +96,31 @@ replicant.createEvent = ({event, userId}, callback) ->
   mtime = ctime
   event.ctime = ctime
   event.mtime = mtime
+  hosts = null
+  guests = [userId]
 
-  createEventDoc = (userId, cb) ->
+  createEventDoc = (_userId, cb) ->
     # @todo replace with getting this from cookies
-    userDbName = getUserDbName(userId: userId)
+    userDbName = getUserDbName(userId: _userId)
     debug 'userDbName:', userDbName
     userDb = nanoAdmin.db.use(userDbName)
     userDb.insert(event, event._id, cb)
 
+  createInitialEventDoc = (next) ->
+    createEventDoc userId, (err, res) ->
+      _rev = res?.rev
+      next(err)
+
   getMembers = (next) ->
     debug 'getMembers'
     db = nanoAdmin.db.use('lifeswap')
-    db.get event.swap_id, (err, swapDoc) ->
-      if not err
-        hosts = [swapDoc.user_id] # @todo swapDoc.user_id will be array in future
-      else debug 'error!', err
-      next(err, hosts)
+    db.get event.swap_id, (err, swap) ->
+      # @todo swap.user_id will be array in future
+      hosts = [swap?.user_id]
+      next(err)
 
   ## OR could just replicate from original user to these users
-  createDocs = (hosts, next) ->
+  createDocs = (next) ->
     ## create doc in mapping DB
     createMapping = (cb) ->
       mapper = nanoAdmin.db.use('mapper')
@@ -133,11 +139,8 @@ replicant.createEvent = ({event, userId}, callback) ->
     ## in parallel
     async.parallel([createMapping, createEventDocs], next)
 
-  async.waterfall [
-    (next) -> createEventDoc userId, (err, res) ->
-      if err then debug 'createEventDoc error', err
-      _rev = res?.rev
-      next()
+  async.series [
+    createInitialEventDoc
     getMembers
     createDocs
   ], (err, res) ->
@@ -145,7 +148,7 @@ replicant.createEvent = ({event, userId}, callback) ->
       err.statusCode = err.status_code ? 500
       callback(err)
     else
-      callback(null, {_rev, mtime, ctime})
+      callback(null, {_rev, mtime, ctime, guests, hosts})
 
 
 ###
@@ -163,6 +166,17 @@ replicant.getEventUsers = ({eventId}, callback) ->
       users.push(user) for user in mapperDoc.hosts
       callback(null, users)
 
+###
+  getEventHostsAndGuests
+  @param event {Object - event}
+###
+replicant.addEventHostsAndGuests = (event, callback) ->
+  mapper = nanoAdmin.db.use('mapper')
+  mapper.get event._id, (err, mapperDoc) ->
+    if mapperDoc then {hosts, guests} = mapperDoc
+    event.hosts = hosts
+    event.guests = guests
+    callback(err, event)
 
 ###
   replicate - replicates from one users db to others
@@ -325,6 +339,8 @@ replicant.getMessage = (messageId, userId, cookie, callback) ->
         message.read = if res.rows[0].value is 1 then false else true
         next(null, message)
   ], callback   # (err, message)
+
+## gets an event and tacks on 'hosts'/'guests' arrays
 
 
 module.exports = replicant

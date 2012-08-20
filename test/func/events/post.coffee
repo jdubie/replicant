@@ -78,7 +78,8 @@ describe 'POST /events', () ->
       request opts, (err, res, body) ->
         should.not.exist(err)
         res.statusCode.should.eql(201)
-        body.should.have.keys(['_rev', 'mtime', 'ctime'])
+        returnedFields = ['_rev', 'mtime', 'ctime', 'guests', 'hosts']
+        body.should.have.keys(returnedFields)
         for key, val of body
           _event[key] = val
         done()
@@ -94,6 +95,8 @@ describe 'POST /events', () ->
         done()
 
     it 'should create an event document for involved users', (done) ->
+      delete _event.hosts
+      delete _event.guests
       checkEventDoc = (userId, callback) ->
         userDbName = getUserDbName(userId: userId)
         userDb = nanoAdmin.db.use(userDbName)

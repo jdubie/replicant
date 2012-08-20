@@ -8,7 +8,7 @@ util = require('util')
 
 helpers = require('./lib/helpers')
 {hash, getUserDbName} = require('./lib/helpers')
-{auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, createEvent, getEventUsers, replicate, getMessages, getMessage, markReadStatus} = require('./lib/replicant')
+{auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, createEvent, getEventUsers, addEventHostsAndGuests, replicate, getMessages, getMessage, markReadStatus} = require('./lib/replicant')
 adminNotifications = require('./lib/adminNotifications')
 config = require('./config')
 
@@ -283,7 +283,7 @@ _.each ['users', 'swaps', 'reviews', 'likes', 'requests'], (model) ->
     @headers cookie {cookie} authenicates user
     @method POST
 
-    return {_rev, ctime, mtime}
+    return {_rev, ctime, mtime, hosts, guests}
 ###
 app.post '/events', (req, res) ->
   event = req.body    # {_id, type, state, swap_id}
@@ -293,15 +293,59 @@ app.post '/events', (req, res) ->
   debug "   event: #{event}"
   createEvent {event, userId: userCtx.user_id}, (err, _res) ->
     if err then res.json(err.statusCode, err)
-    else res.json(201, _res)    # {_rev, mtime, ctime}
+    else res.json(201, _res)    # {_rev, mtime, ctime, hosts, guests}
 
+###
+  GET /events
+###
+app.get '/events', (req, res) ->
+  debug "GET /events"
+  userCtx = req.userCtx   # from the app.all route
+  cookie = req.headers.cookie
+  debug 'userCtx', userCtx
+  async.waterfall [
+    (next) ->
+      getTypeUserDb('event', userCtx.user_id, cookie, next)
+    (events, next) ->
+      async.map(events, addEventHostsAndGuests, next)
+  ], (err, events) ->
+    if err
+      statusCode = err.status_code ? 500
+      res.json(statusCode, err)
+    else
+      res.json(200, events)
+
+###
+  GET /events/:id
+###
+app.get "/events/:id", (req, res) ->
+  id = req.params?.id
+  debug "GET /events/#{id}"
+  userCtx = req.userCtx   # from the app.all route
+  cookie = req.headers.cookie
+  nanoOpts =
+    url: "#{config.dbUrl}/#{getUserDbName(userId: userCtx.user_id)}"
+    cookie: cookie
+  userPrivateNano = require('nano')(nanoOpts)
+  async.waterfall [
+    (next) -> userPrivateNano.get(id, next)
+    (event, hdrs, next) ->
+      addEventHostsAndGuests(event, next)
+  ], (err, event) ->
+    if err
+      statusCode = err.statusCode ? err.status_code ? 500
+      res.json(statusCode, err)
+    else
+      res.json(200, event)
 
 ###
   Some routes for:
     /events
     /cards
+    /email_addresses
+    /phone_numbers
 ###
-_.each ['events', 'cards', 'email_addresses', 'phone_numbers'], (model) ->
+_.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
   ## GET /model
   app.get "/#{model}", (req, res) ->
     debug "GET /#{model}"
@@ -328,7 +372,6 @@ _.each ['events', 'cards', 'email_addresses', 'phone_numbers'], (model) ->
 
 ###
   DELETE
-    /events
     /cards
     /messages
     /email_addresses
