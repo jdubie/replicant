@@ -9,7 +9,7 @@ debug = require('debug')('replicant/test/func/phone_numbers/delete')
 {getUserDbName, hash} = require('lib/helpers')
 
 
-describe 'zzzz GET /messages', () ->
+describe 'GET /messages', () ->
 
   ## from the test/toy data
   _username = hash('user2@test.com')
