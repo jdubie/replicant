@@ -51,5 +51,5 @@ describe 'POST /phone_numbers', () ->
     request opts, (err, res, phone) ->
       should.not.exist(err)
       res.statusCode.should.eql(201)
-      phone.should.have.keys(['_rev', 'mtime', 'ctime'])
+      phone.should.have.keys(['_id', '_rev', 'mtime', 'ctime'])
       done()

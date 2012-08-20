@@ -1,6 +1,5 @@
-TESTS = $(shell find test -name '*.coffee')
-UNIT_TESTS = $(shell find test/unit -name '*.coffee')
-FUNC_TESTS = $(shell find test/func -name '*.coffee')
+func:
+	scripts/func.zsh
 
 unit:
 	scripts/unit.zsh
@@ -8,11 +7,11 @@ unit:
 test:
 	scripts/test.zsh
 
-func:
-	scripts/func.zsh
-
 grep:
 	scripts/grep.zsh
+
+z:
+	scripts/z.zsh
 
 run:
 	scripts/run.zsh

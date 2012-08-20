@@ -51,5 +51,5 @@ describe 'POST /cards', () ->
     request opts, (err, res, card) ->
       should.not.exist(err)
       res.statusCode.should.eql(201)
-      card.should.have.keys(['_rev', 'mtime', 'ctime'])
+      card.should.have.keys(['_id', '_rev', 'mtime', 'ctime'])
       done()

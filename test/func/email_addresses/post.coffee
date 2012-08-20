@@ -51,5 +51,5 @@ describe 'POST /email_addresses', () ->
     request opts, (err, res, email) ->
       should.not.exist(err)
       res.statusCode.should.eql(201)
-      email.should.have.keys(['_rev', 'mtime', 'ctime'])
+      email.should.have.keys(['_id', '_rev', 'mtime', 'ctime'])
       done()
