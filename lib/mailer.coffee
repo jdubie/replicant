@@ -1,11 +1,15 @@
-debug = require('debug')('replicant:lib:mailer')
+debug = require('debug')('replicant/lib:mailer')
 fs = require('fs')
 path = require('path')
 _ = require('underscore')
 mustache = require('mustache')
 config = require('../config')
 
-module.exports.Mailer = class Mailer
+###
+  @name Mailer
+  @description instances send out one type of email
+###
+class Mailer
 
   ###
     Creates a mailer with a default set of email headers
@@ -40,3 +44,6 @@ module.exports.Mailer = class Mailer
     fs.readFile @templatePath, 'utf-8', (err, templateHtml) ->
       html = mustache.to_html(templateHtml, data)
       callback(err, {html})
+
+
+module.exports.Mailer = Mailer
