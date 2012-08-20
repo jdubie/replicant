@@ -30,6 +30,11 @@ else
 module.exports.ADMINS = ADMINS
 
 # Work Queue
+kueAppPort = 4000
+kueAppHost = '127.0.0.1'
+kueUrl = url.format(protocol: 'http:', port: kueAppPort, hostname: kueAppHost)
+module.exports.kueUrl = kueUrl
+
 if process.env.PROD
   # todo add server redis settings
   kue.redis.createClient = () ->
@@ -38,6 +43,8 @@ if process.env.PROD
     #return client
 
 module.exports.jobs = kue.createQueue()
+
+module.exports.redis = redis.createClient()
 
 switch process.env.ENV
   when 'test'

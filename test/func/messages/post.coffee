@@ -2,12 +2,13 @@ should = require('should')
 async = require('async')
 util = require('util')
 request = require('request')
+debug = require('debug')('replicant:test/func/message/post')
+_ = require('underscore')
 
-{jobs, nanoAdmin, nano, dbUrl, ADMINS} = require('config')
+{redis, kueUrl, jobs, nanoAdmin, nano, dbUrl, ADMINS} = require('config')
 {getUserDbName, hash} = require('lib/helpers')
 
-
-describe 'zzzz POST /messages', () ->
+describe 'POST /messages', () ->
 
   ## from the test/toy data
   _username = hash('user2@test.com')
@@ -56,6 +57,7 @@ describe 'zzzz POST /messages', () ->
       async.parallel [
         authUser
         insertMapping
+        (cb) -> redis.flushall(cb)
       ], ready
 
     after (finished) ->
@@ -92,6 +94,7 @@ describe 'zzzz POST /messages', () ->
         (cb) -> async.map(_allUsers, destroyEventUser, cb)
         destroyEventMapper
         destroyReadDocs
+        (cb) -> redis.flushall(cb)
       ], finished
 
 
@@ -134,4 +137,12 @@ describe 'zzzz POST /messages', () ->
           cb()
       async.map(_allUsers, checkMessageReadStatus, done)
 
-      #it 'should add email job to work queue', (done) ->
+    it 'should add notification to work queue', (done) ->
+      request.get kueUrl + '/job/1', (err, res, body) ->
+        body = JSON.parse(body)
+        body.should.have.property('type', 'notification')
+        body.should.have.property('data')
+        body.data.should.have.property('src', _userId)
+        body.data.should.have.property('dsts')
+        body.data.dsts.should.eql(_.union(_hosts, ADMINS))
+        done()
