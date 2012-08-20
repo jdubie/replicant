@@ -140,7 +140,7 @@ describe 'POST /messages', () ->
     it 'should add notification to work queue', (done) ->
       request.get kueUrl + '/job/1', (err, res, body) ->
         body = JSON.parse(body)
-        body.should.have.property('type', 'notification')
+        body.should.have.property('type', 'notification.message')
         body.should.have.property('data')
         body.data.should.have.property('src', _userId)
         body.data.should.have.property('dsts')
