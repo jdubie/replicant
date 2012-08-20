@@ -15,5 +15,7 @@ z:
 
 run:
 	scripts/run.zsh
+watch:
+	scripts/watch.zsh
 
 .PHONY: run, test

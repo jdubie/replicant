@@ -501,6 +501,8 @@ app.post '/messages', (req, res) ->
   eventId = message.event_id
 
   async.waterfall [
+
+    # write message dco to userdb
     (next) ->
       debug 'post message'
       opts =
@@ -509,6 +511,8 @@ app.post '/messages', (req, res) ->
         headers: req.headers
         json: message
       request(opts, next) # (err, resp, body)
+
+    #  write read doc to userdb
     (resp, body, next) ->
       debug 'mark message read'
       statusCode = resp.statusCode
@@ -525,9 +529,13 @@ app.post '/messages', (req, res) ->
             event_id: message.event_id
             ctime: ctime
         request(opts, next) # (err, resp, body)
+
+    # getting users associate with event
     (resp, body, next) ->
       debug 'get users'
       getEventUsers({eventId}, next)  # (err, users)
+
+    # replicating message
     (users, next) ->
       debug 'replicate'
       src = userCtx.user_id
