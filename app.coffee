@@ -9,7 +9,6 @@ util = require('util')
 helpers = require('./lib/helpers')
 {hash, getUserDbName} = require('./lib/helpers')
 {auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, createEvent, getEventUsers, addEventHostsAndGuests, replicate, getMessages, getMessage, markReadStatus} = require('./lib/replicant')
-#adminNotifications = require('./lib/adminNotifications')
 config = require('./config')
 
 app = express()
@@ -58,7 +57,6 @@ app.all userCtxRegExp, (req, res, next) ->
     else
       req.userCtx = userCtx
       next()
-
 
 ###
   Login
