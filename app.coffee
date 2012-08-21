@@ -547,7 +547,7 @@ app.post '/messages', (req, res) ->
 
     # add email jobs to messaging queue
     (src, dsts, eventId, next) ->
-      config.jobs.create('notification.message', {title: "event #{eventId}: message from #{src}", src, dsts, eventId}).save(next)
+      config.jobs.create('notification.message', {title: "event #{eventId}: message from #{src}", src, dsts, message, eventId}).save(next)
 
   ], (err, resp) ->
     if err then res.json(err.statusCode ? 500, err)
