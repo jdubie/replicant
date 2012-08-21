@@ -2,13 +2,14 @@ should = require('should')
 async = require('async')
 util = require('util')
 request = require('request')
+debug = require('debug')('replicant:/test/func/event/post')
 
-{nanoAdmin, nano, ADMINS} = require('config')
+{kueUrl, redis, nanoAdmin, nano, ADMINS} = require('config')
 {getUserDbName, hash} = require('lib/helpers')
 {EVENT_STATE} = require('../../../../lifeswap/userdb/shared/constants')
 
 
-describe 'zzz POST /events', () ->
+describe 'POST /events', () ->
 
   ## from the test/toy data
   _username = hash('user2@test.com')
@@ -45,8 +46,7 @@ describe 'zzz POST /events', () ->
         should.not.exist(err)
         should.exist(headers and headers['set-cookie'])
         cookie = headers['set-cookie'][0]
-        ready()
-
+        redis.flushall(ready)
 
     after (finished) ->
       ## destroy event (in both user's dbs)
@@ -66,6 +66,7 @@ describe 'zzz POST /events', () ->
       async.parallel [
         (cb) -> async.map(_members, destroyEventUser, cb)
         destroyEventMapper
+        (cb) -> redis.flushall(cb)
       ], finished
 
 
@@ -106,4 +107,17 @@ describe 'zzz POST /events', () ->
           callback()
       async.map _members, checkEventDoc, (err, res) ->
         should.not.exist(err)
+        done()
+
+    it 'should create event.create notification on work queue', (done) ->
+      request.get kueUrl + '/job/1', (err, res, body) ->
+        body = JSON.parse(body)
+        body.should.have.property('type', 'notification.event.create')
+        body.should.have.property('data')
+        body.data.should.have.keys('title', 'guests', 'hosts', 'event', 'swap')
+
+        ##
+        ## todo assert more stuff about these keys...
+        ##
+
         done()
