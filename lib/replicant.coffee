@@ -3,7 +3,7 @@ request = require('request')
 _ = require('underscore')
 async = require('async')
 debug = require('debug')('replicant:lib')
-{nanoAdmin, dbUrl, ADMINS} = require('config')
+{jobs, nanoAdmin, dbUrl, ADMINS} = require('config')
 {getUserDbName, getStatusFromCouchError, hash} = require('lib/helpers')
 
 {EVENT_STATE} = require('../../lifeswap/userdb/shared/constants')
@@ -96,6 +96,7 @@ replicant.createEvent = ({event, userId}, callback) ->
   mtime = ctime
   event.ctime = ctime
   event.mtime = mtime
+  swap = null
   hosts = null
   guests = [userId]
 
@@ -114,8 +115,9 @@ replicant.createEvent = ({event, userId}, callback) ->
   getMembers = (next) ->
     debug 'getMembers'
     db = nanoAdmin.db.use('lifeswap')
-    db.get event.swap_id, (err, swap) ->
+    db.get event.swap_id, (err, _swap) ->
       # @todo swap.user_id will be array in future
+      swap = _swap
       hosts = [swap?.user_id]
       next(err)
 
@@ -139,10 +141,14 @@ replicant.createEvent = ({event, userId}, callback) ->
     ## in parallel
     async.parallel([createMapping, createEventDocs], next)
 
+  queueNotifications = (next) ->
+    jobs.create('notification.event.create', {title: "event #{event._id}: event created", guests, hosts, event, swap}).save(next)
+
   async.series [
     createInitialEventDoc
     getMembers
     createDocs
+    queueNotifications
   ], (err, res) ->
     if err
       err.statusCode = err.status_code ? 500

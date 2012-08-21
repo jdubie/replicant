@@ -8,7 +8,7 @@ request = require('request')
 {EVENT_STATE} = require('../../../../lifeswap/userdb/shared/constants')
 
 
-describe 'POST /events', () ->
+describe 'zzz POST /events', () ->
 
   ## from the test/toy data
   _username = hash('user2@test.com')
