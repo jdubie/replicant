@@ -137,15 +137,16 @@ app.get '/zipcodes/:id', (req, res) ->
 app.post '/users', (req, res) ->
   debug "POST /users"
   user = req.body
-  {email, password, _id} = user   # extract email and password
+  {email_address, password, _id} = user   # extract email and password
   user_id = _id
   # delete private data
   delete user.password
-  delete user.email
+  delete user.email_address
+  email = email_address
   email = email.toString().toLowerCase()
   debug "   email: #{email}"
 
-  name = hash(email)
+  user.name = name = hash(email)
   ctime = mtime = Date.now()
   user.ctime = ctime
   user.mtime = mtime
