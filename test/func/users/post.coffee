@@ -18,7 +18,7 @@ describe 'POST /users', () ->
   _userDbName = getUserDbName(userId: _userId)
   _ctime = _mtime = 12345
   _userDoc =
-    email: _email
+    email_address: _email
     password: _password
     _id: _userId
     type: 'user'
@@ -90,7 +90,7 @@ describe 'POST /users', () ->
     it 'should create a user type document in lifeswap DB', (done) ->
       mainDb.get _userId, (err, userDoc) ->
         should.not.exist(err)
-        delete _userDoc.email
+        delete _userDoc.email_address
         delete _userDoc.password
         userDoc.should.eql(_userDoc)
         done()
