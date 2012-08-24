@@ -95,8 +95,8 @@ replicant.changePassword = ({name, oldPass, newPass, cookie}, callback) ->
     ## check that old password was correct
     (_user, hdrs, next) ->
       if _user.password_sha isnt hash(oldPass + _user.salt)
-        debug 'Old password does not match'
-        next(statusCode: 403, reason: password: "Old password incorrect")
+        debug 'Incorrect current password'
+        next(statusCode: 403, reason: oldPass: ["Incorrect current password."])
       else
         _user.password_sha = hash(newPass + _user.salt)
         db.insert _user, _user._id, (err, res) ->
