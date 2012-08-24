@@ -83,6 +83,32 @@ replicant.createUserDb = ({userId, name}, callback) ->
             if err then err.status = getStatusFromCouchError(err)
             callback(err, res)
 
+replicant.changePassword = ({name, oldPass, newPass, cookie}, callback) ->
+  nanoOpts =
+    url: "#{dbUrl}/_users"
+    cookie: cookie
+  db = require('nano')(nanoOpts)
+  async.waterfall [
+    ## get _user document
+    (next) ->
+      db.get("org.couchdb.user:#{name}", next)
+    ## check that old password was correct
+    (_user, hdrs, next) ->
+      if _user.password_sha isnt hash(oldPass + _user.salt)
+        debug 'Old password does not match'
+        next(statusCode: 403, reason: password: "Old password incorrect")
+      else
+        _user.password_sha = hash(newPass + _user.salt)
+        db.insert _user, _user._id, (err, res) ->
+          if err? then debug 'Error inserting _user w/ new password'
+          next(err)
+
+  ], (err, res) ->
+    if err?
+      err.statusCode ?= err.statusCode ? 500
+    callback(err)
+
+
 ###
   createEvent - creates event -> [users] mapping and writes initial events docs to users db
   @param swapId {string}

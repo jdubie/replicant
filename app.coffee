@@ -8,7 +8,7 @@ util = require('util')
 
 helpers = require('./lib/helpers')
 {hash, getUserDbName} = require('./lib/helpers')
-{auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, createEvent, getEventUsers, addEventHostsAndGuests, replicate, getMessages, getMessage, markReadStatus} = require('./lib/replicant')
+{auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, changePassword, createEvent, getEventUsers, addEventHostsAndGuests, replicate, getMessages, getMessage, markReadStatus} = require('./lib/replicant')
 config = require('./config')
 
 app = express()
@@ -105,6 +105,27 @@ app.get '/user_ctx', (req, res) ->
       helpers.getUserId {cookie, userCtx}, (err, userCtx) ->
         if err then res.json(err.statusCode ? 401, err)
         else res.json(statusCode: 200, userCtx)
+
+###
+  Change password
+###
+app.put '/user_ctx', (req, res) ->
+  {name, oldPass, newPass} = req.body
+  cookie = req.headers.cookie
+  debug "PUT /user_ctx"
+  debug "   username: #{name}"
+  newCookie = null
+  async.waterfall [
+    (next) ->
+      changePassword({name, oldPass, newPass, cookie}, next)
+    (next) ->
+      auth({username: name, password: newPass}, next)
+  ], (err, newCookie) ->
+    if err
+      res.json(err.statusCode ? err.status_code ? 500, err)
+    else
+      res.set('Set-Cookie', newCookie)
+      res.send(201)
 
 ###
   Get zipcode mapping
