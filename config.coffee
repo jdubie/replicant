@@ -5,27 +5,36 @@ kue = require('kue')
 redis = require('redis')
 
 # Db connection
-if process.env.PROD
-  protocol = 'http:'
-  auth = "replicant:#{process.env.REPLICANT_PWD}"
-  hostname = 'localhost'
-  port = 5984
-else
-  protocol = 'http:'
-  auth = 'replicant:replicant'
-  hostname = 'localhost'
-  port = 5985
+switch process.env.ENV
+  when 'PROD'
+    protocol = 'http:'
+    auth = "replicant:#{process.env.REPLICANT_PWD}"
+    hostname = 'localhost'
+    port = process.env.REPLICANT_PROD_PORT_COUCH
+  when 'STAGE'
+    protocol = 'http:'
+    auth = "replicant:#{process.env.REPLICANT_PWD}"
+    hostname = 'localhost'
+    port = process.env.REPLICANT_STAGE_PORT_COUCH
+  when 'DEV', 'TEST'
+    protocol = 'http:'
+    auth = 'replicant:replicant'
+    hostname = 'localhost'
+    port = 3000
+  else
+    console.error 'You must set ENV environment variable'
+    process.exit()
 
 module.exports.dbUrl = url.format({protocol,hostname,port})
 module.exports.nano = require('nano')(url.format({protocol,hostname,port}))
 module.exports.nanoAdmin = require('nano')(url.format({protocol,hostname,port,auth}))
 
-
-# Admins
-if process.env.PROD
-  ADMINS = ['shawntuteja', 'jdubie', 'mike', 'bastiaan', 'aotimme']
-else
-  ADMINS = ['tester_id']    # the user_id!
+# Admins - todo rethink this
+switch process.env.ENV
+  when 'PROD'
+    ADMINS = ['shawntuteja', 'jdubie', 'mike', 'bastiaan', 'aotimme']
+  else
+    ADMINS = ['tester_id']    # the user_id!
 
 module.exports.ADMINS = ADMINS
 
@@ -35,22 +44,33 @@ kueAppHost = '127.0.0.1'
 kueUrl = url.format(protocol: 'http:', port: kueAppPort, hostname: kueAppHost)
 module.exports.kueUrl = kueUrl
 
-if process.env.PROD
-  # todo add server redis settings
-  kue.redis.createClient = () ->
-    #client = redis.createClient(1234, '192.168.1.2')
-    # client.auth('password');
-    #return client
+switch process.env.ENV
+  when 'PROD', 'STAGE', 'DEV', 'TEST'
+    # todo add server redis settings
+    kue.redis.createClient = () ->
+      #client = redis.createClient(1234, '192.168.1.2')
+      # client.auth('password');
+      #return client
+  else
+    console.error 'You must set ENV environment variable'
+    process.exit()
 
 module.exports.jobs = kue.createQueue()
 
 module.exports.redis = redis.createClient()
 
 switch process.env.ENV
-  when 'test'
+  when 'TEST'
     exports.port = 3001
-  else
+  when 'STAGE'
+    exports.port = 3002
+  when 'PROD'
     exports.port = 3000
+  when 'DEV'
+    exports.port = 3000
+  else
+    console.error 'You must set ENV environment variable'
+    process.exit()
 
 #gmailSmtpOptions =
 #  service: 'Gmail'

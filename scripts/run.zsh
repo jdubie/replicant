@@ -14,9 +14,7 @@ stage)
   echo "Running DEVELOP";
   ENV='DEV' \
   NODE_PATH=`pwd` \
-  DEBUG=* \
+  DEBUG='replicant*' \
     ./node_modules/.bin/coffee app.coffee;
   ;;
   esac
-
-
