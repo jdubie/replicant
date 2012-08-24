@@ -14,7 +14,8 @@ z:
 	scripts/z.zsh
 
 run:
-	scripts/run.zsh
+	scripts/run.zsh $(ENV)
+
 watch:
 	scripts/watch.zsh
 
