@@ -1,7 +1,11 @@
 #!/usr/bin/env zsh
 
-case "$1" in PRODUCTION)
-  echo "No pushing to production yet";
+case "$1" in PROD)
+  echo 'Running PROD';
+  ENV='PROD' \
+  NODE_PATH=`pwd` \
+  DEBUG='replicant*' \
+    ./node_modules/.bin/coffee app.coffee;
   ;;
 STAGE)
   echo 'Running STAGING';
