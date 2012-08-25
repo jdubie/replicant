@@ -18,6 +18,7 @@
     "underscore": "*",
     "mustache": "*",
     "kue": "*",
-    "redis": "*"
+    "redis": "*",
+    "forever": "*"
   }
 }
