@@ -20,7 +20,7 @@ switch process.env.ENV
     protocol = 'http:'
     auth = 'replicant:replicant'
     hostname = 'localhost'
-    port = 3000
+    port = 5985
   else
     console.error 'You must set ENV environment variable'
     process.exit()
