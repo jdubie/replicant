@@ -86,17 +86,22 @@ replicant.changePassword = ({name, oldPass, newPass, cookie}, callback) ->
     (_user, hdrs, next) ->
       if _user.password_sha isnt h.hash(oldPass + _user.salt)
         debug 'Incorrect current password'
-        next(statusCode: 403, reason: oldPass: ["Incorrect current password."])
+        error =
+          statusCode: 403
+          error     : 'Bad password'
+          reason    : oldPass: ["Incorrect current password."]
+        next(error)
       else
         _user.password_sha = h.hash(newPass + _user.salt)
-        db.insert _user, _user._id, (err, res) ->
-          if err? then debug 'Error inserting _user w/ new password'
-          next(err)
-
+        debug 'Inserting _user w/ new password'
+        db.insert(_user, _user._id, next)
   ], (err, res) ->
     if err?
-      err.statusCode ?= err.statusCode ? 500
-    callback(err)
+      error =
+        statusCode: err.statusCode ? err.status_code ? 500
+        error     : err.error ? 'Error changing password'
+        reason    : err.reaons ? 'Error changing password'
+    callback(error)
 
 
 ###
@@ -230,15 +235,14 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
   #  getDbName
 
 replicant.auth = ({username, password}, callback) ->
-  config.nanoAdmin.auth username, password, (err, body, headers) ->
+  config.nano.auth username, password, (err, body, headers) ->
     if err or not headers
       error =
-        status: 403
-        error: "unauthorized"
-        reason: "Error authorizing"
-      callback(error)
-    else
-      callback(null, headers['set-cookie'])
+        statusCode: err?.status_code ? 403
+        error     : err?.error ? "unauthorized"
+        reason    : err?.reason ? "Error authorizing"
+    else error = null
+    callback(error, headers?['set-cookie'])
 
 
 ## gets all of a type (e.g. type = 'user' or 'swap')
