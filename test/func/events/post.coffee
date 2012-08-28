@@ -4,7 +4,7 @@ util = require('util')
 request = require('request')
 debug = require('debug')('replicant:/test/func/event/post')
 
-{kueUrl, redis, nanoAdmin, nano, ADMINS} = require('config')
+{kueUrl, jobs, nanoAdmin, nano, ADMINS} = require('config')
 {getUserDbName, hash} = require('lib/helpers')
 {EVENT_STATE} = require('../../../../lifeswap/userdb/shared/constants')
 
@@ -46,7 +46,7 @@ describe 'POST /events', () ->
         should.not.exist(err)
         should.exist(headers and headers['set-cookie'])
         cookie = headers['set-cookie'][0]
-        redis.flushall(ready)
+        jobs.client.flushall(ready)
 
     after (finished) ->
       ## destroy event (in both user's dbs)
@@ -66,7 +66,7 @@ describe 'POST /events', () ->
       async.parallel [
         (cb) -> async.map(_members, destroyEventUser, cb)
         destroyEventMapper
-        (cb) -> redis.flushall(cb)
+        (cb) -> jobs.client.flushall(cb)
       ], finished
 
 
