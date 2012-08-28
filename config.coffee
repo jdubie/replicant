@@ -31,8 +31,8 @@ module.exports.nanoAdmin = require('nano')(url.format({protocol,hostname,port,au
 
 # Admins - todo rethink this
 switch process.env.ENV
-  when 'PROD'
-    ADMINS = ['shawntuteja', 'jdubie', 'mike', 'bastiaan', 'aotimme']
+  when 'PROD', 'STAGE'
+    ADMINS = []
   else
     ADMINS = ['tester_id']    # the user_id!
 
