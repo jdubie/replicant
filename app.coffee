@@ -90,20 +90,7 @@ app.get '/user_ctx', (req, res) ->
     headers: req.headers
     url: "#{config.dbUrl}/_session"
     json: true
-  debug opts.url
-  request opts, (err, headers, body) ->
-    # todo handle err
-    debug util.inspect body
-    userCtx = body.userCtx
-    unless userCtx.name?
-      debug 'user is not logged in'
-      res.json(statusCode: 401, {})
-    else
-      debug 'user is logged in', userCtx
-      cookie = req.headers.cookie
-      h.getUserId {cookie, userCtx}, (err, userCtx) ->
-        if err then res.json(err.statusCode ? 401, err)
-        else res.json(statusCode: 200, userCtx)
+  request(opts).pipe(res)
 
 ###
   Change password
