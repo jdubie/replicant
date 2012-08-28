@@ -109,8 +109,31 @@ h.getStatusFromCouchError = (error) ->
     when "file_exists" then return 409      # database already exists
     else return 500
 
+###
+  @name createNotification
+###
 h.createNotification = (name, data, callback) ->
   config.jobs.create("notification.#{name}", data).save(callback)
+
+###
+  @param model {string} plural model
+  @param doc {object} model doc just created
+  @param callback {function}
+###
+h.createSimpleCreateNotification = (model, doc, callback) ->
+  notableEvents = [ 'swap' ]
+  model = h.singularizeModel(model)
+  return callback() unless model in notableEvents
+  notification = {}
+  notification[model] = doc
+  h.createNotification "#{model}.create", notification, (err) ->
+    error = undefined
+    if err
+      error =
+        statusCode: 500
+        error: 'Notification error'
+        reason: err
+    callback(error) # should be undefined
 
 
 ###

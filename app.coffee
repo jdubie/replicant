@@ -66,12 +66,11 @@ app.post '/user_ctx', (req, res) ->
   debug "POST /user_ctx"
   debug "   username: #{username}"
   rep.auth {username, password}, (err, cookie) ->
-    if err or not cookie
-      res.send(403, 'Invalid credentials')
-    else
-      res.set('Set-Cookie', cookie)
-      h.getUserId {cookie, userCtx: name: username}, (err, userCtx) ->
-        res.json(userCtx)
+    return h.sendError(res, err) if err
+    res.set('Set-Cookie', cookie)
+    h.getUserId {cookie, userCtx: name: username}, (err, userCtx) ->
+      return h.sendError(res, err) if err
+      res.json(userCtx)
 
 ###
   Logout
@@ -239,21 +238,13 @@ _.each ['swaps', 'reviews', 'likes', 'requests'], (model) ->
       url: "#{config.dbUrl}/lifeswap"
       headers: req.headers
       json: doc
-    request opts, (err, resp, body) ->
-      statusCode = resp.statusCode ? 500
-      if statusCode isnt 201 then res.json(statusCode, body)
-      else
-        if model == 'swaps'
-          h.createNotification 'swap.create', swap: doc, (err) ->
-            if err
-              statusCode = 500
-              res.json(500, error: 'Error enqueing notification job')
-            else
-              _rev = body.rev
-              res.json(statusCode, {_rev, ctime, mtime})
-        else
-          _rev = body.rev
-          res.json(statusCode, {_rev, ctime, mtime})
+    h.request opts, (err, body) ->
+      return h.sendError(res, err) if err
+      h.createSimpleCreateNotification model, doc, (err) ->
+        return h.sendError(res, err) if err
+        _rev = body.rev
+        res.json(201, {_rev, ctime, mtime})
+
 
 ###
   GET, GET/:id, PUT
@@ -269,8 +260,8 @@ _.each ['users', 'swaps', 'reviews', 'likes', 'requests'], (model) ->
     debug "GET /#{model}"
     type = h.singularizeModel(model)
     rep.getType type, (err, docs) ->
+      return h.sendError(res, err) if err?
       res.json(200, docs)
-      res.end()
 
   ## GET /model/:id
   app.get "/#{model}/:id", (req, res) ->
@@ -293,12 +284,10 @@ _.each ['users', 'swaps', 'reviews', 'likes', 'requests'], (model) ->
       url: "#{config.dbUrl}/lifeswap/#{id}"
       headers: req.headers
       json: doc
-    request opts, (err, resp, body) ->
-      statusCode = resp.statusCode
-      if statusCode isnt 201 then res.json(statusCode, body)
-      else
-        _rev = body.rev
-        res.json(statusCode, {_rev, mtime})
+    h.request opts, (err, body) ->
+      return h.sendError(res, err) if err
+      _rev = body.rev
+      res.json(200, {_rev, mtime})
 
   ## DELETE /model/:id
   app.delete "/#{model}/:id", (req, res) ->
