@@ -113,7 +113,25 @@ h.getStatusFromCouchError = (error) ->
   @name createNotification
 ###
 h.createNotification = (name, data, callback) ->
-  config.jobs.create("notification.#{name}", data).save(callback)
+  config.jobs.create("notification.#{name}", data).save (err) ->
+    return callback() unless err
+    callback(statusCode: 500, error: 'Notification error', reason: err)
+
+
+###
+  @name nanoCallback
+  @description normalizes nano responses to resopnses that ROCK
+###
+h.nanoCallback = (next, opts) ->
+  {error, reason} = opts if opts?
+  (err, res...) ->
+    if err?
+      debug errorMsg
+      errorRes =
+        statusCode: err.status_code ? 500
+        error: err.error ? error
+        reason: err.reason ? reason
+    next(errorRes, res...)
 
 ###
   @param model {string} plural model

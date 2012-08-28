@@ -207,16 +207,16 @@ app.post '/users', (req, res) ->
         ctime: ctime
         mtime: mtime
       userPrivateNano.insert(emailDoc, next)
+      handleNanoRes(next)
 
     (_res, headers, next) ->
       data = {user, emailAddress: email}
       h.createNotification('user.create', data, next)
 
   ], (err, body, headers) ->
-    if err then h.sendError(res, err)
-    else
-      res.set('Set-Cookie', cookie)
-      res.json(201, response)       # {name, roles, id}
+    return h.sendError(res, err) if err
+    res.set('Set-Cookie', cookie)
+    res.json(201, response)       # {name, roles, id}
 
 
 ###
