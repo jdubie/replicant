@@ -175,7 +175,7 @@ replicant.createEvent = ({event, userId}, callback) ->
     createInitialEventDoc
     getMembers
     createDocs
-    #queueNotifications
+    queueNotifications
   ], (err, res) ->
     if err
       err.statusCode = err.status_code ? 500
