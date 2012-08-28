@@ -500,9 +500,9 @@ app.put '/events/:id', (req, res) ->
       else
         users.push(admin) for admin in config.ADMINS
         dsts = _.without(users, src)
-        rep.replicate({src, dsts, eventId}, next)   # (err, resp)
+        rep.replicate({src, dsts, eventId}, next)   # (err)
 
-    (body, next) ->
+    (next) ->
       data = {event, rev: event._rev, userId: userCtx.user_id}
       h.createNotification('event.update', data, next)
 
