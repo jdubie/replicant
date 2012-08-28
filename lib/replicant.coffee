@@ -53,25 +53,42 @@ replicant.createUserDb = ({userId, name}, callback) ->
       roles: []
 
   userDbName = h.getUserDbName({userId})
-  config.nanoAdmin.db.create userDbName, (err, res) ->
-    if err
-      if err.status_code then err.status = err.status_code
-      else err.status = err.statusCode ? err.status_code ? 201
-      debug err
-      callback(err)
-    else
+  async.series [
+    ## create user DB
+    (next) ->
+      config.nanoAdmin.db.create userDbName, (err, res) ->
+        if err?
+          debug "Error creating #{userDbName} db", err
+          error =
+            statusCode: err.statusCode ? err.status_code ? 500
+            error     : err.error ? 'Error creating db file'
+            reason    : err.reason ? "Error creating #{userDbName} db"
+        next(error)
+    ## insert _security document
+    (next) ->
       userdb = config.nanoAdmin.db.use(userDbName)
       userdb.insert security, '_security', (err, res) ->
-        if err
-          debug err
-          err.status = err.statusCode ? err.status_code ? 500
-          callback(err)
-        else
-          opts =
-            doc_ids: [ "_design/#{userDdocName}" ]
-          config.nanoAdmin.db.replicate userDdocDbName, userDbName, opts, (err, res) ->
-            if err then err.status = err.statusCode ? err.status_code ? 500
-            callback(err, res)
+        if err?
+          debug "Error inserting _security doc (#{userDbName})", err
+          error =
+            statusCode: err.statusCode ? err.status_code ? 500
+            error     : err.error ? 'Error modifying db'
+            reason    : err.reason ? "Error modifying #{userDbName} db"
+        next(error)
+    ## replicate user design doc
+    (next) ->
+      opts =
+        doc_ids: [ "_design/#{userDdocName}" ]
+      config.nanoAdmin.db.replicate userDdocDbName, userDbName, opts, (err, res) ->
+        if err?
+          debug "Error replicating user designdoc (#{userDbName})", err
+          error =
+            statusCode: err.statusCode ? err.status_code ? 500
+            error     : err.error ? "Error replicating user ddoc"
+            reason    : err.reason ? "Error replicating userddoc to #{userDbName}"
+        next(error)
+  ], callback
+
 
 replicant.changePassword = ({name, oldPass, newPass, cookie}, callback) ->
   nanoOpts =
@@ -135,7 +152,7 @@ replicant.createEvent = ({event, userId}, callback) ->
 
   getMembers = (next) ->
     debug 'getMembers'
-    db = config.nanoAdmin.db.use('lifeswap')
+    db = config.nano.db.use('lifeswap')
     db.get event.swap_id, (err, _swap) ->
       # @todo swap.user_id will be array in future
       swap = _swap
@@ -171,9 +188,12 @@ replicant.createEvent = ({event, userId}, callback) ->
     createDocs
     queueNotifications
   ], (err, res) ->
-    if err
-      err.statusCode = err.status_code ? 500
-      callback(err)
+    if err?
+      error =
+        statusCode: err.statusCode ? err.status_code ? 500
+        error     : err.error ? "Error creating event"
+        reason    : err.reason ? "Error creating event #{eventId} for #{userId}"
+      callback(error)
     else
       callback(null, {_rev, mtime, ctime, guests, hosts})
 
@@ -185,9 +205,12 @@ replicant.createEvent = ({event, userId}, callback) ->
 replicant.getEventUsers = ({eventId}, callback) ->
   mapper = config.nanoAdmin.db.use('mapper')
   mapper.get eventId, (err, mapperDoc) ->
-    if err
-      err.statusCode = err.status_code ? 500
-      callback(err)
+    if err?
+      error =
+        statusCode: err.status_code ? 500
+        error     : err.error ? "Error getting event mapping"
+        reason    : err.reason ? "Error getting event mapping #{eventId}"
+      callback(error)
     else
       users = (user for user in mapperDoc.guests)
       users.push(user) for user in mapperDoc.hosts
@@ -200,10 +223,17 @@ replicant.getEventUsers = ({eventId}, callback) ->
 replicant.addEventHostsAndGuests = (event, callback) ->
   mapper = config.nanoAdmin.db.use('mapper')
   mapper.get event._id, (err, mapperDoc) ->
-    if mapperDoc then {hosts, guests} = mapperDoc
-    event.hosts = hosts
-    event.guests = guests
-    callback(err, event)
+    if err?
+      error =
+        statusCode: err.status_code ? 500
+        error     : err.error ? "Error getting event mapping"
+        reason    : err.reason ? "Error getting event mapping #{eventId}"
+      callback(error)
+    else
+      {hosts, guests} = mapperDoc
+      event.hosts = hosts
+      event.guests = guests
+      callback(null, event)
 
 ###
   replicate - replicates from one users db to others
@@ -224,8 +254,13 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
   replicateEach = ({src,dst,opts}, cb) ->
     config.nanoAdmin.db.replicate(src, dst, opts, cb)
   async.map params, replicateEach, (err, res) ->
-    if err then err.statusCode = err.status_code ? 500
-    callback(err, res)
+    if err?
+      error =
+        statusCode: err.status_code ? 500
+        error     : err.error ? "Error replicating"
+        reason    : err.reason ? "Error replicating #{src} => #{dsts}"
+    callback(error)
+
 
   # send emails
   #replicant.sendNotifications({dsts, eventId})
@@ -252,8 +287,15 @@ replicant.getType = (type, callback) ->
     key: type
     include_docs: true
   db.view 'lifeswap', 'docs_by_type', opts, (err, res) ->
-    if not err then docs = (row.doc for row in res.rows)
-    callback(err, docs)
+    if err
+      error =
+        statusCode: err.status_code ? 500
+        error     : err.error ? "GET error"
+        reason    : err.reason ? "Error getting '#{type}' docs from main DB"
+      callback(error)
+    else
+      docs = (row.doc for row in res.rows)
+      callback(err, docs)
 
 ## gets all of a type from a user DB
 replicant.getTypeUserDb = (type, userId, cookie, callback) ->
@@ -266,8 +308,15 @@ replicant.getTypeUserDb = (type, userId, cookie, callback) ->
     key: type
     include_docs: true
   db.view 'userddoc', 'docs_by_type', opts, (err, res) ->
-    if not err then docs = (row.doc for row in res.rows)
-    callback(err, docs)
+    if err
+      error =
+        statusCode: err.status_code ? 500
+        error     : err.error ? "GET error"
+        reason    : err.reason ? "Error getting '#{type}' docs from #{userDbName} DB"
+      callback(error)
+    else
+      docs = (row.doc for row in res.rows)
+      callback(err, docs)
 
 
 ## marks a message read/unread if specified
@@ -323,7 +372,14 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
     (next) ->
       if markRead then markMessageRead(next)
       else markMessageUnread(next)
-  ], callback
+  ], (err, res) ->
+    if err?
+      debug "Error changing message read status: #{message?._id} of user #{userId}"
+      error =
+        statusCode: err.statusCode ? err.status_code ? 500
+        error     : err.error ? "Error changing message read status"
+        reason    : err.reason ? "Error changing message read status - #{message?._id}"
+    callback(error)
 
 
 ## gets all messages and tacks on 'read' status (true/false)
@@ -338,10 +394,20 @@ replicant.getMessages = (userId, cookie, callback) ->
     getMessageDoc = (row, cb) ->
       messageId = row.key[1]
       db.get messageId, (err, message) ->
-        if not err
+        if err?
+          error =
+            statusCode: err.statusCode ? err.status_code
+            error     : err.error ? "Error getting message"
+            reason    : err.reason ? "Error getting message: #{userId}"
+        else
           message.read = if row.value is 1 then false else true
-        cb(err, message)
-    if err then callback(err)
+        cb(error, message)
+    if err?
+      error =
+        statusCode: err.statusCode ? err.status_code
+        error     : err.error ? "Error getting messages"
+        reason    : err.reason ? "Error getting messages: #{userId}"
+      callback(error)
     else async.map(res.rows, getMessageDoc, callback)  # messages
 
 
@@ -364,7 +430,14 @@ replicant.getMessage = (messageId, userId, cookie, callback) ->
       else
         message.read = if res.rows[0].value is 1 then false else true
         next(null, message)
-  ], callback   # (err, message)
+  ], (err, message) ->
+    if err?
+      debug "Error getting message #{messageId} for #{userId}"
+      error =
+        statusCode: err.statusCode ? err.status_code
+        error     : err.error ? "Error getting message"
+        reason    : err.reason ? "Error getting message #{messageId}"
+    callback(error, message)
 
 ## gets an event and tacks on 'hosts'/'guests' arrays
 
