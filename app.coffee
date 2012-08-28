@@ -507,6 +507,11 @@ app.put '/events/:id', (req, res) ->
         users.push(admin) for admin in config.ADMINS
         dsts = _.without(users, src)
         rep.replicate({src, dsts, eventId}, next)   # (err, resp)
+
+    (body, next) ->
+      data = {event, rev: event._rev, userId: userCtx.user_id}
+      h.createNotification('notification.event.update', data, next)
+
   ], (err, resp) ->
     if err then res.json(err.statusCode ? 500, err)
     else res.json(201, {_rev, mtime})

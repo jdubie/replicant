@@ -1,9 +1,10 @@
-should = require('should')
-async = require('async')
-util = require('util')
+should  = require('should')
+async   = require('async')
+util    = require('util')
 request = require('request')
+kue     = require('kue')
 
-{nanoAdmin, nano, ADMINS} = require('config')
+{nanoAdmin, nano, ADMINS, jobs} = require('config')
 {getUserDbName, hash} = require('lib/helpers')
 {EVENT_STATE} = require('../../../../lifeswap/userdb/shared/constants')
 
@@ -74,10 +75,12 @@ describe 'PUT /events/:id', () ->
       mapperDb = nanoAdmin.db.use('mapper')
       mapperDb.get _event._id, (err, mapperDoc) ->
         mapperDb.destroy(mapperDoc._id, mapperDoc._rev, cb)
+    flushRedis = (callback) -> jobs.client.flushall(callback)
     ## in parallel
     async.parallel [
       (cb) -> async.map(_allUsers, destroyEvent, cb)
       destroyMapperEvent
+      flushRedis
     ], finished
 
   it 'should PUT the event', (done) ->
@@ -103,3 +106,11 @@ describe 'PUT /events/:id', () ->
         event.should.eql(_event)
         cb()
     async.map(_allUsers, getEvent, done)
+
+  it 'should queue up emails to be sent to the users', (done) ->
+    kue.Job.get 1, (err, res) ->
+      res.should.have.property('data')
+      res.data.should.have.property('event')
+      res.data.should.have.property('userId', _userId)
+      res.data.should.have.property('rev')
+      done()
