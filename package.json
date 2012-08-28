@@ -2,10 +2,23 @@
   "name": "hedwig",
   "version": "0.0.1",
   "description": "Sends messages for lifeswap",
+  "devDependencies": {
+    "smtp-tester": "*",
+    "mocha": "*"
+  },
   "dependencies": {
     "nano": "*",
     "coffee-script": "*",
     "debug": "*",
-    "nodemailer": "*"
+    "nodemailer": "*",
+    "async": "*",
+    "should": "*",
+    "express": "*",
+    "request": "*",
+    "underscore": "*",
+    "mustache": "*",
+    "kue": "*",
+    "redis": "*",
+    "forever": "*"
   }
 }
