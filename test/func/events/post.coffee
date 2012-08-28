@@ -10,7 +10,7 @@ kue = require('kue')
 {EVENT_STATE} = require('../../../../lifeswap/userdb/shared/constants')
 
 
-describe 'zzz POST /events', () ->
+describe 'POST /events', () ->
 
   ## from the test/toy data
   _username = hash('user2@test.com')

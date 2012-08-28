@@ -258,8 +258,17 @@ _.each ['swaps', 'reviews', 'likes', 'requests'], (model) ->
       statusCode = resp.statusCode ? 500
       if statusCode isnt 201 then res.json(statusCode, body)
       else
-        _rev = body.rev
-        res.json(statusCode, {_rev, ctime, mtime})
+        if model == 'swaps'
+          h.createNotification 'notification.swap.create', swap: doc, (err) ->
+            if err
+              statusCode = 500
+              res.json(500, error: 'Error enqueing notification job')
+            else
+              _rev = body.rev
+              res.json(statusCode, {_rev, ctime, mtime})
+        else
+          _rev = body.rev
+          res.json(statusCode, {_rev, ctime, mtime})
 
 ###
   GET, GET/:id, PUT

@@ -2,11 +2,11 @@ should = require('should')
 util = require('util')
 request = require('request')
 
-{nanoAdmin, nano} = require('config')
+{jobs, nanoAdmin, nano} = require('config')
 {hash} = require('lib/helpers')
+kue = require('kue')
 
-
-describe 'POST /swaps', () ->
+describe 'zzzz POST /swaps', () ->
 
   _username = hash('user2@test.com')
   _userId = 'user2_id'
@@ -35,11 +35,12 @@ describe 'POST /swaps', () ->
       should.not.exist(err)
       should.exist(headers and headers['set-cookie'])
       cookie = headers['set-cookie'][0]
-      ready()
+      jobs.client.flushall(ready)
 
   after (finished) ->
-    mainDb.destroy(_swap._id, _swap._rev, finished)
-
+    mainDb.destroy _swap._id, _swap._rev, (err, res) ->
+      return finished(err) if err?
+      jobs.client.flushall(finished)
 
   it 'should POST the swap correctly', (done) ->
     opts =
@@ -52,4 +53,11 @@ describe 'POST /swaps', () ->
       body.should.have.keys(['_rev', 'mtime', 'ctime'])
       for key, val of body
         _swap[key] = val
+      done()
+
+  it 'should added notification', (done) ->
+    kue.Job.get 1, (err, job) ->
+      should.not.exist(err)
+      job.should.have.property('type', 'notification.swap.create')
+      job.should.have.property('data')
       done()
