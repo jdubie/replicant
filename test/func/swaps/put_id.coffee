@@ -64,7 +64,7 @@ describe 'PUT /swaps/:id', () ->
       headers: {cookie}
     request opts, (err, res, body) ->
       should.not.exist(err)
-      res.statusCode.should.eql(201)
+      res.statusCode.should.eql(200)
       body.should.have.keys(['_rev', 'mtime'])
       for key, val of body
         _swap[key] = val

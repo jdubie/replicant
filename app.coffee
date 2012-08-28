@@ -66,12 +66,11 @@ app.post '/user_ctx', (req, res) ->
   debug "POST /user_ctx"
   debug "   username: #{username}"
   rep.auth {username, password}, (err, cookie) ->
-    if err or not cookie
-      res.send(403, 'Invalid credentials')
-    else
-      res.set('Set-Cookie', cookie)
-      h.getUserId {cookie, userCtx: name: username}, (err, userCtx) ->
-        res.json(userCtx)
+    return h.sendError(res, err) if err
+    res.set('Set-Cookie', cookie)
+    h.getUserId {cookie, userCtx: name: username}, (err, userCtx) ->
+      return h.sendError(res, err) if err
+      res.json(userCtx)
 
 ###
   Logout
