@@ -6,7 +6,7 @@ request = require('request')
 {hash} = require('lib/helpers')
 kue = require('kue')
 
-describe 'zzzz POST /swaps', () ->
+describe 'POST /swaps', () ->
 
   _username = hash('user2@test.com')
   _userId = 'user2_id'
