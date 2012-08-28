@@ -41,13 +41,13 @@ module.exports.ADMINS = ADMINS
 # Work Queue
 
 switch process.env.ENV
-  when 'PROD'
+  when 'PROD', 'STAGE'
     # todo add server redis settings
     kue.redis.createClient = () ->
-      #client = redis.createClient(1234, '192.168.1.2')
-      # client.auth('password');
-      #return client
-  when 'STAGE', 'DEV', 'TEST'
+      client = redis.createClient(process.env.REDIS_PORT, '127.0.0.1')
+      client.auth(process.env.REDIS_PASSWORD)
+      return client
+  when 'DEV', 'TEST'
     kue.redis.createClient = () ->
       client = redis.createClient(6379, '127.0.0.1')
       return client
