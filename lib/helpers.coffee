@@ -131,7 +131,7 @@ h.nanoCallback = (next, opts) ->
         statusCode: err.status_code ? 500
         error: err.error ? error
         reason: err.reason ? reason
-    next(errorRes, res)
+    next(errorRes, res...)
 
 ###
   @param model {string} plural model

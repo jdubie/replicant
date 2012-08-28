@@ -311,8 +311,8 @@ app.post '/events', (req, res) ->
   debug "POST /events"
   debug "   event: #{event}"
   rep.createEvent {event, userId: userCtx.user_id}, (err, _res) ->
-    if err then res.json(err.statusCode, err)
-    else res.json(201, _res)    # {_rev, mtime, ctime, hosts, guests}
+    return h.sendError(res, err) if err
+    res.json(201, _res)    # {_rev, mtime, ctime, hosts, guests}
 
 ###
   GET /events
@@ -347,15 +347,12 @@ app.get "/events/:id", (req, res) ->
     cookie: cookie
   userPrivateNano = require('nano')(nanoOpts)
   async.waterfall [
-    (next) -> userPrivateNano.get(id, next)
+    (next) -> userPrivateNano.get(id, h.nanoCallback(next))
     (event, hdrs, next) ->
       rep.addEventHostsAndGuests(event, next)
   ], (err, event) ->
-    if err
-      statusCode = err.statusCode ? err.status_code ? 500
-      res.json(statusCode, err)
-    else
-      res.json(200, event)
+    return h.sendError(res, err) if err
+    res.json(200, event)
 
 ###
   Some routes for:
