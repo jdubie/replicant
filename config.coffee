@@ -39,10 +39,6 @@ switch process.env.ENV
 module.exports.ADMINS = ADMINS
 
 # Work Queue
-kueAppPort = 4000
-kueAppHost = '127.0.0.1'
-kueUrl = url.format(protocol: 'http:', port: kueAppPort, hostname: kueAppHost)
-module.exports.kueUrl = kueUrl
 
 switch process.env.ENV
   when 'PROD'
@@ -52,13 +48,15 @@ switch process.env.ENV
       # client.auth('password');
       #return client
   when 'STAGE', 'DEV', 'TEST'
+    kue.redis.createClient = () ->
+      client = redis.createClient(6379, '127.0.0.1')
+      return client
   else
     console.error 'You must set ENV environment variable'
     process.exit()
 
 module.exports.jobs = kue.createQueue()
-
-module.exports.redis = redis.createClient()
+#module.exports.redis = redis.createClient()
 
 switch process.env.ENV
   when 'TEST'

@@ -5,7 +5,7 @@ request = require('request')
 debug = require('debug')('replicant:test/func/message/post')
 _ = require('underscore')
 
-{redis, kueUrl, jobs, nanoAdmin, nano, dbUrl, ADMINS} = require('config')
+{kueUrl, jobs, nanoAdmin, nano, dbUrl, ADMINS} = require('config')
 {getUserDbName, hash} = require('lib/helpers')
 
 describe 'POST /messages', () ->
@@ -57,7 +57,7 @@ describe 'POST /messages', () ->
       async.parallel [
         authUser
         insertMapping
-        (cb) -> redis.flushall(cb)
+        (cb) -> jobs.client.flushall(cb)
       ], ready
 
     after (finished) ->
@@ -94,7 +94,7 @@ describe 'POST /messages', () ->
         (cb) -> async.map(_allUsers, destroyEventUser, cb)
         destroyEventMapper
         destroyReadDocs
-        (cb) -> redis.flushall(cb)
+        (cb) -> jobs.client.flushall(cb)
       ], finished
 
 
@@ -138,14 +138,11 @@ describe 'POST /messages', () ->
       async.map(_allUsers, checkMessageReadStatus, done)
 
     it 'should add notification to work queue', (done) ->
-      done()
-      # todo don't use request
-      #jobs.range(1,5,
-      #request.get kueUrl + '/job/1', (err, res, body) ->
-      #  body = JSON.parse(body)
-      #  body.should.have.property('type', 'notification.message')
-      #  body.should.have.property('data')
-      #  body.data.should.have.property('src', _userId)
-      #  body.data.should.have.property('dsts')
-      #  body.data.dsts.should.eql(_.union(_hosts, ADMINS))
-      #  done()
+      require('kue').Job.get 1, (err, job) ->
+        should.not.exist(err)
+        job.should.have.property('type', 'notification.message')
+        job.should.have.property('data')
+        job.data.should.have.property('message')
+        job.data.message.should.have.property('message')
+        job.data.message.message.should.equal(_message.message)
+        done()

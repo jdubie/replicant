@@ -3,13 +3,14 @@ async = require('async')
 util = require('util')
 request = require('request')
 debug = require('debug')('replicant:/test/func/event/post')
+kue = require('kue')
 
-{kueUrl, redis, nanoAdmin, nano, ADMINS} = require('config')
+{kueUrl, jobs, nanoAdmin, nano, ADMINS} = require('config')
 {getUserDbName, hash} = require('lib/helpers')
 {EVENT_STATE} = require('../../../../lifeswap/userdb/shared/constants')
 
 
-describe 'POST /events', () ->
+describe 'zzz POST /events', () ->
 
   ## from the test/toy data
   _username = hash('user2@test.com')
@@ -46,7 +47,7 @@ describe 'POST /events', () ->
         should.not.exist(err)
         should.exist(headers and headers['set-cookie'])
         cookie = headers['set-cookie'][0]
-        redis.flushall(ready)
+        jobs.client.flushall(ready)
 
     after (finished) ->
       ## destroy event (in both user's dbs)
@@ -66,7 +67,7 @@ describe 'POST /events', () ->
       async.parallel [
         (cb) -> async.map(_members, destroyEventUser, cb)
         destroyEventMapper
-        (cb) -> redis.flushall(cb)
+        (cb) -> jobs.client.flushall(cb)
       ], finished
 
 
@@ -110,15 +111,16 @@ describe 'POST /events', () ->
         done()
 
     it 'should create event.create notification on work queue', (done) ->
-      done()
-      #request.get kueUrl + '/job/1', (err, res, body) ->
-      #  body = JSON.parse(body)
-      #  body.should.have.property('type', 'notification.event.create')
-      #  body.should.have.property('data')
-      #  body.data.should.have.keys('title', 'guests', 'hosts', 'event', 'swap')
-
-        ##
-        ## todo assert more stuff about these keys...
-        ##
-
-      # done()
+      kue.Job.get 1, (err, job) ->
+        should.not.exist(err)
+        job.should.have.property('type', 'notification.event.create')
+        job.should.have.property('data')
+        job.data.should.have.property('hosts')
+        job.data.should.have.property('guests')
+        job.data.hosts.should.eql(_hosts)
+        job.data.guests.should.eql(_guests)
+        job.data.should.have.property('swap')
+        job.data.should.have.property('event')
+        job.data.event.should.have.property('_id', _event._id)
+        job.data.swap.should.have.property('_id', _swapId)
+        done()
