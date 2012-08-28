@@ -169,7 +169,7 @@ replicant.createEvent = ({event, userId}, callback) ->
     async.parallel([createMapping, createEventDocs], next)
 
   queueNotifications = (next) ->
-    h.createNotification('notification.event.create', {title: "event #{event._id}: event created", guests, hosts, event, swap}, next)
+    h.createNotification('event.create', {title: "event #{event._id}: event created", guests, hosts, event, swap}, next)
 
   async.series [
     createInitialEventDoc

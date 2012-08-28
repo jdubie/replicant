@@ -110,6 +110,6 @@ h.getStatusFromCouchError = (error) ->
     else return 500
 
 h.createNotification = (name, data, callback) ->
-  config.jobs.create(name, data).save(callback)
+  config.jobs.create("notification.#{name}", data).save(callback)
 
 module.exports = h

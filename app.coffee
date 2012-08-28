@@ -224,7 +224,7 @@ app.post '/users', (req, res) ->
 
     (_res, headers, next) ->
       data = {user, emailAddress: email}
-      h.createNotification('notification.user.create', data, next)
+      h.createNotification('user.create', data, next)
 
   ], (err, body, headers) ->
     if err
@@ -259,7 +259,7 @@ _.each ['swaps', 'reviews', 'likes', 'requests'], (model) ->
       if statusCode isnt 201 then res.json(statusCode, body)
       else
         if model == 'swaps'
-          h.createNotification 'notification.swap.create', swap: doc, (err) ->
+          h.createNotification 'swap.create', swap: doc, (err) ->
             if err
               statusCode = 500
               res.json(500, error: 'Error enqueing notification job')
@@ -519,7 +519,7 @@ app.put '/events/:id', (req, res) ->
 
     (body, next) ->
       data = {event, rev: event._rev, userId: userCtx.user_id}
-      h.createNotification('notification.event.update', data, next)
+      h.createNotification('event.update', data, next)
 
   ], (err, resp) ->
     if err then res.json(err.statusCode ? 500, err)
@@ -587,7 +587,7 @@ app.post '/messages', (req, res) ->
     # add email jobs to messaging queue
     (src, dsts, eventId, next) ->
       data = {title: "event #{eventId}: message from #{src}", src, dsts, message, eventId}
-      h.createNotification('notification.message', data, next)
+      h.createNotification('message', data, next)
 
   ], (err, resp) ->
     if err then res.json(err.statusCode ? 500, err)
