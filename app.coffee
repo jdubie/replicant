@@ -227,9 +227,7 @@ app.post '/users', (req, res) ->
       h.createNotification('user.create', data, next)
 
   ], (err, body, headers) ->
-    if err
-      debug '   ERROR', err
-      res.json(err.status ? 500, err)
+    if err then h.sendError(res, err)
     else
       res.set('Set-Cookie', cookie)
       res.json(201, response)       # {name, roles, id}

@@ -112,4 +112,34 @@ h.getStatusFromCouchError = (error) ->
 h.createNotification = (name, data, callback) ->
   config.jobs.create("notification.#{name}", data).save(callback)
 
+
+###
+  @description send an error
+###
+h.sendError = (res, err) ->
+  debug '## ERROR ##', err
+  statusCode = err.statusCode ? 500
+  error =
+    reason: err.reason
+    error : err.error
+  res.json(statusCode, error)
+
+
+h.request = (opts, callback) ->
+  request opts, (err, res, body) ->
+    if err?                         ## request error
+      error =
+        statusCode: 500
+        error     : 'Request error'
+        reason    : err
+    else if res.statusCode >= 400   ## couch error
+      error =
+        statusCode: res.statusCode
+        error     : body.error
+        reason    : body.reason
+    else
+      error = null
+    callback(error, body)
+
+
 module.exports = h

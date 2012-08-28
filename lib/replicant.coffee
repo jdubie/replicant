@@ -31,18 +31,7 @@ replicant.createUnderscoreUser = ({email, password, user_id}, callback) ->
     body: JSON.stringify(underscoreUser)
     method: 'POST'
     json: true
-  request opts, (err, res, body) ->
-    if err then error =
-      status: 403
-      error: "unauthorized"
-      reason: "Error authorizing"
-    else if body.error? # {error, reason}
-      error = body
-      error.status = error.statusCode ? error.status_code ? 500
-    else
-      error = null
-    callback(error, body)
-
+  h.request(opts, callback)
 
 
 ###
