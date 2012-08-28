@@ -38,7 +38,7 @@ replicant.createUnderscoreUser = ({email, password, user_id}, callback) ->
       reason: "Error authorizing"
     else if body.error? # {error, reason}
       error = body
-      error.status = err.statusCode ? err.status_code ? 500
+      error.status = error.statusCode ? error.status_code ? 500
     else
       error = null
     callback(error, body)
