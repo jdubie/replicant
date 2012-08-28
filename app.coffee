@@ -189,7 +189,7 @@ app.post '/users', (req, res) ->
         cookie: cookie
       debug 'nanoOpts', nanoOpts
       userNano = require('nano')(nanoOpts)
-      userNano.insert(user, user_id, next)
+      userNano.insert(user, user_id, h.nanoCallback(next))
 
     (_res, headers, next) ->
       response._rev = _res?.rev    # add _rev to response
@@ -206,8 +206,7 @@ app.post '/users', (req, res) ->
         email_address: email
         ctime: ctime
         mtime: mtime
-      userPrivateNano.insert(emailDoc, next)
-      handleNanoRes(next)
+      userPrivateNano.insert(emailDoc, h.nanoCallback(next))
 
     (_res, headers, next) ->
       data = {user, emailAddress: email}
