@@ -6,7 +6,7 @@ request = require('request')
 {hash} = require('lib/helpers')
 kue = require('kue')
 
-describe 'POST /swaps', () ->
+describe 'zzzz POST /swaps', () ->
 
   _username = hash('user2@test.com')
   _userId = 'user2_id'
@@ -55,7 +55,7 @@ describe 'POST /swaps', () ->
         _swap[key] = val
       done()
 
-  it 'should added notification', (done) ->
+  it 'should add notification', (done) ->
     kue.Job.get 1, (err, job) ->
       should.not.exist(err)
       job.should.have.property('type', 'notification.swap.create')
