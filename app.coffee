@@ -6,10 +6,9 @@ debug = require('debug')('replicant:app')
 request = require('request')
 util = require('util')
 
-helpers = require('./lib/helpers')
-{hash, getUserDbName} = require('./lib/helpers')
-{auth, getType, getTypeUserDb, createUserDb, createUnderscoreUser, changePassword, createEvent, getEventUsers, addEventHostsAndGuests, replicate, getMessages, getMessage, markReadStatus} = require('./lib/replicant')
-config = require('./config')
+config = require('config')
+rep = require('lib/replicant')
+h = require('lib/helpers')
 
 app = express()
 app.use(express.static(__dirname + '/public'))
@@ -52,7 +51,7 @@ app.use (req, res, next) ->
 
 userCtxRegExp = /^\/(events|messages|cards|email_addresses|phone_numbers)(\/.*)?$/
 app.all userCtxRegExp, (req, res, next) ->
-  helpers.getUserCtxFromSession req, (err, userCtx) ->
+  h.getUserCtxFromSession req, (err, userCtx) ->
     if err then res.json(err.statusCode ? err.status_code ? 500, err)
     else
       req.userCtx = userCtx
@@ -62,16 +61,16 @@ app.all userCtxRegExp, (req, res, next) ->
   Login
 ###
 app.post '/user_ctx', (req, res) ->
-  username = hash(req.body.username)
+  username = h.hash(req.body.username)
   password = req.body.password
   debug "POST /user_ctx"
   debug "   username: #{username}"
-  auth {username, password}, (err, cookie) ->
+  rep.auth {username, password}, (err, cookie) ->
     if err or not cookie
       res.send(403, 'Invalid credentials')
     else
       res.set('Set-Cookie', cookie)
-      helpers.getUserId {cookie, userCtx: name: username}, (err, userCtx) ->
+      h.getUserId {cookie, userCtx: name: username}, (err, userCtx) ->
         res.json(userCtx)
 
 ###
@@ -102,7 +101,7 @@ app.get '/user_ctx', (req, res) ->
     else
       debug 'user is logged in', userCtx
       cookie = req.headers.cookie
-      helpers.getUserId {cookie, userCtx}, (err, userCtx) ->
+      h.getUserId {cookie, userCtx}, (err, userCtx) ->
         if err then res.json(err.statusCode ? 401, err)
         else res.json(statusCode: 200, userCtx)
 
@@ -117,9 +116,9 @@ app.put '/user_ctx', (req, res) ->
   newCookie = null
   async.waterfall [
     (next) ->
-      changePassword({name, oldPass, newPass, cookie}, next)
+      rep.changePassword({name, oldPass, newPass, cookie}, next)
     (next) ->
-      auth({username: name, password: newPass}, next)
+      rep.auth({username: name, password: newPass}, next)
   ], (err, newCookie) ->
     if err
       res.json(err.statusCode ? err.status_code ? 500, err)
@@ -167,7 +166,7 @@ app.post '/users', (req, res) ->
   email = email.toString().toLowerCase()
   debug "   email: #{email}"
 
-  user.name = name = hash(email)
+  user.name = name = h.hash(email)
   ctime = mtime = Date.now()
   user.ctime = ctime
   user.mtime = mtime
@@ -183,18 +182,18 @@ app.post '/users', (req, res) ->
     (next) ->
       ## insert document to _users
       debug '   insert document to _users'
-      createUnderscoreUser({email, password, user_id}, next)
+      rep.createUnderscoreUser({email, password, user_id}, next)
 
     (_res, next) ->
       ## auth to get cookie
       debug '   auth to get cookie'
-      auth({username: name, password: password}, next)
+      rep.auth({username: name, password: password}, next)
 
     (_cookie, next) ->
       cookie = _cookie
       ## create user database
       debug '   create user database'
-      createUserDb({userId: user_id, name: name}, next)
+      rep.createUserDb({userId: user_id, name: name}, next)
 
     (_res, next) ->
       ## create 'user' type document
@@ -211,7 +210,7 @@ app.post '/users', (req, res) ->
       ## create 'email_address' type private document
       debug "   create 'email_address' type private document"
       nanoOpts =
-        url: "#{config.dbUrl}/#{getUserDbName(userId: user_id)}"
+        url: "#{config.dbUrl}/#{h.getUserDbName(userId: user_id)}"
         cookie: cookie
       userPrivateNano = require('nano')(nanoOpts)
       emailDoc =
@@ -270,8 +269,8 @@ _.each ['users', 'swaps', 'reviews', 'likes', 'requests'], (model) ->
   ## GET /model
   app.get "/#{model}", (req, res) ->
     debug "GET /#{model}"
-    type = helpers.singularizeModel(model)
-    getType type, (err, docs) ->
+    type = h.singularizeModel(model)
+    rep.getType type, (err, docs) ->
       res.json(200, docs)
       res.end()
 
@@ -325,7 +324,7 @@ app.post '/events', (req, res) ->
   ## TODO: validate that event has _id, type, state, swap_id
   debug "POST /events"
   debug "   event: #{event}"
-  createEvent {event, userId: userCtx.user_id}, (err, _res) ->
+  rep.createEvent {event, userId: userCtx.user_id}, (err, _res) ->
     if err then res.json(err.statusCode, err)
     else res.json(201, _res)    # {_rev, mtime, ctime, hosts, guests}
 
@@ -339,9 +338,9 @@ app.get '/events', (req, res) ->
   debug 'userCtx', userCtx
   async.waterfall [
     (next) ->
-      getTypeUserDb('event', userCtx.user_id, cookie, next)
+      rep.getTypeUserDb('event', userCtx.user_id, cookie, next)
     (events, next) ->
-      async.map(events, addEventHostsAndGuests, next)
+      async.map(events, rep.addEventHostsAndGuests, next)
   ], (err, events) ->
     if err
       statusCode = err.status_code ? 500
@@ -358,13 +357,13 @@ app.get "/events/:id", (req, res) ->
   userCtx = req.userCtx   # from the app.all route
   cookie = req.headers.cookie
   nanoOpts =
-    url: "#{config.dbUrl}/#{getUserDbName(userId: userCtx.user_id)}"
+    url: "#{config.dbUrl}/#{h.getUserDbName(userId: userCtx.user_id)}"
     cookie: cookie
   userPrivateNano = require('nano')(nanoOpts)
   async.waterfall [
     (next) -> userPrivateNano.get(id, next)
     (event, hdrs, next) ->
-      addEventHostsAndGuests(event, next)
+      rep.addEventHostsAndGuests(event, next)
   ], (err, event) ->
     if err
       statusCode = err.statusCode ? err.status_code ? 500
@@ -385,9 +384,9 @@ _.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
     debug "GET /#{model}"
     userCtx = req.userCtx   # from the app.all route
     cookie = req.headers.cookie
-    type = helpers.singularizeModel(model)
+    type = h.singularizeModel(model)
     debug 'userCtx', userCtx
-    getTypeUserDb type, userCtx.user_id, cookie, (err, docs) ->
+    rep.getTypeUserDb type, userCtx.user_id, cookie, (err, docs) ->
       if err
         statusCode = err.status_code ? 500
         res.json(statusCode, err)
@@ -398,7 +397,7 @@ _.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
     id = req.params?.id
     debug "GET /#{model}/#{id}"
     userCtx = req.userCtx   # from the app.all route
-    userDbName = getUserDbName(userId: userCtx.user_id)
+    userDbName = h.getUserDbName(userId: userCtx.user_id)
     endpoint =
       url: "#{config.dbUrl}/#{userDbName}/#{id}"
       headers: req.headers
@@ -425,7 +424,7 @@ _.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
   app.post "/#{model}", (req, res) ->
     debug "POST /#{model}"
     userCtx = req.userCtx   # from the app.all route
-    userDbName = getUserDbName(userId: userCtx.user_id)
+    userDbName = h.getUserDbName(userId: userCtx.user_id)
     doc = req.body
     _id = doc._id
     ctime = mtime = Date.now()
@@ -448,7 +447,7 @@ _.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
     id = req.params?.id
     debug "PUT /#{model}/#{id}"
     userCtx = req.userCtx   # from the app.all route
-    userDbName = getUserDbName(userId: userCtx.user_id)
+    userDbName = h.getUserDbName(userId: userCtx.user_id)
     doc = req.body
     mtime = Date.now()
     doc.mtime = mtime
@@ -472,7 +471,7 @@ app.put '/events/:id', (req, res) ->
   id = req.params?.id
   debug "PUT /events/#{id}"
   userCtx = req.userCtx   # from the app.all route
-  userDbName = getUserDbName(userId: userCtx.user_id)
+  userDbName = h.getUserDbName(userId: userCtx.user_id)
   event = req.body
   mtime = Date.now()
   event.mtime = mtime
@@ -493,7 +492,7 @@ app.put '/events/:id', (req, res) ->
       if statusCode isnt 201 then next(statusCode: statusCode)
       else
         _rev = body.rev
-        getEventUsers({eventId: event._id}, next)   # (err, users)
+        rep.getEventUsers({eventId: event._id}, next)   # (err, users)
     (users, next) ->
       debug 'replicate'
       src = userCtx.user_id
@@ -503,7 +502,7 @@ app.put '/events/:id', (req, res) ->
       else
         users.push(admin) for admin in config.ADMINS
         dsts = _.without(users, src)
-        replicate({src, dsts, eventId}, next)   # (err, resp)
+        rep.replicate({src, dsts, eventId}, next)   # (err, resp)
   ], (err, resp) ->
     if err then res.json(err.statusCode ? 500, err)
     else res.json(201, {_rev, mtime})
@@ -512,7 +511,7 @@ app.put '/events/:id', (req, res) ->
 app.post '/messages', (req, res) ->
   debug "POST /message"
   userCtx = req.userCtx   # from the app.all route
-  userDbName = getUserDbName(userId: userCtx.user_id)
+  userDbName = h.getUserDbName(userId: userCtx.user_id)
   message = req.body
   ctime = mtime = Date.now()
   message.ctime = ctime
@@ -553,7 +552,7 @@ app.post '/messages', (req, res) ->
     # getting users associated with event
     (resp, body, next) ->
       debug 'get users'
-      getEventUsers({eventId}, next)  # (err, users)
+      rep.getEventUsers({eventId}, next)  # (err, users)
 
     # replicating message
     (users, next) ->
@@ -564,7 +563,7 @@ app.post '/messages', (req, res) ->
       else
         users.push(admin) for admin in config.ADMINS
         dsts = _.without(users, src)
-        replicate {src, dsts, eventId}, (err) ->
+        rep.replicate {src, dsts, eventId}, (err) ->
           next(err, src, dsts, eventId)
 
     # add email jobs to messaging queue
@@ -583,7 +582,7 @@ app.put '/messages/:id', (req, res) ->
   userCtx = req.userCtx
   cookie = req.headers.cookie
   message = req.body
-  markReadStatus message, userCtx.user_id, cookie, (err, _res) ->
+  rep.markReadStatus message, userCtx.user_id, cookie, (err, _res) ->
     if err
       statusCode = err.statusCode ? err.status_code ? 500
       res.json(statusCode, err)
@@ -594,7 +593,7 @@ app.get '/messages', (req, res) ->
   debug "GET /messages"
   userCtx =  req.userCtx
   cookie = req.headers.cookie
-  getMessages userCtx.user_id, cookie, (err, messages) ->
+  rep.getMessages userCtx.user_id, cookie, (err, messages) ->
     if err
       statusCode = err.statusCode ? err.status_code ? 500
       res.json(statusCode, err)
@@ -606,7 +605,7 @@ app.get '/messages/:id', (req, res) ->
   debug "GET /messages/#{id}"
   userCtx =  req.userCtx
   cookie = req.headers.cookie
-  getMessage id, userCtx.user_id, cookie, (err, message) ->
+  rep.getMessage id, userCtx.user_id, cookie, (err, message) ->
     if err
       statusCode = err.statusCode ? err.status_code ? 500
       res.json(statusCode, err)

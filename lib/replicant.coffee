@@ -3,8 +3,9 @@ request = require('request')
 _ = require('underscore')
 async = require('async')
 debug = require('debug')('replicant:lib')
-{jobs, nanoAdmin, dbUrl, ADMINS} = require('config')
-{getUserDbName, getStatusFromCouchError, hash} = require('lib/helpers')
+
+config = require('config')
+h = require('lib/helpers')
 
 {EVENT_STATE} = require('../../lifeswap/userdb/shared/constants')
 
@@ -17,7 +18,7 @@ replicant = {}
   @param user_id {uuid string}
 ###
 replicant.createUnderscoreUser = ({email, password, user_id}, callback) ->
-  name = hash(email)
+  name = h.hash(email)
   underscoreUser =
     _id: "org.couchdb.user:#{name}"
     name: name
@@ -26,7 +27,7 @@ replicant.createUnderscoreUser = ({email, password, user_id}, callback) ->
     type: 'user'
     user_id: user_id
   opts =
-    url: "#{dbUrl}/_users"
+    url: "#{config.dbUrl}/_users"
     body: JSON.stringify(underscoreUser)
     method: 'POST'
     json: true
@@ -37,7 +38,7 @@ replicant.createUnderscoreUser = ({email, password, user_id}, callback) ->
       reason: "Error authorizing"
     else if body.error? # {error, reason}
       error = body
-      error.status = getStatusFromCouchError(body.error)
+      error.status = err.statusCode ? err.status_code ? 500
     else
       error = null
     callback(error, body)
@@ -62,30 +63,30 @@ replicant.createUserDb = ({userId, name}, callback) ->
       names: [name]
       roles: []
 
-  userDbName = getUserDbName({userId})
-  nanoAdmin.db.create userDbName, (err, res) ->
+  userDbName = h.getUserDbName({userId})
+  config.nanoAdmin.db.create userDbName, (err, res) ->
     if err
       if err.status_code then err.status = err.status_code
-      else err.status = getStatusFromCouchError(err)
+      else err.status = err.statusCode ? err.status_code ? 201
       debug err
       callback(err)
     else
-      userdb = nanoAdmin.db.use(userDbName)
+      userdb = config.nanoAdmin.db.use(userDbName)
       userdb.insert security, '_security', (err, res) ->
         if err
           debug err
-          err.status = getStatusFromCouchError(err)
+          err.status = err.statusCode ? err.status_code ? 500
           callback(err)
         else
           opts =
             doc_ids: [ "_design/#{userDdocName}" ]
-          nanoAdmin.db.replicate userDdocDbName, userDbName, opts, (err, res) ->
-            if err then err.status = getStatusFromCouchError(err)
+          config.nanoAdmin.db.replicate userDdocDbName, userDbName, opts, (err, res) ->
+            if err then err.status = err.statusCode ? err.status_code ? 500
             callback(err, res)
 
 replicant.changePassword = ({name, oldPass, newPass, cookie}, callback) ->
   nanoOpts =
-    url: "#{dbUrl}/_users"
+    url: "#{config.dbUrl}/_users"
     cookie: cookie
   db = require('nano')(nanoOpts)
   async.waterfall [
@@ -94,11 +95,11 @@ replicant.changePassword = ({name, oldPass, newPass, cookie}, callback) ->
       db.get("org.couchdb.user:#{name}", next)
     ## check that old password was correct
     (_user, hdrs, next) ->
-      if _user.password_sha isnt hash(oldPass + _user.salt)
+      if _user.password_sha isnt h.hash(oldPass + _user.salt)
         debug 'Incorrect current password'
         next(statusCode: 403, reason: oldPass: ["Incorrect current password."])
       else
-        _user.password_sha = hash(newPass + _user.salt)
+        _user.password_sha = h.hash(newPass + _user.salt)
         db.insert _user, _user._id, (err, res) ->
           if err? then debug 'Error inserting _user w/ new password'
           next(err)
@@ -128,9 +129,9 @@ replicant.createEvent = ({event, userId}, callback) ->
 
   createEventDoc = (_userId, cb) ->
     # @todo replace with getting this from cookies
-    userDbName = getUserDbName(userId: _userId)
+    userDbName = h.getUserDbName(userId: _userId)
     debug 'userDbName:', userDbName
-    userDb = nanoAdmin.db.use(userDbName)
+    userDb = config.nanoAdmin.db.use(userDbName)
     userDb.insert(event, event._id, cb)
 
   createInitialEventDoc = (next) ->
@@ -140,7 +141,7 @@ replicant.createEvent = ({event, userId}, callback) ->
 
   getMembers = (next) ->
     debug 'getMembers'
-    db = nanoAdmin.db.use('lifeswap')
+    db = config.nanoAdmin.db.use('lifeswap')
     db.get event.swap_id, (err, _swap) ->
       # @todo swap.user_id will be array in future
       swap = _swap
@@ -151,7 +152,7 @@ replicant.createEvent = ({event, userId}, callback) ->
   createDocs = (next) ->
     ## create doc in mapping DB
     createMapping = (cb) ->
-      mapper = nanoAdmin.db.use('mapper')
+      mapper = config.nanoAdmin.db.use('mapper')
       debug 'createMapping', event._id, userId, hosts
       mapperDoc =
         _id: event._id
@@ -160,7 +161,7 @@ replicant.createEvent = ({event, userId}, callback) ->
       mapper.insert(mapperDoc, event._id, cb)
     ## create docs in other user DBs
     createEventDocs = (cb) ->
-      otherUsers = (admin for admin in ADMINS)
+      otherUsers = (admin for admin in config.ADMINS)
       otherUsers.push(user) for user in hosts
       debug 'createEventDocs', otherUsers
       async.map(otherUsers, createEventDoc, cb)
@@ -168,7 +169,7 @@ replicant.createEvent = ({event, userId}, callback) ->
     async.parallel([createMapping, createEventDocs], next)
 
   queueNotifications = (next) ->
-    jobs.create('notification.event.create', {title: "event #{event._id}: event created", guests, hosts, event, swap}).save(next)
+    h.createNotification('notification.event.create', {title: "event #{event._id}: event created", guests, hosts, event, swap}, next)
 
   async.series [
     createInitialEventDoc
@@ -188,7 +189,7 @@ replicant.createEvent = ({event, userId}, callback) ->
   @param eventId {string}
 ###
 replicant.getEventUsers = ({eventId}, callback) ->
-  mapper = nanoAdmin.db.use('mapper')
+  mapper = config.nanoAdmin.db.use('mapper')
   mapper.get eventId, (err, mapperDoc) ->
     if err
       err.statusCode = err.status_code ? 500
@@ -203,7 +204,7 @@ replicant.getEventUsers = ({eventId}, callback) ->
   @param event {Object - event}
 ###
 replicant.addEventHostsAndGuests = (event, callback) ->
-  mapper = nanoAdmin.db.use('mapper')
+  mapper = config.nanoAdmin.db.use('mapper')
   mapper.get event._id, (err, mapperDoc) ->
     if mapperDoc then {hosts, guests} = mapperDoc
     event.hosts = hosts
@@ -217,8 +218,8 @@ replicant.addEventHostsAndGuests = (event, callback) ->
 ###
 replicant.replicate = ({src, dsts, eventId}, callback) ->
   userDdocName = 'userddoc'
-  src = getUserDbName({userId: src})
-  dsts = _.map dsts, (userId) -> return getUserDbName({userId})
+  src = h.getUserDbName({userId: src})
+  dsts = _.map dsts, (userId) -> return h.getUserDbName({userId})
   opts =
     create_target: true
     query_params: {eventId}
@@ -227,7 +228,7 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
     return {src, dst, opts}
   debug 'replicating', src, dsts
   replicateEach = ({src,dst,opts}, cb) ->
-    nanoAdmin.db.replicate(src, dst, opts, cb)
+    config.nanoAdmin.db.replicate(src, dst, opts, cb)
   async.map params, replicateEach, (err, res) ->
     if err then err.statusCode = err.status_code ? 500
     callback(err, res)
@@ -240,7 +241,7 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
   #  getDbName
 
 replicant.auth = ({username, password}, callback) ->
-  nanoAdmin.auth username, password, (err, body, headers) ->
+  config.nanoAdmin.auth username, password, (err, body, headers) ->
     if err or not headers
       error =
         status: 403
@@ -253,7 +254,7 @@ replicant.auth = ({username, password}, callback) ->
 
 ## gets all of a type (e.g. type = 'user' or 'swap')
 replicant.getType = (type, callback) ->
-  db = nanoAdmin.db.use('lifeswap')
+  db = config.nanoAdmin.db.use('lifeswap')
   opts =
     key: type
     include_docs: true
@@ -263,9 +264,9 @@ replicant.getType = (type, callback) ->
 
 ## gets all of a type from a user DB
 replicant.getTypeUserDb = (type, userId, cookie, callback) ->
-  userDbName = getUserDbName(userId: userId)
+  userDbName = h.getUserDbName(userId: userId)
   nanoOpts =
-    url: "#{dbUrl}/#{userDbName}"
+    url: "#{config.dbUrl}/#{userDbName}"
     cookie: cookie
   db = require('nano')(nanoOpts)
   opts =
@@ -281,9 +282,9 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
   markRead = message.read   # true/false
   debug 'markReadStatus', markRead
   delete message.read
-  userDbName = getUserDbName(userId: userId)
+  userDbName = h.getUserDbName(userId: userId)
   nanoOpts =
-    url: "#{dbUrl}/#{userDbName}"
+    url: "#{config.dbUrl}/#{userDbName}"
     cookie: cookie
   db = require('nano')(nanoOpts)
 
@@ -334,9 +335,9 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
 
 ## gets all messages and tacks on 'read' status (true/false)
 replicant.getMessages = (userId, cookie, callback) ->
-  userDbName = getUserDbName(userId: userId)
+  userDbName = h.getUserDbName(userId: userId)
   nanoOpts =
-    url: "#{dbUrl}/#{userDbName}"
+    url: "#{config.dbUrl}/#{userDbName}"
     cookie: cookie
   db = require('nano')(nanoOpts)
   opts = group_level: 2
@@ -353,9 +354,9 @@ replicant.getMessages = (userId, cookie, callback) ->
 
 ## gets a message and tacks on its 'read' status (true/false)
 replicant.getMessage = (messageId, userId, cookie, callback) ->
-  userDbName = getUserDbName(userId: userId)
+  userDbName = h.getUserDbName(userId: userId)
   nanoOpts =
-    url: "#{dbUrl}/#{userDbName}"
+    url: "#{config.dbUrl}/#{userDbName}"
     cookie: cookie
   db = require('nano')(nanoOpts)
   message = null

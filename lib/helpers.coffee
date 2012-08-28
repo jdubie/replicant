@@ -1,21 +1,23 @@
 async = require('async')
 request = require('request')
 debug = require('debug')('lifeswap:helpers')
-config = require('config')
 crypto = require('crypto')
-{nano} = config
+
+config = require('config')
+
+h = {}
 
 ###
   @param userId {string}
   @return {string}
 ###
-getUserDbName = ({userId}) ->
+h.getUserDbName = ({userId}) ->
   return "users_#{userId}"
 
 ###
   gets login
 ###
-getUserId = ({cookie, userCtx}, callback) ->
+h.getUserId = ({cookie, userCtx}, callback) ->
   nanoOpts =
     url: "#{config.dbUrl}/_users"
     cookie: cookie
@@ -32,7 +34,7 @@ getUserId = ({cookie, userCtx}, callback) ->
   getUserCtxFromSession - helper that gets userCtx from session cookie
   @params headers {object.<string, {string|object}>} http headers object
 ###
-getUserCtxFromSession = ({headers}, callback) ->
+h.getUserCtxFromSession = ({headers}, callback) ->
   unless headers?.cookie?
     callback(statusCode: 403, reason: "No session")
     return
@@ -49,20 +51,20 @@ getUserCtxFromSession = ({headers}, callback) ->
         if userCtx? then next(null, userCtx)
         else next(statusCode: 403, reason: "No user context.")
     (userCtx, next) ->
-      getUserId({cookie, userCtx}, next)
+      h.getUserId({cookie, userCtx}, next)
   ], callback
 
 ###
   @param message {string}
   @return {string}
 ###
-hash = (message) ->
+h.hash = (message) ->
   shasum = crypto.createHash('sha1')
   shasum.update(message)
   return shasum.digest('hex')
 
 
-singularizeModel = (model) ->
+h.singularizeModel = (model) ->
   mapping =
     # lifeswap db
     swaps:      'swap'
@@ -78,7 +80,7 @@ singularizeModel = (model) ->
     phone_numbers:    'phone_number'
   return mapping[model]
 
-pluralizeType = (type) ->
+h.pluralizeType = (type) ->
   mapping =
     # lifeswap db
     swap:       'swaps'
@@ -99,7 +101,7 @@ pluralizeType = (type) ->
   @return {number}
 ###
 ## TODO: stoopid - just get err.status_code from (err, res) ->
-getStatusFromCouchError = (error) ->
+h.getStatusFromCouchError = (error) ->
   switch error
     when "unauthorized" then return 401
     when "forbidden" then return 403
@@ -107,14 +109,7 @@ getStatusFromCouchError = (error) ->
     when "file_exists" then return 409      # database already exists
     else return 500
 
-helpers = {
-  getUserDbName
-  getUserCtxFromSession
-  hash
-  getUserId
-  singularizeModel
-  pluralizeType
-  getStatusFromCouchError
-}
+h.createNotification = (name, data, callback) ->
+  config.jobs.create(name, data).save(callback)
 
-module.exports = helpers
+module.exports = h
