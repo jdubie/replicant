@@ -240,9 +240,9 @@ _.each ['swaps', 'reviews', 'likes', 'requests'], (model) ->
       headers: req.headers
       json: doc
     h.request opts, (err, body) ->
-      return h.sendError(err) if err
+      return h.sendError(res, err) if err
       h.createSimpleCreateNotification model, doc, (err) ->
-        return h.sendError(err) if err
+        return h.sendError(res, err) if err
         _rev = body.rev
         res.json(201, {_rev, ctime, mtime})
 
@@ -285,12 +285,10 @@ _.each ['users', 'swaps', 'reviews', 'likes', 'requests'], (model) ->
       url: "#{config.dbUrl}/lifeswap/#{id}"
       headers: req.headers
       json: doc
-    request opts, (err, resp, body) ->
-      statusCode = resp.statusCode
-      if statusCode isnt 201 then res.json(statusCode, body)
-      else
-        _rev = body.rev
-        res.json(statusCode, {_rev, mtime})
+    h.request opts, (err, body) ->
+      return h.sendError(res, err) if err
+      _rev = body.rev
+      res.json(200, {_rev, mtime})
 
   ## DELETE /model/:id
   app.delete "/#{model}/:id", (req, res) ->
