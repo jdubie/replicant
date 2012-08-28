@@ -56,37 +56,27 @@ replicant.createUserDb = ({userId, name}, callback) ->
   async.series [
     ## create user DB
     (next) ->
-      config.nanoAdmin.db.create userDbName, (err, res) ->
-        if err?
-          debug "Error creating #{userDbName} db", err
-          error =
-            statusCode: err.statusCode ? err.status_code ? 500
-            error     : err.error ? 'Error creating db file'
-            reason    : err.reason ? "Error creating #{userDbName} db"
-        next(error)
+      errorOpts =
+        error: "Error creating db file"
+        reason: "Error creating #{userDbName} db"
+      db = config.nanoAdmin
+      db.db.create(userDbName, h.nanoCallback(next, errorOpts))
     ## insert _security document
     (next) ->
-      userdb = config.nanoAdmin.db.use(userDbName)
-      userdb.insert security, '_security', (err, res) ->
-        if err?
-          debug "Error inserting _security doc (#{userDbName})", err
-          error =
-            statusCode: err.statusCode ? err.status_code ? 500
-            error     : err.error ? 'Error modifying db'
-            reason    : err.reason ? "Error modifying #{userDbName} db"
-        next(error)
+      db = config.nanoAdmin.db.use(userDbName)
+      errorOpts =
+        error : "Error modifying db"
+        reason: "Error modifying #{userDbName} db"
+      db.insert(security, '_security', h.nanoCallback(next, errorOpts))
     ## replicate user design doc
     (next) ->
+      db = config.nanoAdmin
+      errorOpts =
+        error : "Error replicating user ddoc"
+        reason: "Error replicating userddoc to #{userDbName}"
       opts =
         doc_ids: [ "_design/#{userDdocName}" ]
-      config.nanoAdmin.db.replicate userDdocDbName, userDbName, opts, (err, res) ->
-        if err?
-          debug "Error replicating user designdoc (#{userDbName})", err
-          error =
-            statusCode: err.statusCode ? err.status_code ? 500
-            error     : err.error ? "Error replicating user ddoc"
-            reason    : err.reason ? "Error replicating userddoc to #{userDbName}"
-        next(error)
+      db.db.replicate(userDdocDbName, userDbName, opts, h.nanoCallback(next, errorOpts))
   ], callback
 
 
@@ -111,14 +101,12 @@ replicant.changePassword = ({name, oldPass, newPass, cookie}, callback) ->
       else
         _user.password_sha = h.hash(newPass + _user.salt)
         debug 'Inserting _user w/ new password'
-        db.insert(_user, _user._id, next)
+        errorOpts =
+          error : "Error changing password"
+          reason: "Error inserting _user #{name} with new password"
+        db.insert(_user, _user._id, h.nanoCallback(next, errorOpts))
   ], (err, res) ->
-    if err?
-      error =
-        statusCode: err.statusCode ? err.status_code ? 500
-        error     : err.error ? 'Error changing password'
-        reason    : err.reaons ? 'Error changing password'
-    callback(error)
+    callback(err)
 
 
 ###
@@ -143,7 +131,10 @@ replicant.createEvent = ({event, userId}, callback) ->
     userDbName = h.getUserDbName(userId: _userId)
     debug 'userDbName:', userDbName
     userDb = config.nanoAdmin.db.use(userDbName)
-    userDb.insert(event, event._id, cb)
+    errorOpts =
+      error : "Error creating event"
+      reason: "Error inserting event doc #{event._id} for #{_userId}"
+    userDb.insert(event, event._id, h.nanoCallback(cb, errorOpts))
 
   createInitialEventDoc = (next) ->
     createEventDoc userId, (err, res) ->
@@ -155,9 +146,14 @@ replicant.createEvent = ({event, userId}, callback) ->
     db = config.nano.db.use('lifeswap')
     db.get event.swap_id, (err, _swap) ->
       # @todo swap.user_id will be array in future
-      swap = _swap
-      hosts = [swap?.user_id]
-      next(err)
+      if err?
+        error =
+          error : "Error creating event"
+          reason: "Error finding swap (#{event.swap_id}) host #{event._id}"
+      else
+        swap = _swap
+        hosts = [swap?.user_id]
+      next(error)
 
   ## OR could just replicate from original user to these users
   createDocs = (next) ->
@@ -169,13 +165,19 @@ replicant.createEvent = ({event, userId}, callback) ->
         _id: event._id
         guests: [userId]
         hosts: hosts
-      mapper.insert(mapperDoc, event._id, cb)
+      errorOpts =
+        error : "Error creating event"
+        reason: "Error creating mapping document"
+      mapper.insert(mapperDoc, event._id, h.nanoCallback(cb, errorOpts))
     ## create docs in other user DBs
     createEventDocs = (cb) ->
       otherUsers = (admin for admin in config.ADMINS)
       otherUsers.push(user) for user in hosts
       debug 'createEventDocs', otherUsers
-      async.map(otherUsers, createEventDoc, cb)
+      errorOpts =
+        error : "Error creating event"
+        reason: "Error creating event docs: #{otherUsers}"
+      async.map(otherUsers, createEventDoc, h.nanoCallback(cb, errorOpts))
     ## in parallel
     async.parallel([createMapping, createEventDocs], next)
 
@@ -188,14 +190,7 @@ replicant.createEvent = ({event, userId}, callback) ->
     createDocs
     queueNotifications
   ], (err, res) ->
-    if err?
-      error =
-        statusCode: err.statusCode ? err.status_code ? 500
-        error     : err.error ? "Error creating event"
-        reason    : err.reason ? "Error creating event #{eventId} for #{userId}"
-      callback(error)
-    else
-      callback(null, {_rev, mtime, ctime, guests, hosts})
+    callback(err, {_rev, mtime, ctime, guests, hosts})
 
 
 ###
@@ -276,7 +271,6 @@ replicant.auth = ({username, password}, callback) ->
         statusCode: err?.status_code ? 403
         error     : err?.error ? "unauthorized"
         reason    : err?.reason ? "Error authorizing"
-    else error = null
     callback(error, headers?['set-cookie'])
 
 
@@ -337,12 +331,18 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
       message_id: message._id
       event_id: message.event_id
       ctime: Date.now()
-    db.insert(readDoc, callback)
+    errorOpts =
+      error : "Error marking message read"
+      reason: "Error marking message #{message._id} read for #{userId}"
+    db.insert(readDoc, h.nanoCallback(callback, errorOpts))
   ## destroy 'read' document
   destroyReadDoc = (row, callback) ->
     doc = row.doc
     if doc.type is 'read'
-      db.destroy(doc._id, doc._rev, callback)
+      errorOpts =
+        error : "Error marking message unread"
+        reason: "Error removing 'read' doc read for #{userId} (#{message._id})"
+      db.destroy(doc._id, doc._rev, h.nanoCallback(callback, errorOpts))
     else callback()
   ## mark a message unread
   markMessageUnread = (callback) ->
@@ -351,35 +351,37 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
       reduce: false
       key: [message.event_id, message._id]
     db.view 'userddoc', 'messages', opts, (err, res) ->
-      async.map(res.rows, destroyReadDoc, callback)
+      if err?
+        error =
+          statusCode: err.status_code ? 500
+          error     : err.error ? "Error getting message status"
+          reason    : err.reason ? "message #{message._id} for #{userId}"
+        callback(error)
+      else async.map(res.rows, destroyReadDoc, callback)
 
   async.waterfall [
     (next) ->
       if not markRead?
-        next(statusCode: 403, reason: "Read/unread status undefined")
+        next(statusCode: 403, error: "Error message status", reason: "Read/unread status undefined")
       else
         opts = key: [message.event_id, message._id]
-        db.view('userddoc', 'messages', opts, next) # (err, res, hdr)
+        errorOpts =
+          error : "Error getting message status"
+          reason: "For message #{message._id}, user #{userId}, event #{message.event_id}"
+        db.view('userddoc', 'messages', opts, h.nanoCallback(next, errorOpts)) # (err, res, hdr)
     (res, hdr, next) ->
       if res.rows.length < 1
-        next(statusCode: 404, reason: "Too many messages found.")
+        next(statusCode: 404, error: "Error message status", reason: "Too many messages found.")
       else
         row = res.rows[0]
         isRead = if row.value is 1 then false else true
         if markRead isnt isRead then next()
         else
-          next(statusCode: 403, reason: "Can only change read/unread status of message")
+          next(statusCode: 403, error: "Error message status", reason: "Can only change read/unread status of message")
     (next) ->
       if markRead then markMessageRead(next)
       else markMessageUnread(next)
-  ], (err, res) ->
-    if err?
-      debug "Error changing message read status: #{message?._id} of user #{userId}"
-      error =
-        statusCode: err.statusCode ? err.status_code ? 500
-        error     : err.error ? "Error changing message read status"
-        reason    : err.reason ? "Error changing message read status - #{message?._id}"
-    callback(error)
+  ], (err, res) -> callback(err)
 
 
 ## gets all messages and tacks on 'read' status (true/false)
@@ -424,20 +426,21 @@ replicant.getMessage = (messageId, userId, cookie, callback) ->
     (_message, headers, next) ->
       message = _message
       opts = key: [message.event_id, message._id]
-      db.view('userddoc', 'messages', opts, next)
+      errorOpts =
+        error : "Error getting message"
+        reason: "Error getting message #{messageId}"
+      db.view('userddoc', 'messages', opts, h.nanoCallback(next, errorOpts))
     (res, headers, next) ->
-      if res.rows.length < 1 then next(statusCode: 404)
+      if res.rows.length < 1
+        error =
+          statusCode: 404
+          error     : "Error getting message"
+          reason    : "No results for get message #{message._id}"
+        next(error)
       else
         message.read = if res.rows[0].value is 1 then false else true
         next(null, message)
-  ], (err, message) ->
-    if err?
-      debug "Error getting message #{messageId} for #{userId}"
-      error =
-        statusCode: err.statusCode ? err.status_code
-        error     : err.error ? "Error getting message"
-        reason    : err.reason ? "Error getting message #{messageId}"
-    callback(error, message)
+  ], callback
 
 ## gets an event and tacks on 'hosts'/'guests' arrays
 
