@@ -1,9 +1,10 @@
-should = require('should')
-async = require('async')
-util = require('util')
+should  = require('should')
+async   = require('async')
+util    = require('util')
 request = require('request')
+kue     = require('kue')
 
-{nanoAdmin} = require('config')
+{nanoAdmin, jobs} = require('config')
 {hash} = require('lib/helpers')
 
 #{getUserDbName} = require('../../../lifeswap/shared/helpers')
@@ -55,11 +56,13 @@ describe 'POST /users', () ->
         nanoAdmin.db.list (err, dbs) ->
           dbs.should.include(_userDbName)
           nanoAdmin.db.destroy(_userDbName, callback)
+      flushRedis = (callback) -> jobs.client.flushall(callback)
 
       async.parallel [
         destroyUser           # destroy _users entry
         destroyLifeswapUser   # destroy 'user' in Lifeswap
         destroyUserDb         # destory users_... database
+        flushRedis            # flush the information in redis
       ], finished
 
 
@@ -111,6 +114,14 @@ describe 'POST /users', () ->
         doc.should.have.property('type', 'email_address')
         doc.should.have.property('email_address', _email)
         doc.should.have.property('user_id', _userId)
+        done()
+
+    it 'should trigger an email to user via redis', (done) ->
+      kue.Job.get 1, (err, res) ->
+        res.should.have.property('data')
+        res.data.should.have.property('emailAddress', _email)
+        res.data.should.have.property('user')
+        res.data.user.should.have.property('name', _username)
         done()
 
 

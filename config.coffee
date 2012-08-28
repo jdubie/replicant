@@ -39,10 +39,6 @@ switch process.env.ENV
 module.exports.ADMINS = ADMINS
 
 # Work Queue
-#kueAppPort = 4000
-#kueAppHost = '127.0.0.1'
-#khueUrl = url.format(protocol: 'http:', port: kueAppPort, hostname: kueAppHost)
-#module.exports.kueUrl = kueUrl
 
 switch process.env.ENV
   when 'PROD'
