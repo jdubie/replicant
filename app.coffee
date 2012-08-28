@@ -222,6 +222,10 @@ app.post '/users', (req, res) ->
         mtime: mtime
       userPrivateNano.insert(emailDoc, next)
 
+    (_res, headers, next) ->
+      data = {user, emailAddress: email}
+      h.createNotification('notification.user.create', data, next)
+
   ], (err, body, headers) ->
     if err
       debug '   ERROR', err

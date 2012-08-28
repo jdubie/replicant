@@ -45,12 +45,13 @@ kueUrl = url.format(protocol: 'http:', port: kueAppPort, hostname: kueAppHost)
 module.exports.kueUrl = kueUrl
 
 switch process.env.ENV
-  when 'PROD', 'STAGE', 'DEV', 'TEST'
+  when 'PROD'
     # todo add server redis settings
     kue.redis.createClient = () ->
       #client = redis.createClient(1234, '192.168.1.2')
       # client.auth('password');
       #return client
+  when 'STAGE', 'DEV', 'TEST'
   else
     console.error 'You must set ENV environment variable'
     process.exit()
