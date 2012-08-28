@@ -106,25 +106,20 @@ app.put '/user_ctx', (req, res) ->
     (next) ->
       rep.auth({username: name, password: newPass}, next)
   ], (err, newCookie) ->
-    if err
-      res.json(err.statusCode ? err.status_code ? 500, err)
-    else
-      res.set('Set-Cookie', newCookie)
-      res.send(201)
+    return h.sendError(res, err) if err
+    res.set('Set-Cookie', newCookie)
+    res.send(201)
 
 ###
   Get zipcode mapping
 ###
 app.get '/zipcodes/:id', (req, res) ->
+  callback = (err, body) ->
+    if body.rows.length == 0 then res.json(404, error: 'Not found', reason: 'Not a valid zipcode')
+    else res.json(body.rows[0].value)
+
   db = config.nano.use('zipcodes')
-  db.view 'zipcodes', 'zipcodes', key: req.params.id, (err, body, headers) ->
-    debug util.inspect body
-    if headers['status-code'] != 200
-      res.json(headers['status-code'], err)
-    if body.rows.length == 0
-      res.json(404, reason: 'Not a valid zipcode')
-    else
-      res.json(body.rows[0].value)
+  db.view('zipcodes', 'zipcodes', {key: req.params.id}, h.nanoCallback(callback))
 
 ###
   POST /users
@@ -328,11 +323,8 @@ app.get '/events', (req, res) ->
     (events, next) ->
       async.map(events, rep.addEventHostsAndGuests, next)
   ], (err, events) ->
-    if err
-      statusCode = err.status_code ? 500
-      res.json(statusCode, err)
-    else
-      res.json(200, events)
+    return h.sendError(res, err) if err
+    res.json(200, events)
 
 ###
   GET /events/:id
@@ -370,11 +362,9 @@ _.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
     type = h.singularizeModel(model)
     debug 'userCtx', userCtx
     rep.getTypeUserDb type, userCtx.user_id, cookie, (err, docs) ->
-      if err
-        statusCode = err.status_code ? 500
-        res.json(statusCode, err)
-      else
-        res.json(200, docs)
+      return h.sendError(res, err) if err
+      res.json(200, docs)
+
   ## GET /model/:id
   app.get "/#{model}/:id", (req, res) ->
     id = req.params?.id
@@ -492,8 +482,8 @@ app.put '/events/:id', (req, res) ->
       h.createNotification('event.update', data, next)
 
   ], (err, resp) ->
-    if err then res.json(err.statusCode ? 500, err)
-    else res.json(201, {_rev, mtime})
+    return h.sendError(res, err) if err
+    res.json(201, {_rev, mtime})
 
 
 app.post '/messages', (req, res) ->
@@ -560,8 +550,8 @@ app.post '/messages', (req, res) ->
       h.createNotification('message', data, next)
 
   ], (err, resp) ->
-    if err then res.json(err.statusCode ? 500, err)
-    else res.json(201, {_rev, ctime, mtime})
+    return h.sendError(res, err) if err
+    res.json(201, {_rev, ctime, mtime})
 
 
 app.put '/messages/:id', (req, res) ->
@@ -572,22 +562,16 @@ app.put '/messages/:id', (req, res) ->
   cookie = req.headers.cookie
   message = req.body
   rep.markReadStatus message, userCtx.user_id, cookie, (err, _res) ->
-    if err
-      statusCode = err.statusCode ? err.status_code ? 500
-      res.json(statusCode, err)
-    else
-      res.send(201)
+    return h.sendError(res, err) if err
+    res.send(201)
 
 app.get '/messages', (req, res) ->
   debug "GET /messages"
   userCtx =  req.userCtx
   cookie = req.headers.cookie
   rep.getMessages userCtx.user_id, cookie, (err, messages) ->
-    if err
-      statusCode = err.statusCode ? err.status_code ? 500
-      res.json(statusCode, err)
-    else
-      res.json(200, messages)
+    return h.sendError(res, err) if err
+    res.json(200, messages)
 
 app.get '/messages/:id', (req, res) ->
   id = req.params?.id
@@ -595,11 +579,8 @@ app.get '/messages/:id', (req, res) ->
   userCtx =  req.userCtx
   cookie = req.headers.cookie
   rep.getMessage id, userCtx.user_id, cookie, (err, message) ->
-    if err
-      statusCode = err.statusCode ? err.status_code ? 500
-      res.json(statusCode, err)
-    else
-      res.json(200, message)
+    return h.sendError(res, err) if err
+    res.json(200, message)
 
 # fire up HTTP server
 app.listen(config.port)
