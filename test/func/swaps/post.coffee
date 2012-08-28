@@ -55,7 +55,7 @@ describe 'POST /swaps', () ->
         _swap[key] = val
       done()
 
-  it 'should added notification', (done) ->
+  it 'should add notification', (done) ->
     kue.Job.get 1, (err, job) ->
       should.not.exist(err)
       job.should.have.property('type', 'notification.swap.create')

@@ -45,3 +45,17 @@ describe 'GET /reviews/:id', () ->
       should.not.exist(err)
       review.should.eql(_review)
       done()
+
+  it 'should give error, reason, and statusCode on bad get', (done) ->
+    opts =
+      method: 'GET'
+      url: "http://localhost:3001/reviews/doesnt_exist"
+      json: true
+    request opts, (err, res, body) ->
+      should.not.exist(err)
+      should.exist(res)
+      res.should.have.property('statusCode', 404)
+      body.should.have.keys('error', 'reason')
+      body.error.should.eql('not_found')
+      body.reason.should.eql('missing')
+      done()
