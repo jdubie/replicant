@@ -261,8 +261,8 @@ _.each ['users', 'swaps', 'reviews', 'likes', 'requests'], (model) ->
     debug "GET /#{model}"
     type = h.singularizeModel(model)
     rep.getType type, (err, docs) ->
+      return h.sendError(res, err) if err?
       res.json(200, docs)
-      res.end()
 
   ## GET /model/:id
   app.get "/#{model}/:id", (req, res) ->
