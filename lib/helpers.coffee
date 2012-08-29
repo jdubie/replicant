@@ -18,17 +18,17 @@ h.getUserDbName = ({userId}) ->
   gets login
 ###
 h.getUserId = ({cookie, userCtx}, callback) ->
+
+  res = (err, _userDoc) ->
+    userCtx.roles = _userDoc?.roles
+    userCtx.user_id = _userDoc?.user_id
+    callback(err, userCtx)
+
   nanoOpts =
     url: "#{config.dbUrl}/_users"
     cookie: cookie
   userPrivateNano = require('nano')(nanoOpts)
-  userPrivateNano.get "org.couchdb.user:#{userCtx.name}", (err, _userDoc) ->
-    userCtx.roles = _userDoc?.roles
-    userCtx.user_id = _userDoc?.user_id
-    if err
-      err.statusCode = err.status_code ? 403
-      err.reason = err.reason ? "Error finding user in database."
-    callback(err, userCtx)
+  userPrivateNano.get("org.couchdb.user:#{userCtx.name}", h.nanoCallback(res))
 
 ###
   getUserCtxFromSession - helper that gets userCtx from session cookie

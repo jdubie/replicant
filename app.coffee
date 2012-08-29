@@ -91,7 +91,11 @@ app.get '/user_ctx', (req, res) ->
     json: true
   h.request opts, (err, body) ->
     return h.sendError(res, err) if err
-    res.json(200, body.userCtx)
+    cookie = req.headers.cookie
+    userCtx = body.userCtx
+    h.getUserId {cookie, userCtx}, (err, userCtx) ->
+      return h.sendError(res, err) if err
+      res.json(200, userCtx)
 
 ###
   Change password
