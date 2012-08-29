@@ -89,7 +89,9 @@ app.get '/user_ctx', (req, res) ->
     headers: req.headers
     url: "#{config.dbUrl}/_session"
     json: true
-  request(opts).pipe(res)
+  h.request opts, (err, body) ->
+    return h.sendError(res, err) if err
+    res.json(200, body.userCtx)
 
 ###
   Change password
