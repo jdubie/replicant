@@ -1,6 +1,6 @@
 async = require('async')
 request = require('request')
-debug = require('debug')('lifeswap:helpers')
+debug = require('debug')('replicant:helpers')
 crypto = require('crypto')
 
 config = require('config')
@@ -11,8 +11,14 @@ h = {}
   @param userId {string}
   @return {string}
 ###
-h.getUserDbName = ({userId}) ->
-  return "users_#{userId}"
+h.getUserDbName = ({userId}) -> "users_#{userId}"
+
+###
+  @description returns _user id given name
+  @param userId {string}
+  @return {string}
+###
+h.getCouchUserName = (name) -> "org.couchdb.user:#{name}"
 
 ###
   gets login
@@ -46,11 +52,8 @@ h.getUserCtxFromSession = ({headers}, callback) ->
         url: "#{config.dbUrl}/_session"
         headers: headers
         json: true
-      request opts, (err, res, body) ->
-        userCtx = body?.userCtx
-        if userCtx? then next(null, userCtx)
-        else next(statusCode: 403, reason: "No user context.")
-    (userCtx, next) ->
+      h.request(opts, next)   ## returns body object with userCtx key
+    ({userCtx}, next) ->
       h.getUserId({cookie, userCtx}, next)
   ], callback
 

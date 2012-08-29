@@ -289,11 +289,88 @@ _.each ['users', 'swaps', 'reviews', 'likes', 'requests'], (model) ->
       _rev = body.rev
       res.json(200, {_rev, mtime})
 
+
+###
+  DELETE
+    /swaps
+    /reviews
+    /likes
+    /requests
+###
+_.each ['swaps', 'reviews', 'likes', 'requests'], (model) ->
   ## DELETE /model/:id
   app.delete "/#{model}/:id", (req, res) ->
     id = req.params?.id
     debug "DELETE /#{model}/#{id}"
     res.send(403)
+
+###
+  DELETE /users/:id
+###
+app.delete "/users/:id", (req, res) ->
+  userId = req.params?.id
+  debug "DELETE /users/#{userId}"
+  async.waterfall [
+    ## get user ctx
+    (next) ->
+      h.getUserCtxFromSession(req, next)
+    (userCtx, next) ->
+      if not ('constable' in userCtx.roles) then next(statusCode: 403)
+      else next(null, userCtx)
+    ## if a constable!
+    (userCtx, next) ->
+      cookie = req.headers.cookie
+      userName = userRev = null
+      userRev = null
+
+      async.waterfall [
+        (_next) ->
+          debug 'get user document'
+          nanoOpts =
+            url: "#{config.dbUrl}/lifeswap"
+            cookie: cookie
+          db = require('nano')(nanoOpts)
+          db.get(userId, h.nanoCallback(_next))
+        (userDoc, hdr, _next) ->
+          userRev = userDoc._rev
+          userName = userDoc.name
+
+          async.series [
+            ## delete _user document
+            (cb) ->
+              debug 'delete _user'
+              db = config.nanoAdmin.use('_users')
+              _username = h.getCouchUserName(userName)
+              async.waterfall [
+                (done) ->
+                  debug 'getting _user', _username
+                  db.get(_username, h.nanoCallback(done))
+                (_userDoc, hdr, done) ->
+                  debug 'destroying _user'
+                  db.destroy(_username, _userDoc._rev, h.nanoCallback(done))
+              ], cb
+
+            ## delete user type document
+            (cb) ->
+              debug 'delete user'
+              nanoOpts =
+                url: "#{config.dbUrl}/lifeswap"
+                cookie: cookie
+              db = require('nano')(nanoOpts)
+              db.destroy(userId, userRev, h.nanoCallback(cb))
+
+            ## delete user DB
+            (cb) ->
+              debug 'delete user db'
+              userDbName = h.getUserDbName({userId})
+              debug 'userDbName', userDbName
+              config.nanoAdmin.db.destroy(userDbName, h.nanoCallback(cb))
+          ], _next
+      ], next
+  ], (err, _res) ->
+    return h.sendError(res, err) if err?
+    res.send(200)
+
 
 ###
   POST /events
