@@ -122,7 +122,11 @@ app.put '/user_ctx', (req, res) ->
 ###
 app.get '/zipcodes/:id', (req, res) ->
   callback = (err, body) ->
-    if body.rows.length == 0 then res.json(404, error: 'Not found', reason: 'Not a valid zipcode')
+    if body.rows.length == 0
+      error =
+        error : 'Not found'
+        reason: zipcode: ['Not a valid zipcode']
+      res.json(404, error)
     else res.json(body.rows[0].value)
 
   db = config.nano.use('zipcodes')
