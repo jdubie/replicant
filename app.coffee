@@ -91,8 +91,9 @@ app.get '/user_ctx', (req, res) ->
     json: true
   h.request opts, (err, body) ->
     return h.sendError(res, err) if err
-    cookie = req.headers.cookie
     userCtx = body.userCtx
+    return res.json(200, userCtx) unless userCtx.name
+    cookie = req.headers.cookie
     h.getUserId {cookie, userCtx}, (err, userCtx) ->
       return h.sendError(res, err) if err
       res.json(200, userCtx)
