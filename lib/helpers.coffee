@@ -70,33 +70,35 @@ h.hash = (message) ->
 h.singularizeModel = (model) ->
   mapping =
     # lifeswap db
-    swaps:      'swap'
-    users:      'user'
-    reviews:    'review'
-    likes:      'like'
-    requests:   'request'
+    swaps   : 'swap'
+    users   : 'user'
+    reviews : 'review'
+    likes   : 'like'
+    requests: 'request'
     # user db
-    events:           'event'
-    messages:         'message'
-    cards:            'card'
-    email_addresses:  'email_address'
-    phone_numbers:    'phone_number'
+    events         : 'event'
+    messages       : 'message'
+    cards          : 'card'
+    payments       : 'payment'
+    email_addresses: 'email_address'
+    phone_numbers  : 'phone_number'
   return mapping[model]
 
 h.pluralizeType = (type) ->
   mapping =
     # lifeswap db
-    swap:       'swaps'
-    user:       'users'
-    review:     'reviews'
-    like:       'likes'
-    request:    'requests'
+    swap   : 'swaps'
+    user   : 'users'
+    review : 'reviews'
+    like   : 'likes'
+    request: 'requests'
     # user db
-    event:          'events'
-    message:        'messages'
-    card:           'cards'
-    email_address:  'email_addresses'
-    phone_number:   'phone_numbers'
+    event        : 'events'
+    message      : 'messages'
+    card         : 'cards'
+    payment      : 'payments'
+    email_address: 'email_addresses'
+    phone_number : 'phone_numbers'
   return mapping[type]
 
 ###
