@@ -49,7 +49,7 @@ app.use (req, res, next) ->
     express.bodyParser()(req, res, next)
   else next()
 
-userCtxRegExp = /^\/(events|messages|cards|email_addresses|phone_numbers)(\/.*)?$/
+userCtxRegExp = /^\/(events|messages|cards|payments|email_addresses|phone_numbers)(\/.*)?$/
 app.all userCtxRegExp, (req, res, next) ->
   h.getUserCtxFromSession req, (err, userCtx) ->
     if err then res.json(err.statusCode ? err.status_code ? 500, err)
@@ -436,12 +436,12 @@ app.get "/events/:id", (req, res) ->
 
 ###
   Some routes for:
-    /events
     /cards
+    /payments
     /email_addresses
     /phone_numbers
 ###
-_.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
+_.each ['cards', 'payments', 'email_addresses', 'phone_numbers'], (model) ->
   ## GET /model
   app.get "/#{model}", (req, res) ->
     debug "GET /#{model}"
@@ -466,21 +466,27 @@ _.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
 
 ###
   DELETE
-    /cards
+    /events
     /messages
+    /cards
+    /payments
     /email_addresses
+    /phone_numbers
 ###
-_.each ['events', 'cards', 'messages', 'email_addresses', 'phone_numbers'], (model) ->
+_.each ['events', 'messages', 'cards', 'payments', 'email_addresses', 'phone_numbers'], (model) ->
   app.delete "/#{model}/:id", (req, res) ->
     id = req.params?.id
     debug "DELETE /#{model}/#{id}"
     res.send(403)
 
 ###
-  /cards/:id
-  /email_addresses/:id
+  GET
+    /cards/:id
+    /payments/:id
+    /email_addresses/:id
+    /phone_numbers/:id
 ###
-_.each ['cards', 'email_addresses', 'phone_numbers'], (model) ->
+_.each ['cards', 'payments', 'email_addresses', 'phone_numbers'], (model) ->
   ## POST /models
   app.post "/#{model}", (req, res) ->
     debug "POST /#{model}"
