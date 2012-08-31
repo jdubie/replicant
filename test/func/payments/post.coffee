@@ -18,6 +18,7 @@ describe 'POST /payments', () ->
     user_id: _userId
     event_id: 'eventid'
     card_id: 'cardid'
+    amount: 7
     status: "1"
     baz: 'bar'
   _cookie = null

@@ -19,6 +19,7 @@ describe 'PUT /payments/:id', () ->
     user_id: _userId
     event_id: 'eventid'
     card_id: 'cardid'
+    amount: 7.77
     status: "1"
     ctime: _ctime
     mtime: _mtime

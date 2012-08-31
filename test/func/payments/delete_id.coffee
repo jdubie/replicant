@@ -20,6 +20,7 @@ describe 'DELETE /payments/:id', () ->
     user_id: _userId
     event_id: 'eventid'
     card_id: 'cardid'
+    amount: 5.05
     status: "1"
     ctime: _ctime
     mtime: _mtime

@@ -21,6 +21,7 @@ describe 'GET /payments', () ->
       user_id: _userId
       event_id: 'eventid'
       card_id: 'cardid'
+      amount: 5.05
       status: "1"
       ctime: _ctime
       mtime: _mtime
@@ -32,6 +33,7 @@ describe 'GET /payments', () ->
       user_id: _userId
       event_id: 'eventid'
       card_id: 'cardid'
+      amount: 5.35
       status: "2"
       ctime: _ctime
       mtime: _mtime
