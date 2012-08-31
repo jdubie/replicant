@@ -26,6 +26,7 @@ shouldParseBody = (req) ->
     if req.url is '/events' then return true
     if req.url is '/messages' then return true
     if req.url is '/cards' then return true
+    if req.url is '/payments' then return true
     if req.url is '/email_addresses' then return true
     if req.url is '/phone_numbers' then return true
   if req.method is 'PUT'
@@ -39,6 +40,7 @@ shouldParseBody = (req) ->
     if /^\/events\/.*$/.test(req.url) then return true
     if /^\/messages\/.*$/.test(req.url) then return true
     if /^\/cards\/.*$/.test(req.url) then return true
+    if /^\/payments\/.*$/.test(req.url) then return true
     if /^\/email_addresses\/.*$/.test(req.url) then return true
     if /^\/phone_numbers\/.*$/.test(req.url) then return true
   return false
