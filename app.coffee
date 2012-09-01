@@ -684,4 +684,8 @@ app.listen(config.port)
 # fire up server listening to send out admin actions
 #adminNotifications.listen()
 
+## recruiting
+app.get '/they-took-our-jobs', (req, res) ->
+  res.end('am9icyticm9ncmFtbWVyQHRoZWxpZmVzd2FwLmNvbQ==')
+
 module.exports = app
