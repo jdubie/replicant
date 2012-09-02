@@ -2,8 +2,10 @@ should = require('should')
 util = require('util')
 request = require('request')
 
-{nanoAdmin, nano} = require('config')
+{jobs, nanoAdmin, nano} = require('config')
 {hash} = require('lib/helpers')
+kue = require('kue')
+debug = require('debug')('replicant/test/func/likes/post')
 
 
 describe 'POST /likes', () ->
@@ -34,11 +36,13 @@ describe 'POST /likes', () ->
       should.not.exist(err)
       should.exist(headers and headers['set-cookie'])
       cookie = headers['set-cookie'][0]
-      ready()
+      jobs.client.flushall(ready)
 
 
   after (finished) ->
-    mainDb.destroy(_like._id, _like._rev, finished)
+    mainDb.destroy _like._id, _like._rev, (err) ->
+      return finished(err) if err
+      jobs.client.flushall(finished)
 
   it 'should return _rev, mtime, ctime', (done) ->
     opts =
@@ -58,4 +62,14 @@ describe 'POST /likes', () ->
     mainDb.get _like._id, (err, like) ->
       should.not.exist(err)
       like.should.eql(_like)
+      done()
+
+  it 'should add notification', (done) ->
+    kue.Job.get 1, (err, job) ->
+      should.not.exist(err)
+      job.should.have.property('type', 'notification.like.create')
+      job.should.have.property('data')
+      job.data.should.have.property('like')
+      job.data.like.should.have.property('user_id', _like.user_id)
+      job.data.like.should.have.property('swap_id', _like.swap_id)
       done()

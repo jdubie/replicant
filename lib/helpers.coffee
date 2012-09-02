@@ -144,7 +144,7 @@ h.nanoCallback = (next, opts) ->
   @param callback {function}
 ###
 h.createSimpleCreateNotification = (model, doc, callback) ->
-  notableEvents = [ 'swap' ]
+  notableEvents = [ 'swap', 'like' ]
   model = h.singularizeModel(model)
   return callback() unless model in notableEvents
   notification = {}
