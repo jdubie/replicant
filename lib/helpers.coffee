@@ -131,7 +131,7 @@ h.nanoCallback = (next, opts) ->
   {error, reason} = opts if opts?
   (err, res...) ->
     if err?
-      debug error, reason
+      debug 'err', err
       errorRes =
         statusCode: err.status_code ? 500
         error: err.error ? error
