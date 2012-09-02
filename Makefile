@@ -19,4 +19,11 @@ run:
 watch:
 	scripts/watch.zsh
 
+vim:
+	vim -o \
+		test \
+		lib/helpers.coffee  \
+		lib/replicant.coffee \
+		app.coffee
+
 .PHONY: run, test
