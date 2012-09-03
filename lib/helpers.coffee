@@ -147,7 +147,8 @@ h.createSimpleCreateNotification = (model, doc, callback) ->
   notableEvents = [ 'swap', 'like' ]
   model = h.singularizeModel(model)
   return callback() unless model in notableEvents
-  notification = {}
+  notification = title: "user_id: #{doc.user_id}"
+  notification.title += ", swap_id: #{doc.swap_id}" if doc.swap_id?
   notification[model] = doc
   h.createNotification "#{model}.create", notification, (err) ->
     error = undefined

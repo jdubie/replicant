@@ -14,6 +14,8 @@ app = express()
 app.use(express.static(__dirname + '/public'))
 
 shouldParseBody = (req) ->
+  if req.method is 'DELETE'
+    if req.url.match /^\/likes\/.*$/ then return true
   if req.url is '/user_ctx' then return true
   if req.method is 'POST'
     # lifeswap db
@@ -303,15 +305,33 @@ _.each ['users', 'swaps', 'reviews', 'likes', 'requests'], (model) ->
   DELETE
     /swaps
     /reviews
-    /likes
     /requests
 ###
-_.each ['swaps', 'reviews', 'likes', 'requests'], (model) ->
+_.each ['swaps', 'reviews', 'requests'], (model) ->
   ## DELETE /model/:id
   app.delete "/#{model}/:id", (req, res) ->
     id = req.params?.id
     debug "DELETE /#{model}/#{id}"
     res.send(403)
+
+###
+  DELETE
+    /likes
+###
+_.each ['likes'], (model) ->
+  app.delete "/#{model}/:id", (req, res) ->
+    id = req.params?.id
+    debug "DELETE /#{model}/#{id}"
+    doc = req.body
+    debug "   req.body", doc
+    opts =
+      method: 'DELETE'
+      url: "#{config.dbUrl}/lifeswap/#{id}"
+      headers: req.headers
+      qs: rev: req.body._rev
+      json: req.body
+    request(opts).pipe(res)
+
 
 ###
   DELETE /users/:id

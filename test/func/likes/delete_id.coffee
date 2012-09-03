@@ -5,6 +5,7 @@ request = require('request')
 
 {nano, nanoAdmin} = require('config')
 {hash} = require('lib/helpers')
+debug = require('debug')('replicant/test/func/like/delete_id')
 
 
 describe 'DELETE /likes/:id', () ->
@@ -19,7 +20,7 @@ describe 'DELETE /likes/:id', () ->
   _like =
     _id: 'deletelike'
     type: 'like'
-    name: _userId
+    name: _username
     user_id: 'user2'
     swap_id: 'swap1'
     ctime: ctime
@@ -53,28 +54,22 @@ describe 'DELETE /likes/:id', () ->
       insertLike
     ], ready
 
-
-  after (finished) ->
-    ## destroy like
-    mainDb.get _like._id, (err, like) ->
-      should.not.exist(err)
-      mainDb.destroy(like._id, like._rev, finished)
-
-
-  it 'should return a 403 (forbidden)', (done) ->
+  it 'should return a 200', (done) ->
     opts =
       method: 'DELETE'
       url: "http://localhost:3001/likes/#{_like._id}"
-      json: true
       headers: cookie: cookie
+      json: _like
     request opts, (err, res, body) ->
       should.not.exist(err)
-      res.should.have.property('statusCode', 403)
+      res.statusCode.should.equal(200)
+      body.should.have.property('ok', true)
+      body.should.have.property('id', _like._id)
       done()
 
-
-  it 'should not delete \'like\' type entry in lifeswap db', (done) ->
+  it 'should actually remove document', (done) ->
     mainDb.get _like._id, (err, like) ->
-      should.not.exist(err)
-      like.should.eql(_like)
+      should.not.exist(like)
+      should.exist(err)
+      err.should.have.property('status_code', 404)
       done()
