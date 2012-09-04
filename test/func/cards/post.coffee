@@ -35,7 +35,6 @@ describe 'POST /cards', () ->
       cookie = headers['set-cookie'][0]
       ready()
 
-
   after (finished) ->
     ## destroy card
     userDb.get _card._id, (err, card) ->
