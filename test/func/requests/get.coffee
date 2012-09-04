@@ -1,10 +1,11 @@
-should = require('should')
-util = require('util')
-async = require('async')
+should  = require('should')
+util    = require('util')
+async   = require('async')
 request = require('request')
+_       = require('underscore')
 
 {nanoAdmin} = require('config')
-{hash} = require('lib/helpers')
+{hash}      = require('lib/helpers')
 
 
 describe 'GET /requests', () ->
@@ -55,5 +56,6 @@ describe 'GET /requests', () ->
       json: true
     request opts, (err, res, requests) ->
       should.not.exist(err)
+      requests = (request for request in requests when request._id.match /getrequests/)
       requests.should.eql(_requests)
       done()
