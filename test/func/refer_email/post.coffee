@@ -5,7 +5,7 @@ config  = require('config')
 debug   = require('debug')('replicants/test/func/refer_email/post')
 kue     = require('kue')
 
-describe 'zzz POST /refer_emails', () ->
+describe 'POST /refer_emails', () ->
 
   _username = h.hash('user2@test.com')
   _userId = 'user2_id'
