@@ -82,6 +82,7 @@ h.singularizeModel = (model) ->
     payments       : 'payment'
     email_addresses: 'email_address'
     phone_numbers  : 'phone_number'
+    refer_emails   : 'refer_email'
   return mapping[model]
 
 h.pluralizeType = (type) ->
@@ -144,11 +145,11 @@ h.nanoCallback = (next, opts) ->
   @param callback {function}
 ###
 h.createSimpleCreateNotification = (model, doc, callback) ->
-  debug 'helpers#createNotification'
-  notableEvents = [ 'swap', 'like' ]
+  notableEvents = [ 'swap', 'like', 'refer_email' ]
   model = h.singularizeModel(model)
+  debug 'helpers#createNotification', model
   return callback() unless model in notableEvents
-  debug 'notable events - adding to kue'
+  debug 'adding to kue', model, doc
   notification = title: "user_id: #{doc.user_id}"
   notification.title += ", swap_id: #{doc.swap_id}" if doc.swap_id?
   notification[model] = doc

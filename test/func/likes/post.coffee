@@ -38,7 +38,6 @@ describe 'POST /likes', () ->
       cookie = headers['set-cookie'][0]
       jobs.client.flushall(ready)
 
-
   after (finished) ->
     mainDb.destroy _like._id, _like._rev, (err) ->
       return finished(err) if err

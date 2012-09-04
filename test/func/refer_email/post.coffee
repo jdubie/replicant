@@ -3,6 +3,7 @@ request = require('request')
 h       = require('lib/helpers')
 config  = require('config')
 debug   = require('debug')('replicants/test/func/refer_email/post')
+kue     = require('kue')
 
 describe 'zzz POST /refer_emails', () ->
 
@@ -11,6 +12,7 @@ describe 'zzz POST /refer_emails', () ->
   _password = 'pass2'
   _requestId = 'request1'
   _email_address = 'test@thelifeswap.com'
+  _personal_message = 'hi im a personal message'
   _ctime = _mtime = 12345
   _referEmail =
     _id: 'post_refer_email_id'
@@ -19,6 +21,7 @@ describe 'zzz POST /refer_emails', () ->
     user_id: _userId
     request_id: _requestId
     email_address: _email_address
+    personal_message: _personal_message
     ctime: _ctime
     mtime: _mtime
   cookie = null
@@ -33,13 +36,15 @@ describe 'zzz POST /refer_emails', () ->
       should.not.exist(err)
       should.exist(headers and headers['set-cookie'])
       cookie = headers['set-cookie'][0]
-      ready()
+      config.jobs.client.flushall(ready)
 
   after (finished) ->
     ## destroy refer_email
     userDb.get _referEmail._id, (err, referEmail) ->
       should.not.exist(err)
-      userDb.destroy(_referEmail._id, referEmail._rev, finished)
+      userDb.destroy _referEmail._id, referEmail._rev, (err) ->
+        should.not.exist(err)
+        config.jobs.client.flushall(finished)
 
   it 'should POST the refer_email correctly', (done) ->
     opts =
@@ -51,4 +56,14 @@ describe 'zzz POST /refer_emails', () ->
       should.not.exist(err)
       res.statusCode.should.eql(201)
       referEmail.should.have.keys(['_id', '_rev', 'mtime', 'ctime'])
+      done()
+
+  it 'should add notification', (done) ->
+    kue.Job.get 1, (err, job) ->
+      should.not.exist(err)
+      job.should.have.property('type', 'notification.refer_email.create')
+      job.should.have.property('data')
+      job.data.should.have.property('refer_email')
+      job.data.refer_email.should.have.property('personal_message', _personal_message)
+      job.data.refer_email.should.have.property('request_id', _requestId)
       done()
