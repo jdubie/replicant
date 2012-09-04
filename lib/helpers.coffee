@@ -144,9 +144,11 @@ h.nanoCallback = (next, opts) ->
   @param callback {function}
 ###
 h.createSimpleCreateNotification = (model, doc, callback) ->
+  debug 'helpers#createNotification'
   notableEvents = [ 'swap', 'like' ]
   model = h.singularizeModel(model)
   return callback() unless model in notableEvents
+  debug 'notable events - adding to kue'
   notification = title: "user_id: #{doc.user_id}"
   notification.title += ", swap_id: #{doc.swap_id}" if doc.swap_id?
   notification[model] = doc
