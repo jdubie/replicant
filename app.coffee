@@ -31,6 +31,7 @@ shouldParseBody = (req) ->
     if req.url is '/payments' then return true
     if req.url is '/email_addresses' then return true
     if req.url is '/phone_numbers' then return true
+    if req.url is '/refer_emails' then return true
   if req.method is 'PUT'
     # lifeswap db
     if /^\/users\/.*$/.test(req.url) then return true
@@ -53,7 +54,7 @@ app.use (req, res, next) ->
     express.bodyParser()(req, res, next)
   else next()
 
-userCtxRegExp = /^\/(events|messages|cards|payments|email_addresses|phone_numbers)(\/.*)?$/
+userCtxRegExp = /^\/(events|messages|cards|payments|email_addresses|phone_numbers|refer_emails)(\/.*)?$/
 app.all userCtxRegExp, (req, res, next) ->
   h.getUserCtxFromSession req, (err, userCtx) ->
     if err then res.json(err.statusCode ? err.status_code ? 500, err)
@@ -504,16 +505,17 @@ _.each ['events', 'messages', 'cards', 'payments', 'email_addresses', 'phone_num
     res.send(403)
 
 ###
-  GET
+  POST/PUT
     /cards/:id
     /payments/:id
     /email_addresses/:id
     /phone_numbers/:id
 ###
-_.each ['cards', 'payments', 'email_addresses', 'phone_numbers'], (model) ->
+_.each ['cards', 'payments', 'email_addresses', 'phone_numbers', 'refer_emails'], (model) ->
   ## POST /models
   app.post "/#{model}", (req, res) ->
     debug "POST /#{model}"
+    debug "   req.userCtx", req.userCtx
     userCtx = req.userCtx   # from the app.all route
     userDbName = h.getUserDbName(userId: userCtx.user_id)
     doc = req.body
@@ -526,12 +528,13 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers'], (model) ->
       url: "#{config.dbUrl}/#{userDbName}"
       headers: req.headers
       json: doc
-    request opts, (err, resp, body) ->
-      statusCode = resp.statusCode
-      if statusCode isnt 201 then res.send(statusCode)
-      else
-        _rev = body.rev
-        res.json(statusCode, {_id, _rev, mtime, ctime})
+    h.request opts, (err, body) ->
+      debug '   after post', err, body
+      return h.sendError(res, err) if err
+      _rev = body.rev
+      h.createSimpleCreateNotification model, doc, (err) ->
+        return h.sendError(res, err) if err
+        res.json(201, {_id, _rev, mtime, ctime})
 
   ## PUT /models/:id
   app.put "/#{model}/:id", (req, res) ->
