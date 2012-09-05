@@ -161,6 +161,7 @@ app.post '/users', (req, res) ->
   # delete private data
   delete user.password
   delete user.email_address
+  delete user.confirm_password
   email = email_address
   email = email.toString().toLowerCase()
   debug "   email: #{email}"
