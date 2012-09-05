@@ -17,6 +17,7 @@ describe 'GET /requests', () ->
       type: 'request'
       name: hash('user1@test.com')
       user_id: 'user1_id'
+      title: 'Get Request 1'
       ctime: _ctime
       mtime: _mtime
       foo: 'bar'
@@ -26,6 +27,7 @@ describe 'GET /requests', () ->
       type: 'request'
       name: hash('user2@test.com')
       user_id: 'user2_id'
+      title: 'Get Request 2'
       ctime: _ctime
       mtime: _mtime
       foo: 'bar'

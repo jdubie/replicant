@@ -19,6 +19,7 @@ describe 'PUT /requests/:id', () ->
     type: 'request'
     name: _username
     user_id: _userId
+    title: 'PUT Request'
     ctime: _ctime
     mtime: _mtime
     foo: 'bar'

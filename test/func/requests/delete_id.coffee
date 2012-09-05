@@ -21,6 +21,7 @@ describe 'DELETE /requests/:id', () ->
     type: 'request'
     name: _username
     user_id: _userId
+    title: 'Delete this Request'
     ctime: _ctime
     mtime: _mtime
     foo: 'bar'

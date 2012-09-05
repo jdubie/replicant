@@ -3,15 +3,15 @@ async = require('async')
 util = require('util')
 request = require('request')
 
-{nanoAdmin, nano} = require('config')
-{hash} = require('lib/helpers')
+config = require('config')
+h = require('lib/helpers')
 
 
 describe 'DELETE /reviews/:id', () ->
 
   ## simple test - for now should just 403 (forbidden)
 
-  _username = hash('user2@test.com')
+  _username = h.hash('user2@test.com')
   _userId = 'user2_id'
   _password = 'pass2'
   _ctime = _mtime = 12345
@@ -30,15 +30,15 @@ describe 'DELETE /reviews/:id', () ->
     foo: 'bar'
   cookie = null
 
-  mainDb = nanoAdmin.db.use('lifeswap')
-  usersDb = nanoAdmin.db.use('_users')
+  mainDb = config.nanoAdmin.db.use('lifeswap')
+  usersDb = config.nanoAdmin.db.use('_users')
 
   before (ready) ->
     ## start webserver
-    app = require('../../../app')
+    app = require('app')
     ## authenticate user
     authUser = (callback) ->
-      nano.auth _username, _password, (err, body, headers) ->
+      config.nano.auth _username, _password, (err, body, headers) ->
         should.not.exist(err)
         should.exist(headers and headers['set-cookie'])
         cookie = headers['set-cookie'][0]

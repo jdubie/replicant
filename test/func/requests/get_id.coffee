@@ -2,16 +2,25 @@ should = require('should')
 util = require('util')
 request = require('request')
 
-{nanoAdmin} = require('config')
-
+config = require('config')
+h = require('lib/helpers')
 
 describe 'GET /requests/:id', () ->
 
+  _username = h.hash('user2@test.com')
+  _userId = 'user2_id'
+  _password = 'pass2'
+  _ctime = _mtime = 12345
   _request =
     _id: 'getrequestid'
     type: 'request'
+    name: _username
+    user_id: _userId
+    title: 'GET Request'
+    ctime: _ctime
+    mtime: _mtime
 
-  mainDb = nanoAdmin.db.use('lifeswap')
+  mainDb = config.nanoAdmin.db.use('lifeswap')
 
   before (ready) ->
     ## start webserver
