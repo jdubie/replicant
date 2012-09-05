@@ -17,6 +17,7 @@ describe 'POST /requests', () ->
     type: 'request'
     name: _username
     user_id: _userId
+    title: 'POST requests'
     ctime: _ctime
     mtime: _mtime
   cookie = null
