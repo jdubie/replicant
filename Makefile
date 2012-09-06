@@ -13,6 +13,9 @@ grep:
 z:
 	scripts/z.zsh
 
+y:
+	scripts/y.zsh
+
 run:
 	scripts/run.zsh $(ENV)
 
