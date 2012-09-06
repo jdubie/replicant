@@ -133,4 +133,81 @@ m.TestUser = class TestUser
     ], callback
 
 
+m.TestSwap = class TestSwap
+  @attributes: [
+    '_id'
+    '_rev'
+    'type'
+    'name'
+    'user_id'
+    'ctime'
+    'mtime'
+    'status'
+    'title'
+    'zipcode'
+    'city'
+    'state'
+    'entity'
+    'website'
+    'industry'
+    'description'
+    'highlights'
+    'duration'
+    'price'
+    'extra_info'
+    'num_guests'
+    'require_approval'
+    'image_original'
+    'image_huge'
+    'image_big'
+    'image_medium'
+    'image_thumbnail'
+    'image_small'
+    'image_narrow'
+    'availability'
+    'tags'
+    'address'
+    'parking'
+    'dresscode'
+  ]
+
+  attributes: =>
+    result = {}
+    for key in @constructor.attributes when key of this
+      result[key] = @[key]
+    result._id = @_id if @_id
+    result
+
+  constructor: (id, user, opts) ->
+
+    def =
+      _id: id
+      name: user.name
+      user_id: user._id
+      type: 'swap'
+      ctime: 12345
+      mtime: 12345
+      status: 'pending'
+      title: "#{id} Swap"
+      zipcode: '94305'
+      industry: 'Agriculture'
+      
+    opts ?= {}
+    _.defaults(opts, def)
+    _.extend(this, opts)
+
+
+    @mainDb = config.nanoAdmin.db.use('lifeswap')
+
+  create: (callback) =>
+    @mainDb.insert @attributes(), @_id, (err, res) =>
+      return callback(err) if err
+      @_rev = res.rev
+      callback()
+
+  destroy: (callback) =>
+    @mainDb.get @_id, (err, userDoc) =>
+      return callback() if err?   # should error
+      @mainDb.destroy(@_id, userDoc._rev, callback)
+
 module.exports = m
