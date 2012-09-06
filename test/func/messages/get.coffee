@@ -1,7 +1,5 @@
 should = require('should')
 async = require('async')
-_ = require('underscore')
-util = require('util')
 request = require('request')
 debug = require('debug')('replicant/test/func/phone_numbers/delete')
 

@@ -786,6 +786,7 @@ m.TestMessage = class TestMessage
     async.map(allUsers, insertMessage, callback)
 
   destroy: (callback) =>
+    ## todo: destroy read document
     @userDb.get @_id, (err, userDoc) =>
       return callback() if err?   # should error
       @userDb.destroy(@_id, userDoc._rev, callback)
