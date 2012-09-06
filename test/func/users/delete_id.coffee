@@ -8,7 +8,7 @@ config = require('config')
 h = require('lib/helpers')
 
 
-describe 'DELETE /users/:id', () ->
+describe 'zzz DELETE /users/:id', () ->
 
   ## simple test - for now should just 403 (forbidden)
 

@@ -43,8 +43,6 @@ m.TestUser = class TestUser
     result._id = @_id if @_id
     result
 
-
-
   constructor: (id, opts) ->
 
     def =
@@ -69,6 +67,9 @@ m.TestUser = class TestUser
 
   create: (callback) =>
 
+    userDdocDbName = 'userddocdb'
+    userDdocName = 'userddoc'
+
     insertUser = (callback) =>
       async.parallel
         _userDoc: (cb) =>
@@ -86,7 +87,10 @@ m.TestUser = class TestUser
             return cb(err) if err
             cb(null, res.rev)
         admin: (cb) =>
-          config.nanoAdmin.db.create("users_#{@_id}", cb)
+          config.nanoAdmin.db.create "users_#{@_id}", (err) =>
+            return cb(err) if err
+            config.nanoAdmin.db.replicate(userDdocDbName, @userDbName, cb)
+
           #, _callback
       , (err, res) ->
         debug '#createUser err, res', err, res
