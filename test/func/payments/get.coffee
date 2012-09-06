@@ -7,7 +7,7 @@ h = require('lib/helpers')
 {TestPayment, TestUser} = require('lib/test_models')
 
 
-describe 'yyyy GET /payments', () ->
+describe 'y GET /payments', () ->
 
   user = new TestUser('get_payments_user')
   payments = ['get_payments_1', 'get_payments_2', 'get_payments_3']

@@ -8,7 +8,7 @@ request = require('request')
 {TestUser, TestPhoneNumber} = require('lib/test_models')
 
 
-describe 'yyy DELETE /phone_numbers/:id', () ->
+describe ' DELETE /phone_numbers/:id', () ->
 
   user = new TestUser('delete_phone_id_user')
   phoneNumber = new TestPhoneNumber('delete_phone_id', user)

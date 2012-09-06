@@ -8,7 +8,7 @@ request = require('request')
 {hash} = require('lib/helpers')
 
 
-describe 'yyyy PUT /reviews/:id', () ->
+describe 'y PUT /reviews/:id', () ->
 
   user = new TestUser('post_reviews_user')
   review = new TestReview('post_reviews', user)

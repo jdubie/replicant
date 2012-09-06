@@ -8,7 +8,7 @@ request = require('request')
 {hash} = require('lib/helpers')
 
 
-describe 'yyyy PUT /likes/:id', () ->
+describe 'y PUT /likes/:id', () ->
 
   user = new TestUser('put_likes_id_user')
   like = new TestLike('putlikesid', user)

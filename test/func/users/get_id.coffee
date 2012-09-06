@@ -6,7 +6,7 @@ request = require('request')
 {nanoAdmin} = require('config')
 
 
-describe 'yyyy GET /users/:id', () ->
+describe 'y GET /users/:id', () ->
 
   user = null
 

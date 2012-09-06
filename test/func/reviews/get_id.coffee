@@ -7,7 +7,7 @@ request = require('request')
 {hash} = require('lib/helpers')
 
 
-describe 'yyyy GET /reviews/:id', () ->
+describe 'y GET /reviews/:id', () ->
 
   review = new TestReview('get_review_id')
 

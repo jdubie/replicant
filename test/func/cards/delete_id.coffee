@@ -8,7 +8,7 @@ request = require('request')
 {getUserDbName, hash} = require('lib/helpers')
 
 
-describe 'yyyy DELETE /cards/:id', () ->
+describe 'y DELETE /cards/:id', () ->
 
   user = new TestUser('delete_card_id_user')
   card = new TestCard('delete_card_id', user)
