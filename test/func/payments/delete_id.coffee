@@ -4,63 +4,28 @@ request = require('request')
 
 config = require('config')
 h = require('lib/helpers')
+{TestUser, TestPayment} = require('lib/test_models')
 
 
-describe 'DELETE /payments/:id', () ->
+describe 'yyyy DELETE /payments/:id', () ->
 
-  ## simple test - for now should just 403 (forbidden)
-  _username = h.hash('user2@test.com')
-  _userId = 'user2_id'
-  _password = 'pass2'
-  _ctime = _mtime = 12345
-  _payment =
-    _id: 'deletepaymentid'
-    type: 'payment'
-    name: _username
-    user_id: _userId
-    event_id: 'eventid'
-    card_id: 'cardid'
-    amount: 5.05
-    status: "1"
-    ctime: _ctime
-    mtime: _mtime
-  _cookie = null
-
-  userDb = config.nanoAdmin.db.use(h.getUserDbName(userId: _userId))
+  user = new TestUser('delete_payments_id_user')
+  payment = new TestPayment('delete_payments_id', user)
+  userDb = config.nanoAdmin.db.use(h.getUserDbName(userId: user._id))
 
   before (ready) ->
-    ## start webserver
     app = require('app')
-    ## authenticate user
-    authUser = (callback) ->
-      config.nano.auth _username, _password, (err, body, headers) ->
-        should.not.exist(err)
-        should.exist(headers and headers['set-cookie'])
-        _cookie = headers['set-cookie'][0]
-        callback()
-    ## insert payment
-    insertPayment = (cb) ->
-      userDb.insert _payment, _payment._id, (err, res) ->
-        _payment._rev = res.rev
-        cb()
-
-    async.parallel [
-      authUser
-      insertPayment
-    ], ready
-
+    async.series([user.create, payment.create], ready)
 
   after (finished) ->
-    ## destroy payment
-    userDb.destroy(_payment._id, _payment._rev, finished)
-
+    user.destroy(finished) # destroys payment too
 
   it 'should return a 403 (forbidden)', (done) ->
     opts =
       method: 'DELETE'
-      url: "http://localhost:3001/payments/#{_userId}"
+      url: "http://localhost:3001/payments/#{payment._id}"
       json: true
-      headers: cookie: _cookie
+      headers: cookie: user.cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
       res.should.have.property('statusCode', 403)
@@ -68,7 +33,7 @@ describe 'DELETE /payments/:id', () ->
 
 
   it 'should not delete \'payment\' type entry in user db', (done) ->
-    userDb.get _payment._id, (err, payment) ->
+    userDb.get payment._id, (err, paymentDoc) ->
       should.not.exist(err)
-      payment.should.eql(_payment)
+      paymentDoc.should.eql(payment.attributes())
       done()
