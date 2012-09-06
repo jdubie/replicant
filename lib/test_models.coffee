@@ -72,6 +72,7 @@ m.TestUser = class TestUser
 
     insertUser = (callback) =>
       async.parallel
+        flush: (cb) -> config.jobs.client.flushall(cb)
         _userDoc: (cb) =>
           userDoc =
             _id: @couchUser
