@@ -29,6 +29,18 @@ module.exports.dbUrl = url.format({protocol,hostname,port})
 module.exports.nano = require('nano')(url.format({protocol,hostname,port}))
 module.exports.nanoAdmin = require('nano')(url.format({protocol,hostname,port,auth}))
 
+db = {}
+
+## export db convience function
+nano = require('nano')
+db.user = (userId) -> nano(url.format({protocol, auth, hostname, port})).use(getUserDbName(userId))
+db.main = () -> nano(url.format({protocol, auth, hostname, port})).use('lifeswap')
+db.mapper = () -> nano(url.format({protocol, auth, hostname, port})).use('mapper')
+db.constable = () -> nano(url.format({protocol, auth, hostname, port})).use('drunk_tank')
+
+module.exports.db = db
+
+
 # Admins - todo rethink this
 switch process.env.ENV
   when 'PROD', 'STAGE'

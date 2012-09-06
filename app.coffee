@@ -518,24 +518,29 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers', 'refer_emails']
     debug "POST /#{model}"
     debug "   req.userCtx", req.userCtx
     userCtx = req.userCtx   # from the app.all route
-    userDbName = h.getUserDbName(userId: userCtx.user_id)
     doc = req.body
+    # unauthorized
+    if userCtx.name isnt doc.name and not ('constable' in userCtx.roles)
+      return res.send(403)
+
     _id = doc._id
     ctime = mtime = Date.now()
     doc.ctime = ctime
     doc.mtime = mtime
-    opts =
-      method: 'POST'
-      url: "#{config.dbUrl}/#{userDbName}"
-      headers: req.headers
-      json: doc
-    h.request opts, (err, body) ->
-      debug '   after post', err, body
+    async.series
+      _rev: (next) ->
+        callback = (err, res) ->
+          return next(err) if err
+          next(null, res.rev)
+        config.db.constable().insert(doc, doc._id, h.nanoCallback(callback))
+      replicate: (next) ->
+        h.replicateOut([doc.user_id], [doc._id],next)
+      notify: (next) ->
+        h.createSimpleCreateNotification(model, doc, next)
+    , (err, resp) ->
       return h.sendError(res, err) if err
-      _rev = body.rev
-      h.createSimpleCreateNotification model, doc, (err) ->
-        return h.sendError(res, err) if err
-        res.json(201, {_id, _rev, mtime, ctime})
+      _rev = resp._rev
+      res.json(201, {_id, _rev, mtime, ctime})
 
   ## PUT /models/:id
   app.put "/#{model}/:id", (req, res) ->

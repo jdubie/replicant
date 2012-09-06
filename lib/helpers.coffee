@@ -191,4 +191,18 @@ h.request = (opts, callback) ->
     callback(error, body)
 
 
+# replicateOut
+#
+# @description replicate from constable DB out to user databases
+# @param userIds {Array.<String>}
+# @param docIds {Array.<String>}
+#
+h.replicateOut = (userIds, docIds, callback) ->
+  replicate = (userId, cb) ->
+    userDbName = h.getUserDbName({userId})
+    opts = create: true, doc_ids: docIds
+    config.nanoAdmin.db.replicate('drunk_tank', userDbName, opts, h.nanoCallback(cb))
+  async.map(userIds, replicate, callback)
+
+
 module.exports = h
