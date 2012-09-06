@@ -504,7 +504,7 @@ m.TestPayment = class TestPayment
       event_id: "event_id_#{id}"
       card_id: "card_id_#{id}"
       amount: 69
-      status: '1'
+      status: '1'     # unpaid
       
     opts ?= {}
     _.defaults(opts, def)
@@ -594,6 +594,82 @@ m.TestCard = class TestCard
     @userDb.get @_id, (err, userDoc) =>
       return callback() if err?   # should error
       @userDb.destroy(@_id, userDoc._rev, callback)
+
+
+m.TestEvent = class TestEvent
+  @attributes: [
+    '_id'
+    '_rev'
+    'type'
+    'ctime'
+    'mtime'
+    'state'
+    'swap_id'
+    'date'
+    #'hosts'  # client-side
+    #'guests' # client-side
+    'card_id'
+  ]
+
+  attributes: =>
+    result = {}
+    for key in @constructor.attributes when key of this
+      result[key] = @[key]
+    result
+
+  constructor: (id, @guests, @hosts, @swap, opts) ->
+
+    def =
+      _id: id
+      type: 'event'
+      ctime: 12345
+      mtime: 12345
+      state: 'requested'    # put EVENT_STATE.requested
+      swap_id: swap._id
+      
+    opts ?= {}
+    _.defaults(opts, def)
+    _.extend(this, opts)
+
+    @users = []
+    @users.push(guest) for guest in @guests
+    @users.push(host) for host in @hosts
+    @mapperDb = config.nanoAdmin.db.use('mapper')
+
+
+  create: (callback) =>
+    createOneEvent = (user, callback) =>
+      userDb = config.nanoAdmin.db.use("users_#{user._id}")
+      userDb.insert @attributes(), @_id, (err, res) =>
+        return callback(err) if err
+        @_rev = res.rev
+        callback()
+    createEvent = (callback) =>
+      async.map(@users, createOneEvent, callback)
+    insertIntoMapper = (callback) =>
+      mapperDoc =
+        _id   : @_id
+        guests: (guest._id for guest in @guests)
+        hosts : (host._id for host in @hosts)
+      @mapperDb.insert(mapperDoc, @_id, callback)
+
+    async.parallel([createEvent, insertIntoMapper], callback)
+
+
+  destroy: (callback) =>
+    destroyOneEvent = (user, callback) =>
+      userDb = config.nanoAdmin.db.use("users_#{user._id}")
+      userDb.get @_id, (err, eventDoc) =>
+        return callback() if err?
+        userDb.destroy(@_id, eventDoc._rev, callback)
+    destroyEvent = (callback) =>
+      async.map(@users, destroyOneEvent, callback)
+    removeFromMapper = (callback) =>
+      @mapperDb.get @_id, (err, mapperDoc) =>
+        return callback() if err?
+        @mapperDb.destroy(@_id, mapperDoc._rev, callback)
+
+    async.parallel([destroyEvent, removeFromMapper], callback)
 
 
 module.exports = m

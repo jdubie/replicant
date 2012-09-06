@@ -4,113 +4,70 @@ util    = require('util')
 request = require('request')
 kue     = require('kue')
 
-{nanoAdmin, nano, ADMINS, jobs} = require('config')
-{getUserDbName, hash} = require('lib/helpers')
+{nanoAdmin, jobs} = require('config')
+{getUserDbName} = require('lib/helpers')
 {EVENT_STATE} = require('../../../../lifeswap/userdb/shared/constants')
+{TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
 
-describe 'PUT /events/:id', () ->
+describe 'yyy PUT /events/:id', () ->
 
-  ## from the test/toy data
-  _username = hash('user2@test.com')
-  _userId = 'user2_id'
-  _password = 'pass2'
-  _hosts = ['user1_id']
-  _guests = ['user2_id']
-  _allUsers = (user for user in _hosts)
-  _allUsers.push(user) for user in _guests
-  _allUsers.push(user) for user in ADMINS
-  cookie = null
-  ctime = mtime = 12345
-  _event =
-    _id: 'puteventid'
-    type: 'event'
-    state: EVENT_STATE.requested
-    swap_id: 'swap1'
-    ctime: ctime
-    mtime: mtime
-
-  mainDb = nanoAdmin.db.use('lifeswap')
+  guest = new TestUser('put_events_id_guest')
+  host  = new TestUser('put_events_id_host')
+  swap  = new TestSwap('put_events_id_swap', host)
+  event = new TestEvent('put_events_id', [guest], [host], swap)
 
   before (ready) ->
     ## start webserver
     app = require('app')
-    ## authenticate user (host of swap)
-    authUser = (cb) ->
-      nano.auth _username, _password, (err, body, headers) ->
-        should.not.exist(err)
-        should.exist(headers and headers['set-cookie'])
-        cookie = headers['set-cookie'][0]
-        cb()
-    ## insert event
-    insertEvent = (userId, cb) ->
-      userDb = nanoAdmin.db.use(getUserDbName({userId}))
-      userDb.insert _event, _event._id, (err, res) ->
-        _event._rev = res.rev
-        cb()
-    insertEvents = (cb) -> async.map(_allUsers, insertEvent, cb)
-    ##
-    insertIntoMapper = (cb) ->
-      mapperDb = nanoAdmin.db.use('mapper')
-      mapperDoc =
-        _id: _event._id
-        guests: _guests
-        hosts: _hosts
-      mapperDb.insert(mapperDoc, _event._id, cb)
-    ## in parallel
-    async.parallel [
-      authUser
-      insertEvents
-      insertIntoMapper
+    ## create users, swap, and event
+    async.series [
+      (cb) -> async.parallel([guest.create, host.create], cb)
+      swap.create
+      event.create
     ], ready
 
 
   after (finished) ->
-    ## destroy event
-    destroyEvent = (userId, cb) ->
-      userDb = nanoAdmin.db.use(getUserDbName({userId}))
-      userDb.destroy(_event._id, _event._rev, cb)
-    ## destroy mapper document of event
-    destroyMapperEvent = (cb) ->
-      mapperDb = nanoAdmin.db.use('mapper')
-      mapperDb.get _event._id, (err, mapperDoc) ->
-        mapperDb.destroy(mapperDoc._id, mapperDoc._rev, cb)
-    flushRedis = (callback) -> jobs.client.flushall(callback)
-    ## in parallel
-    async.parallel [
-      (cb) -> async.map(_allUsers, destroyEvent, cb)
-      destroyMapperEvent
-      flushRedis
+    ## destroy event and swap, then users
+    async.series [
+      (cb) -> async.parallel([event.destroy, swap.destroy], cb)
+      (cb) -> async.parallel([guest.destroy, host.destroy], cb)
+      (cb) -> jobs.client.flushall(cb)    ## move this into parallel
     ], finished
 
   it 'should PUT the event', (done) ->
-    _event.state = EVENT_STATE.confirmed
+    event.state = EVENT_STATE.confirmed
     opts =
       method: 'PUT'
-      url: "http://localhost:3001/events/#{_event._id}"
-      json: _event
-      headers: cookie: cookie
+      url: "http://localhost:3001/events/#{event._id}"
+      json: event.attributes()
+      headers: cookie: host.cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
-      res.statusCode.should.eql(201)
+      res.should.have.property('statusCode', 201)
       body.should.have.keys(['_rev', 'mtime'])
       for key, val of body
-        _event[key] = val
+        event[key] = val
       done()
 
   it 'should reflect the change in all users DBs', (done) ->
-    getEvent = (userId, cb) ->
-      userDb = nanoAdmin.db.use(getUserDbName({userId}))
-      userDb.get _event._id, (err, event) ->
+    getEvent = (user, callback) ->
+      userDb = nanoAdmin.db.use(getUserDbName(userId: user._id))
+      userDb.get event._id, (err, eventDoc) ->
         should.not.exist(err)
-        event.should.eql(_event)
-        cb()
-    async.map(_allUsers, getEvent, done)
+        eventDoc.should.eql(event.attributes())
+        callback()
+    async.parallel [
+      (cb) -> getEvent(guest, cb)
+      (cb) -> getEvent(host, cb)
+    ], done
 
   it 'should queue up emails to be sent to the users', (done) ->
     kue.Job.get 1, (err, res) ->
+      console.error err if err?
       res.should.have.property('data')
       res.data.should.have.property('event')
-      res.data.should.have.property('userId', _userId)
+      res.data.should.have.property('userId', host._id)
       res.data.should.have.property('rev')
       done()
