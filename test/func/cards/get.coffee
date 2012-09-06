@@ -17,9 +17,10 @@ describe 'yyyy GET /cards', () ->
 
     before (ready) ->
       app = require('app')
-      user.create () ->
+      createCards = (cb) ->
         create = (card, callback) -> card.create(callback)
-        async.map(cards, create, ready)
+        async.map(cards, create, cb)
+      async.series([user.create, createCards], ready)
 
     after (finished) ->
       user.destroy(finished)
