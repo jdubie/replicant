@@ -1,69 +1,62 @@
 should = require('should')
 async = require('async')
-util = require('util')
 request = require('request')
 
-{nanoAdmin, nano, dbUrl, ADMINS} = require('config')
-{getUserDbName, hash} = require('lib/helpers')
+{nanoAdmin} = require('config')
+{getUserDbName} = require('lib/helpers')
+{TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
 
-describe 'GET /events', () ->
+describe 'yyy GET /events', () ->
 
-  ## from the test/toy data
-  _username = hash('user2@test.com')
-  _userId = 'user2_id'
-  _password = 'pass2'
-  _eventsNano = []
-  cookie = null
+  user1  = new TestUser('get_events_user2')
+  user2  = new TestUser('get_events_user1')
+  swap1  = new TestSwap('get_events_swap1', user1)
+  event1 = new TestEvent('get_events1', [user2], [user1], swap1)
+  swap2  = new TestSwap('get_events_swap2', user2)
+  event2 = new TestEvent('get_events2', [user1], [user2], swap2)
 
-  mainDb = nanoAdmin.db.use('lifeswap')
-  usersDb = nanoAdmin.db.use('_users')
-  userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
+  userDb = nanoAdmin.db.use(getUserDbName(userId: user1._id))
 
-  describe 'correctness:', () ->
+  before (ready) ->
+    ## start webserver
+    app = require('app')
+    ## create users, swaps, and events
+    async.series [
+      (cb) -> async.parallel([user1.create, user2.create], cb)
+      (cb) -> async.parallel([swap1.create, swap2.create], cb)
+      (cb) -> async.parallel([event1.create, event2.create], cb)
+    ], ready
 
-    before (ready) ->
-      ## start webserver
-      app = require('app')
-      ## authenticate user
-      authUser = (cb) ->
-        nano.auth _username, _password, (err, body, headers) ->
-          should.not.exist(err)
-          should.exist(headers and headers['set-cookie'])
-          cookie = headers['set-cookie'][0]
-          cb()
-      ## get events
-      getEvents = (cb) ->
-        opts =
-          key: 'event'
-          include_docs: true
-        userDb.view 'userddoc', 'docs_by_type', opts, (err, res) ->
-          _eventsNano = (row.doc for row in res.rows)
-          cb()
-      insertEvents = (cb) -> async.map(_events, insertEvent, cb)
-      ## in parallel
-      async.parallel [
-        authUser
-        getEvents
-      ], (err, res) ->
-        ready()
+  after (finished) ->
+    ## destroy events and swaps, then users
+    async.series [
+      (cb) -> async.parallel [
+        event1.destroy
+        event2.destroy
+        swap1.destroy
+        swap2.destroy
+        ], cb
+      (cb) -> async.parallel([user1.destroy, user2.destroy], cb)
+    ], finished
 
 
-    it 'should GET all events', (done) ->
-      opts =
-        method: 'GET'
-        url: "http://localhost:3001/events"
-        json: true
-        headers: cookie: cookie
-      request opts, (err, res, events) ->
-        should.not.exist(err)
-        res.statusCode.should.eql(200)
-        ## TODO: should probably make sure these are correct!
-        #         but for now just delete them
-        for event in events
-          event.should.have.property('hosts')
-          delete event.hosts
-          event.should.have.property('guests')
-          delete event.guests
-        events.should.eql(_eventsNano)
-        done()
+  it 'should GET all events', (done) ->
+    opts =
+      method: 'GET'
+      url: "http://localhost:3001/events"
+      json: true
+      headers: cookie: user1.cookie
+    request opts, (err, res, events) ->
+      should.not.exist(err)
+      res.should.have.property('statusCode', 200)
+      ## TODO: should probably make sure these are correct!
+      #         but for now just delete them
+      eventsNano = [event1.attributes(), event2.attributes()]
+      for _event in events
+        _event.should.have.property('hosts')
+        delete _event.hosts
+        _event.should.have.property('guests')
+        delete _event.guests
+      events.should.eql(eventsNano)
+      done()

@@ -1,65 +1,45 @@
 should = require('should')
 async = require('async')
-util = require('util')
 request = require('request')
 
-{nanoAdmin, nano} = require('config')
-{getUserDbName, hash} = require('lib/helpers')
-{EVENT_STATE} = require('../../../../lifeswap/userdb/shared/constants')
+{nanoAdmin} = require('config')
+{getUserDbName} = require('lib/helpers')
+{TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
 
-describe 'DELETE /events/:id', () ->
+describe 'yyy DELETE /events/:id', () ->
 
-  ## simple test - for now should just 403 (forbidden)
-  _username = hash('user2@test.com')
-  _userId = 'user2_id'
-  _password = 'pass2'
-  cookie = null
-  ctime = mtime = 12345
-  _event =
-    _id: 'deleteeventid'
-    type: 'event'
-    state: EVENT_STATE.requested
-    swap_id: 'swap1'
-    ctime: ctime
-    mtime: mtime
+  guest = new TestUser('delete_events_id_guest')
+  host  = new TestUser('delete_events_id_host')
+  swap  = new TestSwap('delete_events_id_swap', host)
+  event = new TestEvent('delete_events_id', [guest], [host], swap)
 
-  mainDb = nanoAdmin.db.use('lifeswap')
-  userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
+  userDb = nanoAdmin.db.use(getUserDbName(userId: guest._id))
 
   before (ready) ->
     ## start webserver
     app = require('app')
-    ## authenticate user
-    authUser = (callback) ->
-      nano.auth _username, _password, (err, body, headers) ->
-        should.not.exist(err)
-        should.exist(headers and headers['set-cookie'])
-        cookie = headers['set-cookie'][0]
-        callback()
-    ## insert event
-    insertEvent = (cb) ->
-      userDb.insert _event, _event._id, (err, res) ->
-        _event._rev = res.rev
-        cb()
-
-    async.parallel [
-      authUser
-      insertEvent
+    ## create users, swap, and event
+    async.series [
+      (cb) -> async.parallel([guest.create, host.create], cb)
+      swap.create
+      event.create
     ], ready
 
-
   after (finished) ->
-    ## destroy event
-    userDb.destroy(_event._id, _event._rev, finished)
+    ## destroy event and swap, then users
+    async.series [
+      (cb) -> async.parallel([event.destroy, swap.destroy], cb)
+      (cb) -> async.parallel([guest.destroy, host.destroy], cb)
+    ], finished
 
 
   it 'should return a 403 (forbidden)', (done) ->
     opts =
       method: 'DELETE'
-      url: "http://localhost:3001/swaps/#{_userId}"
+      url: "http://localhost:3001/swaps/#{guest._id}"
       json: true
-      headers: cookie: cookie
+      headers: cookie: guest.cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
       res.should.have.property('statusCode', 403)
@@ -67,7 +47,7 @@ describe 'DELETE /events/:id', () ->
 
 
   it 'should not delete \'event\' type entry in user db', (done) ->
-    userDb.get _event._id, (err, event) ->
+    userDb.get event._id, (err, eventDoc) ->
       should.not.exist(err)
-      event.should.eql(_event)
+      eventDoc.should.eql(event.attributes())
       done()
