@@ -671,5 +671,61 @@ m.TestEvent = class TestEvent
 
     async.parallel([destroyEvent, removeFromMapper], callback)
 
+m.TestMessage = class TestMessage
+  @attributes: [
+    '_id'
+    '_rev'
+    'type'
+    'name'
+    'user_id'
+    'ctime'
+    'mtime'
+    'event_id'
+    'message'
+    'read'
+  ]
+
+  attributes: =>
+    result = {}
+    for key in @constructor.attributes when key of this
+      result[key] = @[key]
+    result
+
+  constructor: (id, @user, @event, opts) ->
+
+    def =
+      _id: id
+      type: 'message'
+      name: @user.name
+      user_id: @user._id
+      ctime: 12345
+      mtime: 12345
+      event_id: @event._id
+      message: 'test message'
+      read: 'true'
+      
+    opts ?= {}
+    _.defaults(opts, def)
+    _.extend(this, opts)
+
+    @userDb = config.nanoAdmin.db.use("users_#{user._id}")
+
+  create: (callback) =>
+    # TODO: user mapper to get users?
+    #mapperDb = nanoAdmin.db.use('mapper')
+
+    insertMessage = (user, cb) =>
+      userDb = config.nanoAdmin.db.use(h.getUserDbName(userId: user._id))
+      userDb.insert @attributes(), @_id, (err, res) =>
+        cb(err) if err
+        @_rev = res.rev
+        cb()
+    allUsers = _.union(@event.guests, @event.hosts)
+    async.map(allUsers, insertMessage, callback)
+
+  destroy: (callback) =>
+    @userDb.get @_id, (err, userDoc) =>
+      return callback() if err?   # should error
+      @userDb.destroy(@_id, userDoc._rev, callback)
 
 module.exports = m
