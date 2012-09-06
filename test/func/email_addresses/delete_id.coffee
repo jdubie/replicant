@@ -3,62 +3,35 @@ async = require('async')
 util = require('util')
 request = require('request')
 
-{nanoAdmin, nano, dbUrl, ADMINS} = require('config')
-{getUserDbName, hash} = require('lib/helpers')
+{nanoAdmin} = require('config')
+{getUserDbName} = require('lib/helpers')
+{TestUser, TestEmailAddress} = require('lib/test_models')
 
 
-describe 'DELETE /email_addresses/:id', () ->
+describe 'yyy DELETE /email_addresses/:id', () ->
 
-  ## simple test - for now should just 403 (forbidden)
-  _username = hash('user2@test.com')
-  _userId = 'user2_id'
-  _password = 'pass2'
-  _ctime = _mtime = 12345
-  _email =
-    _id: 'deleteemailid'
-    type: 'email_address'
-    name: _username
-    user_id: _userId
-    email_address: 'user2@test.com'
-    ctime: _ctime
-    mtime: _mtime
-  cookie = null
+  user = new TestUser('delete_email_id_user')
+  emailAddress = new TestEmailAddress('delete_email_id', user)
 
-  userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
+  userDb = nanoAdmin.db.use(getUserDbName(userId: user._id))
 
   before (ready) ->
     ## start webserver
     app = require('app')
-    ## authenticate user
-    authUser = (callback) ->
-      nano.auth _username, _password, (err, body, headers) ->
-        should.not.exist(err)
-        should.exist(headers and headers['set-cookie'])
-        cookie = headers['set-cookie'][0]
-        callback()
-    ## insert email
-    insertEmail = (cb) ->
-      userDb.insert _email, _email._id, (err, res) ->
-        _email._rev = res.rev
-        cb()
-    ## in parrallel
-    async.parallel [
-      authUser
-      insertEmail
-    ], ready
-
+    ## insert user and email address
+    async.series([user.create, emailAddress.create], ready)
 
   after (finished) ->
-    ## destroy email
-    userDb.destroy(_email._id, _email._rev, finished)
+    ## destroy user (destroys email address as well)
+    user.destroy(finished)
 
 
   it 'should return a 403 (forbidden)', (done) ->
     opts =
       method: 'DELETE'
-      url: "http://localhost:3001/email_addresses/#{_userId}"
+      url: "http://localhost:3001/email_addresses/#{emailAddress._id}"
       json: true
-      headers: cookie: cookie
+      headers: cookie: user.cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
       res.should.have.property('statusCode', 403)
@@ -66,7 +39,7 @@ describe 'DELETE /email_addresses/:id', () ->
 
 
   it 'should not delete \'email_address\' type entry in user db', (done) ->
-    userDb.get _email._id, (err, email) ->
+    userDb.get emailAddress._id, (err, email) ->
       should.not.exist(err)
-      email.should.eql(_email)
+      email.should.eql(emailAddress.attributes())
       done()
