@@ -2,35 +2,23 @@ should = require('should')
 util = require('util')
 request = require('request')
 
-{nanoAdmin} = require('config')
-h = require('lib/helpers')
+{TestUser, TestRequest} = require('lib/test_models')
 
 
-describe 'GET /requests/:id', () ->
+describe 'yyy GET /requests/:id', () ->
 
-  _ctime = _mtime = 12345
-  _request =
-    _id: 'getrequestid'
-    type: 'request'
-    name: h.hash('user2@test.com')
-    user_id: 'user2_id'
-    title: 'GET requests'
-    ctime: _ctime
-    mtime: _mtime
-    foo: 'bar'
-
-  mainDb = nanoAdmin.db.use('lifeswap')
+  user = new TestUser('getrequestsidser')
+  _request = new TestRequest('getrequestsid', user)
 
   before (ready) ->
     ## start webserver
     app = require('app')
     ## insert request
-    mainDb.insert _request, _request._id, (err, res) ->
-      _request._rev = res.rev
-      ready()
+    _request.create(ready)
 
   after (finished) ->
-    mainDb.destroy(_request._id, _request._rev, finished)
+    ## destroy request
+    _request.destroy(finished)
 
   it 'should get the correct request', (done) ->
     opts =
@@ -39,5 +27,5 @@ describe 'GET /requests/:id', () ->
       json: true
     request opts, (err, res, requestDoc) ->
       should.not.exist(err)
-      requestDoc.should.eql(_request)
+      requestDoc.should.eql(_request.attributes())
       done()

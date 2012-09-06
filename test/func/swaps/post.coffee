@@ -1,8 +1,8 @@
 should  = require('should')
 async   = require('async')
 request = require('request')
-
 kue = require('kue')
+
 config = require('config')
 {TestUser, TestSwap} = require('lib/test_models')
 
@@ -10,6 +10,9 @@ describe 'yyy POST /swaps', () ->
 
   user = new TestUser('postswapsuser')
   swap = new TestSwap('postswap', user)
+
+
+  mainDb = config.nanoAdmin.db.use('lifeswap')
 
   before (ready) ->
     ## start webserver
@@ -38,6 +41,12 @@ describe 'yyy POST /swaps', () ->
       body.should.have.keys(['_rev', 'mtime', 'ctime'])
       for key, val of body
         swap[key] = val
+      done()
+
+  it 'should have the swap in the DB', (done) ->
+    mainDb.get swap._id, (err, _swap) ->
+      should.not.exist(err)
+      _swap.should.eql(swap.attributes())
       done()
 
   it 'should add notification', (done) ->

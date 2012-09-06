@@ -3,7 +3,7 @@ async = require('async')
 util = require('util')
 request = require('request')
 
-{nano, nanoAdmin} = require('config')
+{nanoAdmin} = require('config')
 {TestUser, TestRequest} = require('lib/test_models')
 
 
