@@ -1,27 +1,36 @@
-should = require('should')
-util = require('util')
+should  = require('should')
 request = require('request')
+async   = require('async')
 
-{nano} = require('config')
-{createUser} = require('lib/replicant')
+{TestUser, TestSwap} = require('lib/test_models')
 
 
-describe 'GET /swaps', () ->
+describe 'yyy GET /swaps', () ->
 
   swapsNano = []
+  user1 = new TestUser('getswapsuser1')
+  user2 = new TestUser('getswapsuser2')
+  swap1 = new TestSwap('getswaps1', user1)
+  swap2 = new TestSwap('getswaps2', user2)
 
   before (ready) ->
     # start webserver
     app = require('app')
+    ## insert users and swaps
+    async.parallel [
+      user1.create
+      user2.create
+      swap1.create
+      swap2.create
+    ], ready
 
-    db = nano.db.use('lifeswap')
-    opts =
-      key: 'swap'
-      include_docs: true
-    db.view 'lifeswap', 'docs_by_type', opts, (err, res) ->
-      should.not.exist(err)
-      swapsNano = (row.doc for row in res.rows)
-      ready()
+  after (finished) ->
+    async.parallel [
+      user1.destroy
+      user2.destroy
+      swap1.destroy
+      swap2.destroy
+    ], finished
 
   it 'should provide a list of all the correct swaps', (done) ->
     opts =
@@ -30,5 +39,6 @@ describe 'GET /swaps', () ->
       json: true
     request opts, (err, res, swaps) ->
       should.not.exist(err)
+      swapsNano = [swap1.attributes(), swap2.attributes()]
       swaps.should.eql(swapsNano)
       done()
