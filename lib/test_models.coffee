@@ -64,6 +64,7 @@ m.TestUser = class TestUser
     @usersDb = config.nanoAdmin.db.use('_users')
     @userDbName = h.getUserDbName(userId: @_id)
     @couchUser = "org.couchdb.user:#{@name}"
+    @userDb = config.nanoAdmin.db.use(@userDbName)
 
   create: (callback) =>
 
@@ -134,6 +135,33 @@ m.TestUser = class TestUser
       destroyUserDb
       flushRedis
     ], callback
+
+  getAllMessages: (callback) =>
+    @userDb.view 'userddoc', 'docs_by_type', key: 'message', include_docs: true, (err, body) ->
+      msgs = _.map body.rows, (row) -> row.doc
+      callback(err, msgs)
+
+  getAllReadDocs: (callback) =>
+    @userDb.view 'userddoc', 'docs_by_type', key: 'read', include_docs: true, (err, body) ->
+      read_docs = _.map body.rows, (row) -> row.doc
+      callback(err, read_docs)
+
+  getMessages: (callback) =>
+    async.parallel {getAllMessages, getAllReadDocs}, (err, res) =>
+      return callback(err) if err
+
+      messages = res.getAllMessages
+      readDocs = res.getAllReadDocs
+
+      for message in messages
+        message.read = false
+
+      for message in messages
+        for readDoc in readDocs
+          if message._id is readDoc.message_id
+            message.read = true
+
+      callback(null, messages)
 
 
 m.TestSwap = class TestSwap
@@ -710,16 +738,34 @@ m.TestMessage = class TestMessage
 
     @userDb = config.nanoAdmin.db.use("users_#{user._id}")
 
+  getReadDoc: () =>
+    doc =
+      _id: Math.random().toString().substring(2) # HACK
+      type: 'read'
+      name: @user.name
+      user_id: @user._id
+      ctime: 12345
+      mtime: 12345
+      event_id: @event._id
+      message_id: @_id
+
   create: (callback) =>
     # TODO: user mapper to get users?
     #mapperDb = nanoAdmin.db.use('mapper')
 
     insertMessage = (user, cb) =>
       userDb = config.nanoAdmin.db.use(h.getUserDbName(userId: user._id))
-      userDb.insert @attributes(), @_id, (err, res) =>
-        cb(err) if err
-        @_rev = res.rev
-        cb()
+      async.parallel [
+        (_cb) =>
+          userDb.insert @attributes(), @_id, (err, res) =>
+            _cb(err) if err
+            @_rev = res.rev
+            _cb()
+            #(_cb) =>
+            #  if @read then userDb.insert(@getReadDoc(), @_id, _cb)
+            #  else _cb()
+      ], cb
+
     allUsers = _.union(@event.guests, @event.hosts)
     async.map(allUsers, insertMessage, callback)
 
