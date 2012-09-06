@@ -34,7 +34,7 @@ switch process.env.ENV
   when 'PROD', 'STAGE'
     ADMINS = []
   else
-    ADMINS = ['tester_id']    # the user_id!
+    ADMINS = []    # the user_id!
 
 module.exports.ADMINS = ADMINS
 
