@@ -31,7 +31,6 @@ describe 'yyyy DELETE /payments/:id', () ->
       res.should.have.property('statusCode', 403)
       done()
 
-
   it 'should not delete \'payment\' type entry in user db', (done) ->
     userDb.get payment._id, (err, paymentDoc) ->
       should.not.exist(err)
