@@ -8,19 +8,21 @@ request = require('request')
 
 describe 'GET /users', () ->
 
-  _users = []
+  usersNano = []
 
   before (ready) ->
     # start webserver
     app = require('app')
 
-    # create two users
-    async.parallel
-      user1: createUser(user: _id: 'getusers1')
-
-  after (finished) ->
-
-    # delete both users
+    ## get the _correct_ list of users
+    db = nano.db.use('lifeswap')
+    opts =
+      key: 'user'
+      include_docs: true
+    db.view 'lifeswap', 'docs_by_type', opts, (err, res) ->
+      should.not.exist(err)
+      usersNano = (row.doc for row in res.rows)
+      ready()
 
   it 'should provide a list of all the correct users', (done) ->
     opts =
