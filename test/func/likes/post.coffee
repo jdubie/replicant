@@ -2,53 +2,47 @@ should = require('should')
 util = require('util')
 request = require('request')
 
+{TestUser} = require('lib/test_models')
 {jobs, nanoAdmin, nano} = require('config')
 {hash} = require('lib/helpers')
 kue = require('kue')
 debug = require('debug')('replicant/test/func/likes/post')
 
 
-describe 'POST /likes', () ->
+describe 'yyyy POST /likes', () ->
 
-  _username = hash('user2@test.com')
-  _userId = 'user2_id'
-  _password = 'pass2'
-  ctime = mtime = 12345
+  user = new TestUser('user_post_likes')
+
+  # TODO: make this test model
+  #new TestLike('post_likes', user)
+
   _like =
     _id: 'postlikes'
     type: 'like'
-    name: _username
+    name: user.name
     user_id: 'user2'
     swap_id: 'swap1'
-    ctime: ctime
-    mtime: mtime
     foo: 'bar'
-  cookie = null
 
   mainDb = nanoAdmin.db.use('lifeswap')
 
   before (ready) ->
     ## start webserver
-    app = require('../../../app')
+    app = require('app')
+    user.create(ready)
 
-    ## authenticate user
-    nano.auth _username, _password, (err, body, headers) ->
-      should.not.exist(err)
-      should.exist(headers and headers['set-cookie'])
-      cookie = headers['set-cookie'][0]
-      jobs.client.flushall(ready)
 
   after (finished) ->
     mainDb.destroy _like._id, _like._rev, (err) ->
       return finished(err) if err
-      jobs.client.flushall(finished)
+      user.destroy(finished)
 
   it 'should return _rev, mtime, ctime', (done) ->
     opts =
       method: 'POST'
       url: "http://localhost:3001/likes"
       json: _like
-      headers: cookie: cookie
+      headers: cookie: user.cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
       res.statusCode.should.eql(201)

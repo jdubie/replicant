@@ -6,7 +6,7 @@ request = require('request')
 {nanoAdmin} = require('config')
 
 
-describe 'GET /likes', () ->
+describe 'yyyy GET /likes', () ->
 
   ctime = mtime = 12345
   _likes = [

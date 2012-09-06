@@ -3,58 +3,51 @@ async = require('async')
 util = require('util')
 request = require('request')
 
+{TestUser} = require('lib/test_models')
 {nanoAdmin, nano} = require('config')
 {hash} = require('lib/helpers')
 
 
-describe 'PUT /likes/:id', () ->
+describe 'yyyy PUT /likes/:id', () ->
 
   ## from toy data
-  _username = hash('user2@test.com')
-  _userId = 'user2_id'
-  _password = 'pass2'
+  user = new TestUser('put_likes_id')
   ctime = mtime = 12345
   _like =
     _id: 'putlikesid'
     type: 'like'
-    name: _username
+    name: user.name
     user_id: 'user2'
     swap_id: 'swap1'
     ctime: ctime
     mtime: mtime
     foo: 'bar'
 
-  cookie = null
-
   mainDb = nanoAdmin.db.use('lifeswap')
 
   before (ready) ->
     ## start webserver
     app = require('app')
-    ## authenticate user
-    authUser = (callback) ->
-      nano.auth _username, _password, (err, body, headers) ->
-        should.not.exist(err)
-        should.exist(headers and headers['set-cookie'])
-        cookie = headers['set-cookie'][0]
-        callback()
+
     ## insert like
     insertLike = (callback) ->
       mainDb.insert _like, (err, res) ->
         should.not.exist(err)
         _like._rev = res.rev
         callback()
+
     ## in parallel
     async.series [
-      authUser
+      user.create
       insertLike
     ], ready
 
 
   after (finished) ->
     ## destroy like
-    mainDb.destroy(_like._id, _like._rev, finished)
-
+    mainDb.destroy _like._id, _like._rev, (err) ->
+      return finished(err) if err
+      user.destroy(finished)
 
   it 'should return 403 (cannot modify likes)', (done) ->
     oldFoo = _like.foo
@@ -63,7 +56,7 @@ describe 'PUT /likes/:id', () ->
       method: 'PUT'
       url: "http://localhost:3001/likes/#{_like._id}"
       json: _like
-      headers: cookie: cookie
+      headers: cookie: user.cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
       res.statusCode.should.eql(403)
