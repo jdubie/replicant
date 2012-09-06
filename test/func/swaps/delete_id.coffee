@@ -16,7 +16,6 @@ describe 'yyy DELETE /swaps/:id', () ->
   swap = new TestSwap('deleteswap', user)
 
   mainDb = nanoAdmin.db.use('lifeswap')
-  usersDb = nanoAdmin.db.use('_users')
 
   before (ready) ->
     ## start webserver
