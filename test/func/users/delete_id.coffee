@@ -2,33 +2,21 @@ should = require('should')
 async = require('async')
 util = require('util')
 request = require('request')
+{TestUser} = require('lib/test_models')
 
 config = require('config')
 h = require('lib/helpers')
 
 
-describe 'DELETE /users/:id', () ->
+describe 'zzzz DELETE /users/:id', () ->
 
   ## simple test - for now should just 403 (forbidden)
 
-  user =
-    _id: 'deleteuser'
-    type: 'user'
-    ctime: 12345
-    mtime: 12345
-    foo: 'delete bar'
-    email_address: 'deleteuser@thelifeswap.com'
-    password: 'deletepass'
-    # name is computed inside create user
+  user = new TestUser('deleteuser')
 
   #_adminName = h.hash('tester@test.com')
   #_adminPass = 'tester'
   #_adminCookie = null
-
-  # incoming data from before
-  _userRev    = null
-  _userCookie = null
-  couchUser   = null
 
   mainDb = config.nanoAdmin.db.use('lifeswap')
   usersDb = config.nanoAdmin.db.use('_users')
@@ -38,16 +26,11 @@ describe 'DELETE /users/:id', () ->
     ## start webserver
     app = require('app')
 
-    h.createUser {user: user, roles: []}, (err, res) ->
-      return ready(err) if err
-      {couchUser, _rev, cookie} = res
-      _userRev = _rev
-      _userCookie = cookie
-      ready()
+    user.create(ready)
 
 
   after (finished) ->
-    h.destroyUser(user, finished)
+    user.destroy(finished)
 
   describe 'regular user', () ->
     it 'should return a 403 (forbidden)', (done) ->
@@ -55,22 +38,22 @@ describe 'DELETE /users/:id', () ->
         method: 'DELETE'
         url: "http://localhost:3001/users/#{user._id}"
         json: true
-        headers: cookie: _userCookie
+        headers: cookie: user.cookie
       request opts, (err, res, body) ->
         should.not.exist(err)
         res.should.have.property('statusCode', 403)
         done()
 
     it 'should not delete _users entry', (done) ->
-      usersDb.get couchUser, (err, userDoc) ->
+      usersDb.get user.couchUser, (err, userDoc) ->
         should.not.exist(err)
-        userDoc.should.have.property('_id', couchUser)
+        userDoc.should.have.property('_id', user.couchUser)
         done()
 
     it 'should not delete \'user\' type entry in lifeswap db', (done) ->
       mainDb.get user._id, (err, userDoc) ->
         should.not.exist(err)
-        userDoc.should.eql(user)
+        userDoc.should.eql(user.attributes())
         done()
 
     it 'should not delete user DB', (done) ->
@@ -93,7 +76,7 @@ describe 'DELETE /users/:id', () ->
         #        done()
         #
         #    it 'should delete the _users entry', (done) ->
-        #      usersDb.get couchUser, (err, userDoc) ->
+        #      usersDb.get user.couchUser, (err, userDoc) ->
         #        should.exist(err)
         #        err.should.have.property('status_code', 404)
         #        done()
