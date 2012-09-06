@@ -1,8 +1,9 @@
 should = require('should')
 util = require('util')
 request = require('request')
+async = require('async')
 
-{TestUser} = require('lib/test_models')
+{TestUser, TestLike} = require('lib/test_models')
 {jobs, nanoAdmin, nano} = require('config')
 {hash} = require('lib/helpers')
 kue = require('kue')
@@ -12,49 +13,37 @@ debug = require('debug')('replicant/test/func/likes/post')
 describe 'yyyy POST /likes', () ->
 
   user = new TestUser('user_post_likes')
-
-  # TODO: make this test model
-  #new TestLike('post_likes', user)
-
-  _like =
-    _id: 'postlikes'
-    type: 'like'
-    name: user.name
-    user_id: 'user2'
-    swap_id: 'swap1'
-    foo: 'bar'
+  like = new TestLike('post_likes', user)
 
   mainDb = nanoAdmin.db.use('lifeswap')
 
   before (ready) ->
-    ## start webserver
     app = require('app')
     user.create(ready)
 
-
   after (finished) ->
-    mainDb.destroy _like._id, _like._rev, (err) ->
-      return finished(err) if err
-      user.destroy(finished)
+    async.parallel([like.destroy, user.destroy], finished)
 
   it 'should return _rev, mtime, ctime', (done) ->
     opts =
       method: 'POST'
       url: "http://localhost:3001/likes"
-      json: _like
+      json: like.attributes()
       headers: cookie: user.cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
       res.statusCode.should.eql(201)
       body.should.have.keys(['_rev', 'mtime', 'ctime'])
       for key, val of body
-        _like[key] = val
+        like[key] = val
       done()
 
   it 'should actually put the document in the DB', (done) ->
-    mainDb.get _like._id, (err, like) ->
+    mainDb.get like._id, (err, likeDoc) ->
       should.not.exist(err)
-      like.should.eql(_like)
+      debug 'like.attributes()', like.attributes()
+      debug 'likeDoc', likeDoc
+      likeDoc.should.eql(like.attributes())
       done()
 
   it 'should add notification', (done) ->
@@ -63,6 +52,6 @@ describe 'yyyy POST /likes', () ->
       job.should.have.property('type', 'notification.like.create')
       job.should.have.property('data')
       job.data.should.have.property('like')
-      job.data.like.should.have.property('user_id', _like.user_id)
-      job.data.like.should.have.property('swap_id', _like.swap_id)
+      job.data.like.should.have.property('user_id', like.user_id)
+      job.data.like.should.have.property('swap_id', like.swap_id)
       done()
