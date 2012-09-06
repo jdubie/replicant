@@ -16,6 +16,9 @@ describe 'yyyy GET /users/:id', () ->
     user = new TestUser('get_users_id')
     user.create(ready)
 
+  after (finished) ->
+    user.destroy(finished)
+
   it 'should get the correct user\'s document', (done) ->
     opts =
       method: 'GET'

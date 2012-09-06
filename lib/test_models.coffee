@@ -125,11 +125,13 @@ m.TestUser = class TestUser
       config.nanoAdmin.db.list (err, dbs) =>
         return callback() if not (@userDbName in dbs)  # should callback
         config.nanoAdmin.db.destroy(@userDbName, callback)
+    flushRedis = (callback) -> config.jobs.client.flushall(callback)
 
     async.parallel [
       destroyUser
       destroyLifeswapUser
       destroyUserDb
+      flushRedis
     ], callback
 
 
