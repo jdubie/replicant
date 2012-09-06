@@ -9,7 +9,7 @@ request = require('request')
 {TestReview} = require('lib/test_models')
 
 
-describe 'zzzz DELETE /reviews/:id', () ->
+describe 'yyyy DELETE /reviews/:id', () ->
 
   ## simple test - for now should just 403 (forbidden)
 

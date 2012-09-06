@@ -291,6 +291,10 @@ m.TestReview = class TestReview
 
   constructor: (id, user, opts) ->
 
+    user ?= {}
+    user.name ?= "user_name_#{id}"
+    user._id ?= "user_id_#{id}"
+
     def =
       _id: id
       type: 'review'
