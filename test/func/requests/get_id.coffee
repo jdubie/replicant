@@ -2,27 +2,23 @@ should = require('should')
 util = require('util')
 request = require('request')
 
-{nanoAdmin} = require('config')
+{TestUser, TestRequest} = require('lib/test_models')
 
 
-describe 'GET /requests/:id', () ->
+describe 'yyy GET /requests/:id', () ->
 
-  _request =
-    _id: 'getrequestid'
-    type: 'request'
-
-  mainDb = nanoAdmin.db.use('lifeswap')
+  user = new TestUser('getrequestsidser')
+  _request = new TestRequest('getrequestsid', user)
 
   before (ready) ->
     ## start webserver
     app = require('app')
     ## insert request
-    mainDb.insert _request, _request._id, (err, res) ->
-      _request._rev = res.rev
-      ready()
+    _request.create(ready)
 
   after (finished) ->
-    mainDb.destroy(_request._id, _request._rev, finished)
+    ## destroy request
+    _request.destroy(finished)
 
   it 'should get the correct request', (done) ->
     opts =
@@ -31,5 +27,5 @@ describe 'GET /requests/:id', () ->
       json: true
     request opts, (err, res, requestDoc) ->
       should.not.exist(err)
-      requestDoc.should.eql(_request)
+      requestDoc.should.eql(_request.attributes())
       done()

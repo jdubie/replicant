@@ -3,58 +3,29 @@ util = require('util')
 async = require('async')
 request = require('request')
 
+{TestLike} = require('lib/test_models')
 {nanoAdmin} = require('config')
 
 
-describe 'GET /likes', () ->
+describe 'yyyy GET /likes', () ->
 
-  ctime = mtime = 12345
-  _likes = [
-    {
-      _id: 'getlikes1'
-      type: 'like'
-      name: '-hash2-'
-      user_id: 'user2'
-      swap_id: 'swap1'
-      ctime: ctime
-      mtime: mtime
-      foo: 'bar'
-    }
-    {
-      _id: 'getlikes2'
-      type: 'like'
-      name: '-hash1-'
-      user_id: 'user1'
-      swap_id: 'swap1'
-      ctime: ctime
-      mtime: mtime
-      foo: 'bar'
-    }
-  ]
-
-  mainDb = nanoAdmin.db.use('lifeswap')
+  likes = (new TestLike(id) for id in ['get_likes_1', 'get_likes_2'])
 
   before (ready) ->
-    # start webserver
     app = require('app')
-    ## insert like
-    insertLike = (like, cb) ->
-      mainDb.insert like, like._id, (err, res) ->
-        like._rev = res.rev
-        cb()
-    async.map(_likes, insertLike, ready)
+    create = (like, callback) -> like.create(callback)
+    async.map(likes, create, ready)
 
   after (finished) ->
-    destroyLike = (like, cb) ->
-      mainDb.destroy(like._id, like._rev, cb)
-    async.map(_likes, destroyLike, finished)
+    destroy = (like, callback) -> like.destroy(callback)
+    async.map(likes, destroy, finished)
 
   it 'should provide a list of all the correct likes', (done) ->
     opts =
       method: 'GET'
       url: 'http://localhost:3001/likes'
       json: true
-    request opts, (err, res, likes) ->
+    request opts, (err, res, likeDocs) ->
       should.not.exist(err)
-      likes.should.eql(_likes)
+      likeDocs.should.eql((like.attributes() for like in likes))
       done()

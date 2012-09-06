@@ -5,122 +5,86 @@ request = require('request')
 debug = require('debug')('replicant:/test/func/event/post')
 kue = require('kue')
 
-{kueUrl, jobs, nanoAdmin, nano, ADMINS} = require('config')
-{getUserDbName, hash} = require('lib/helpers')
-{EVENT_STATE} = require('../../../../lifeswap/userdb/shared/constants')
+{kueUrl, jobs, nanoAdmin} = require('config')
+{getUserDbName} = require('lib/helpers')
+{TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
 
-describe 'POST /events', () ->
+describe 'yyy POST /events', () ->
 
-  ## from the test/toy data
-  _username = hash('user2@test.com')
-  _userId = 'user2_id'
-  _guests = ['user2_id']
-  _hosts = ['user1_id']
-  _members = ['user2_id', 'user1_id']
-  _members.push(admin) for admin in ADMINS
-  _password = 'pass2'
-  _swapId = 'swap1'
+  guest = new TestUser('post_events_guest')
+  host  = new TestUser('post_events_host')
+  swap  = new TestSwap('post_events_swap', host)
+  event = new TestEvent('post_events_id', [guest], [host], swap)
 
-  cookie = null
-  eventId = 'posteventid'
-  ctime = mtime = 12345
-  _event =
-    _id: eventId
-    type: 'event'
-    state: EVENT_STATE.requested
-    swap_id: _swapId
-    ctime: ctime
-    mtime: mtime
+  before (ready) ->
+    ## start webserver
+    app = require('app')
+    ## create users and swap
+    async.series [
+      (cb) -> async.parallel([guest.create, host.create], cb)
+      swap.create
+      (cb) -> jobs.client.flushall(cb)
+    ], ready
 
-  mainDb = nanoAdmin.db.use('lifeswap')
-  usersDb = nanoAdmin.db.use('_users')
+  after (finished) ->
+    ## destroy event and swap, then users
+    async.series [
+      (cb) -> async.parallel([event.destroy, swap.destroy], cb)
+      (cb) -> async.parallel([guest.destroy, host.destroy], cb)
+      (cb) -> jobs.client.flushall(cb)
+    ], finished
 
-  describe 'correctness:', () ->
 
-    before (ready) ->
-      ## start webserver
-      app = require('app')
+  it 'should POST without failure', (done) ->
+    opts =
+      method: 'POST'
+      url: "http://localhost:3001/events"
+      json: event.attributes()
+      headers: cookie: guest.cookie
+    request opts, (err, res, body) ->
+      should.not.exist(err)
+      res.should.have.property('statusCode', 201)
+      returnedFields = ['_rev', 'mtime', 'ctime', 'guests', 'hosts']
+      body.should.have.keys(returnedFields)
+      for key, val of body when not (key in ['guests', 'hosts'])
+        event[key] = val
+      done()
 
-      ## authenticate user
-      nano.auth _username, _password, (err, body, headers) ->
+  it 'should create an event in the \'mapper\' DB', (done) ->
+    mapperDb = nanoAdmin.db.use('mapper')
+    mapperDb.get event._id, (err, mapperDoc) ->
+      should.not.exist(err)
+      mapperDoc.should.have.property('guests')
+      mapperDoc.guests.should.eql([guest._id])
+      mapperDoc.should.have.property('hosts')
+      mapperDoc.hosts.should.eql([host._id])
+      done()
+
+  it 'should create an event document for involved users', (done) ->
+    checkEventDoc = (user, callback) ->
+      userDbName = getUserDbName(userId: user._id)
+      userDb = nanoAdmin.db.use(userDbName)
+      userDb.get event._id, (err, eventDoc) ->
         should.not.exist(err)
-        should.exist(headers and headers['set-cookie'])
-        cookie = headers['set-cookie'][0]
-        jobs.client.flushall(ready)
+        eventDoc.should.eql(event.attributes())
+        callback()
+    async.parallel [
+      (cb) -> checkEventDoc(guest, cb)
+      (cb) -> checkEventDoc(host, cb)
+    ], done
 
-    after (finished) ->
-      ## destroy event (in both user's dbs)
-      destroyEventUser = (userId, callback) ->
-        userDbName = getUserDbName(userId: userId)
-        userDb = nanoAdmin.db.use(userDbName)
-        userDb.get eventId, (err, eventDoc) ->
-          should.not.exist(err)
-          userDb.destroy(eventId, eventDoc._rev, callback)
-
-      destroyEventMapper = (callback) ->
-        mapperDb = nanoAdmin.db.use('mapper')
-        mapperDb.get eventId, (err, mapperDoc) ->
-          should.not.exist(err)
-          mapperDb.destroy(eventId, mapperDoc._rev, callback)
-
-      async.parallel [
-        (cb) -> async.map(_members, destroyEventUser, cb)
-        destroyEventMapper
-        (cb) -> jobs.client.flushall(cb)
-      ], finished
-
-
-    it 'should POST without failure', (done) ->
-      opts =
-        method: 'POST'
-        url: "http://localhost:3001/events"
-        json: _event
-        headers: cookie: cookie
-      request opts, (err, res, body) ->
-        should.not.exist(err)
-        res.statusCode.should.eql(201)
-        returnedFields = ['_rev', 'mtime', 'ctime', 'guests', 'hosts']
-        body.should.have.keys(returnedFields)
-        for key, val of body
-          _event[key] = val
-        done()
-
-    it 'should create an event in the \'mapper\' DB', (done) ->
-      mapperDb = nanoAdmin.db.use('mapper')
-      mapperDb.get eventId, (err, mapperDoc) ->
-        should.not.exist(err)
-        mapperDoc.should.have.property('guests')
-        mapperDoc.guests.should.eql(_guests)
-        mapperDoc.should.have.property('hosts')
-        mapperDoc.hosts.should.eql(_hosts)
-        done()
-
-    it 'should create an event document for involved users', (done) ->
-      delete _event.hosts
-      delete _event.guests
-      checkEventDoc = (userId, callback) ->
-        userDbName = getUserDbName(userId: userId)
-        userDb = nanoAdmin.db.use(userDbName)
-        userDb.get eventId, (err, eventDoc) ->
-          should.not.exist(err)
-          eventDoc.should.eql(_event)
-          callback()
-      async.map _members, checkEventDoc, (err, res) ->
-        should.not.exist(err)
-        done()
-
-    it 'should create event.create notification on work queue', (done) ->
-      kue.Job.get 1, (err, job) ->
-        should.not.exist(err)
-        job.should.have.property('type', 'notification.event.create')
-        job.should.have.property('data')
-        job.data.should.have.property('hosts')
-        job.data.should.have.property('guests')
-        job.data.hosts.should.eql(_hosts)
-        job.data.guests.should.eql(_guests)
-        job.data.should.have.property('swap')
-        job.data.should.have.property('event')
-        job.data.event.should.have.property('_id', _event._id)
-        job.data.swap.should.have.property('_id', _swapId)
-        done()
+  it 'should create event.create notification on work queue', (done) ->
+    kue.Job.get 1, (err, job) ->
+      should.not.exist(err)
+      job.should.have.property('type', 'notification.event.create')
+      job.should.have.property('data')
+      job.data.should.have.property('hosts')
+      job.data.should.have.property('guests')
+      job.data.hosts.should.eql([host._id])
+      job.data.guests.should.eql([guest._id])
+      job.data.should.have.property('swap')
+      job.data.should.have.property('event')
+      job.data.event.should.have.property('_id', event._id)
+      job.data.swap.should.have.property('_id', event.swap_id)
+      done()

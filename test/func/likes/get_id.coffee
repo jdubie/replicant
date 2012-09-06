@@ -2,43 +2,29 @@ should = require('should')
 util = require('util')
 request = require('request')
 
+{TestLike} = require('lib/test_models')
 {nanoAdmin} = require('config')
 
 
-describe 'GET /likes/:id', () ->
+describe 'yyyy GET /likes/:id', () ->
 
-  ctime = mtime = 12345
-  _like =
-    _id: 'getlikeid'
-    type: 'like'
-    name: '-hash2-'
-    user_id: 'user2'
-    swap_id: 'swap1'
-    ctime: ctime
-    mtime: mtime
-    foo: 'bar'
-
-  mainDb = nanoAdmin.db.use('lifeswap')
+  like = new TestLike('get_likes_id')
 
   before (ready) ->
-    ## start webserver
     app = require('app')
-    ## insert like
-    mainDb.insert _like, _like._id, (err, res) ->
-      _like._rev = res.rev
-      ready()
+    like.create(ready)
 
   after (finished) ->
-    mainDb.destroy(_like._id, _like._rev, finished)
+    like.destroy(finished)
 
   it 'should get the correct like', (done) ->
     opts =
       method: 'GET'
-      url: "http://localhost:3001/likes/#{_like._id}"
+      url: "http://localhost:3001/likes/#{like._id}"
       json: true
-    request opts, (err, res, like) ->
+    request opts, (err, res, likeDoc) ->
       should.not.exist(err)
-      like.should.eql(_like)
+      likeDoc.should.eql(like.attributes())
       done()
 
   it 'should give error, reason, and statusCode on bad get', (done) ->

@@ -1,148 +1,94 @@
 should = require('should')
 async = require('async')
-util = require('util')
 request = require('request')
-debug = require('debug')('replicant:test/func/message/post')
 _ = require('underscore')
 
-{kueUrl, jobs, nanoAdmin, nano, dbUrl, ADMINS} = require('config')
-{getUserDbName, hash} = require('lib/helpers')
+{kueUrl, jobs, nanoAdmin} = require('config')
+{getUserDbName} = require('lib/helpers')
+{TestUser, TestSwap, TestEvent, TestMessage} = require('lib/test_models')
 
-describe 'POST /messages', () ->
+describe 'yyy POST /messages', () ->
 
-  ## from the test/toy data
-  _username = hash('user2@test.com')
-  _userId = 'user2_id'
-  _password = 'pass2'
-  cookie = null
-  _guests = ['user2_id']
-  _hosts = ['user1_id']
-  _allUsers = (user for user in _guests)
-  _allUsers.push(user) for user in _hosts
-  _allUsers.push(user) for user in ADMINS
-  _ctime = _mtime = 12345
-  _message =
-    _id: 'postmessage'
-    type: 'message'
-    name: _username
-    user_id: _userId
-    event_id: 'postmessageeventid'
-    message: 'Hey bro'
-    ctime: _ctime
-    mtime: _mtime
+  guest   = new TestUser('post_messages_guest')
+  host    = new TestUser('post_messages_host')
+  swap    = new TestSwap('post_messages_swap', host)
+  event   = new TestEvent('post_messages_event', [guest], [host], swap)
+  message = new TestMessage('post_messages', guest, event)
 
-  mainDb = nanoAdmin.db.use('lifeswap')
-  mapperDb = nanoAdmin.db.use('mapper')
+  before (ready) ->
+    ## start webserver
+    app = require('app')
+    ## create users and swap, then event
+    async.series [
+      (cb) -> async.parallel([guest.create, host.create, swap.create], cb)
+      event.create
+      (cb) -> jobs.client.flushall(cb)
+    ], ready
 
 
-  describe 'correctness:', () ->
+  after (finished) ->
+    ## destroy users and swap, then event
+    async.series [
+      event.destroy
+      (cb) -> async.parallel([guest.destroy, host.destroy, swap.destroy], cb)
+      (cb) -> jobs.client.flushall(cb)
+    ], finished
 
-    before (ready) ->
-      ## start webserver
-      app = require('app')
-      ## authenticate user
-      authUser = (cb) ->
-        nano.auth _username, _password, (err, body, headers) ->
-          should.not.exist(err)
-          should.exist(headers and headers['set-cookie'])
-          cookie = headers['set-cookie'][0]
-          cb()
-      ## put mapping into mapper db
-      insertMapping = (cb) ->
-        mapperDoc =
-          _id: _message.event_id
-          guests: _guests
-          hosts: _hosts
-        mapperDb.insert(mapperDoc, mapperDoc._id, cb)
-      async.parallel [
-        authUser
-        insertMapping
-        (cb) -> jobs.client.flushall(cb)
-      ], ready
+  it 'should POST without failure', (done) ->
+    _message = message.attributes()
+    delete _message.read
+    opts =
+      method: 'POST'
+      url: "http://localhost:3001/messages"
+      json: _message
+      headers: cookie: guest.cookie
+    request opts, (err, res, body) ->
+      should.not.exist(err)
+      res.should.have.property('statusCode', 201)
+      body.should.have.keys(['_rev', 'ctime', 'mtime'])
+      for key, val of body
+        message[key] = val
+      done()
 
-    after (finished) ->
-      ## destroy message (in both user's DBs)
-      destroyEventUser = (userId, cb) ->
-        userDb = nanoAdmin.db.use(getUserDbName({userId}))
-        #userDb.destroy(_message._id, _message._rev, cb)
-        userDb.get _message._id, (err, messageDoc) ->
-          if err then cb()
-          else userDb.destroy(_message._id, _message._rev, cb)
-
-      ## destroy mapping of event in mapper DB
-      destroyEventMapper = (cb) ->
-        mapperDb.get _message.event_id, (err, mapperDoc) ->
-          should.not.exist(err)
-          if err then cb()
-          else mapperDb.destroy(_message.event_id, mapperDoc._rev, cb)
-
-      ## destroy read document
-      destroyReadDocs = (cb) ->
-        userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
-        destroyReadDoc = (row, _cb) ->
-          doc = row.doc
-          if doc.type isnt 'read' then _cb()
-          else userDb.destroy(doc._id, doc._rev, _cb)
-        opts =
-          reduce: false
-          include_docs: true
-        userDb.view 'userddoc', 'messages', opts, (err, res) ->
-          if err then cb()
-          else async.map(res.rows, destroyReadDoc, cb)
-
-      async.parallel [
-        (cb) -> async.map(_allUsers, destroyEventUser, cb)
-        destroyEventMapper
-        destroyReadDocs
-        (cb) -> jobs.client.flushall(cb)
-      ], finished
-
-
-    it 'should POST without failure', (done) ->
-      opts =
-        method: 'POST'
-        url: "http://localhost:3001/messages"
-        json: _message
-        headers: cookie: cookie
-      request opts, (err, res, body) ->
+  it 'should replicate the message to all involved users', (done) ->
+    checkMessageDoc = (user, cb) ->
+      userDbName = getUserDbName(userId: user._id)
+      userDb = nanoAdmin.db.use(userDbName)
+      userDb.get message._id, (err, messageDoc) ->
         should.not.exist(err)
-        res.statusCode.should.eql(201)
-        body.should.have.keys(['_rev', 'ctime', 'mtime'])
-        for key, val of body
-          _message[key] = val
-        done()
+        _message = message.attributes()
+        delete _message.read
+        messageDoc.should.eql(_message)
+        cb()
+    async.parallel [
+      (cb) -> checkMessageDoc(guest, cb)
+      (cb) -> checkMessageDoc(host, cb)
+    ], done
 
-    it 'should replicate the message to all involved users', (done) ->
-      checkMessageDoc = (userId, cb) ->
-        userDbName = getUserDbName({userId})
-        userDb = nanoAdmin.db.use(userDbName)
-        userDb.get _message._id, (err, messageDoc) ->
-          should.not.exist(err)
-          messageDoc.should.eql(_message)
-          cb()
-      async.map(_allUsers, checkMessageDoc, done)
-
-    it 'should mark the message as read for the author', (done) ->
-      checkMessageReadStatus = (userId, cb) ->
-        userDbName = getUserDbName({userId})
-        userDb = nanoAdmin.db.use(userDbName)
-        opts = key: [_message.event_id, _message._id]
-        userDb.view 'userddoc', 'messages', opts, (err, res) ->
-          should.not.exist(err)
-          res.should.have.property('rows').with.lengthOf(1)
-          if userId is _userId
-            res.rows[0].should.have.property('value', 0)
-          else
-            res.rows[0].should.have.property('value', 1)
-          cb()
-      async.map(_allUsers, checkMessageReadStatus, done)
-
-    it 'should add notification to work queue', (done) ->
-      require('kue').Job.get 1, (err, job) ->
+  it 'should mark the message as read for the author', (done) ->
+    checkMessageReadStatus = (user, cb) ->
+      userDbName = getUserDbName(userId: user._id)
+      userDb = nanoAdmin.db.use(userDbName)
+      opts = key: [message.event_id, message._id]
+      userDb.view 'userddoc', 'messages', opts, (err, res) ->
         should.not.exist(err)
-        job.should.have.property('type', 'notification.message')
-        job.should.have.property('data')
-        job.data.should.have.property('message')
-        job.data.message.should.have.property('message')
-        job.data.message.message.should.equal(_message.message)
-        done()
+        res.should.have.property('rows').with.lengthOf(1)
+        if user._id is guest._id     ## read
+          res.rows[0].should.have.property('value', 0)
+        else                        ## unread
+          res.rows[0].should.have.property('value', 1)
+        cb()
+    async.parallel [
+      (cb) -> checkMessageReadStatus(guest, cb)
+      (cb) -> checkMessageReadStatus(host, cb)
+    ], done
+
+  it 'should add notification to work queue', (done) ->
+    require('kue').Job.get 1, (err, job) ->
+      should.not.exist(err)
+      job.should.have.property('type', 'notification.message')
+      job.should.have.property('data')
+      job.data.should.have.property('message')
+      job.data.message.should.have.property('message')
+      job.data.message.message.should.equal(message.message)
+      done()

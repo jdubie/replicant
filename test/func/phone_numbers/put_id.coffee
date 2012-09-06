@@ -3,69 +3,47 @@ async = require('async')
 util = require('util')
 request = require('request')
 
-{nanoAdmin, nano} = require('config')
-{getUserDbName, hash} = require('lib/helpers')
+{nanoAdmin} = require('config')
+{getUserDbName} = require('lib/helpers')
+{TestUser, TestPhoneNumber} = require('lib/test_models')
 
 
-describe 'PUT /phone_numbers/:id', () ->
+describe 'yyy PUT /phone_numbers/:id', () ->
 
-  _username = hash('user2@test.com')
-  _userId = 'user2_id'
-  _password = 'pass2'
-  _ctime = _mtime = 12345
-  _phone =
-    _id: 'putphoneid'
-    type: 'phone_number'
-    name: _username
-    user_id: _userId
-    phone_number: 5552097765
-    ctime: _ctime
-    mtime: _mtime
-    foo: 'bar'
+  user = new TestUser('put_phone_user')
+  phoneNumber = new TestPhoneNumber('put_phone', user, foo: 'bar')
 
-  cookie = null
-
-  userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
+  userDb = nanoAdmin.db.use(getUserDbName(userId: user._id))
 
   before (ready) ->
     ## start webserver
     app = require('app')
-    ## authenticate user
-    authUser = (callback) ->
-      nano.auth _username, _password, (err, body, headers) ->
-        should.not.exist(err)
-        should.exist(headers and headers['set-cookie'])
-        cookie = headers['set-cookie'][0]
-        callback()
-    ## insert phone
-    insertPhone = (callback) ->
-      userDb.insert _phone, (err, res) ->
-        should.not.exist(err)
-        _phone._rev = res.rev
-        callback()
-
-    async.series [
-      authUser
-      insertPhone
-    ], ready
+    ## insert user and phone number
+    async.series([user.create, phoneNumber.create], ready)
 
 
   after (finished) ->
-    ## destroy phone
-    userDb.get _phone._id, (err, phone) ->
-      should.not.exist(err)
-      userDb.destroy(phone._id, phone._rev, finished)
+    ## destroy user (and thus phone number)
+    user.destroy(finished)
 
 
   it 'should PUT the phone_number correctly', (done) ->
-    _phone.foo = 'c3p0'
+    phoneNumber.foo = 'c3p0'
     opts =
       method: 'PUT'
-      url: "http://localhost:3001/phone_numbers/#{_phone._id}"
-      json: _phone
-      headers: cookie: cookie
+      url: "http://localhost:3001/phone_numbers/#{phoneNumber._id}"
+      json: phoneNumber.attributes()
+      headers: cookie: user.cookie
     request opts, (err, res, phone) ->
       should.not.exist(err)
       res.statusCode.should.eql(201)
       phone.should.have.keys(['_rev', 'mtime'])
+      for key, val of phone
+        phoneNumber[key] = val
+      done()
+
+  it 'should put the phone number in the user db', (done) ->
+    userDb.get phoneNumber._id, (err, phone) ->
+      should.not.exist(err)
+      phone.should.eql(phoneNumber.attributes())
       done()

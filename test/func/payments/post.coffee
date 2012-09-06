@@ -1,53 +1,30 @@
 should = require('should')
 request = require('request')
+async = require('async')
 
+{TestUser, TestPayment} = require('lib/test_models')
 config = require('config')
 h = require('lib/helpers')
 
 
-describe 'POST /payments', () ->
+describe 'yyyy POST /payments', () ->
 
-  _username = h.hash('user2@test.com')
-  _userId = 'user2_id'
-  _password = 'pass2'
-  ## note: ctime and mtime not necessary for posts (set by replicant)
-  _payment =
-    _id: 'postpaymentsid'
-    type: 'payment'
-    name: _username
-    user_id: _userId
-    event_id: 'eventid'
-    card_id: 'cardid'
-    amount: 7
-    status: "1"
-    baz: 'bar'
-  _cookie = null
-
-  userDb = config.nanoAdmin.db.use(h.getUserDbName(userId: _userId))
+  user = new TestUser('post_payments_user')
+  payment = new TestPayment('post_payments', user)
 
   before (ready) ->
-    ## start webserver
     app = require('app')
-    ## authenticate user
-    config.nano.auth _username, _password, (err, body, headers) ->
-      should.not.exist(err)
-      should.exist(headers and headers['set-cookie'])
-      _cookie = headers['set-cookie'][0]
-      ready()
-
+    user.create(ready)
 
   after (finished) ->
-    ## destroy payment
-    userDb.get _payment._id, (err, payment) ->
-      should.not.exist(err)
-      userDb.destroy(payment._id, payment._rev, finished)
+    user.destroy(finished)
 
   it 'should POST the payment correctly', (done) ->
     opts =
       method: 'POST'
       url: "http://localhost:3001/payments"
-      json: _payment
-      headers: cookie: _cookie
+      json: payment.attributes()
+      headers: cookie: user.cookie
     request opts, (err, res, payment) ->
       should.not.exist(err)
       res.statusCode.should.eql(201)

@@ -4,6 +4,6 @@
 NODE_PATH=`pwd` ENV=TEST \
 	./node_modules/.bin/mocha \
 		--compilers coffee:coffee-script \
-		--reporter list \
+		--reporter nyan \
 		--require should \
     test/func/**/*.coffee

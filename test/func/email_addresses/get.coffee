@@ -1,60 +1,42 @@
 should = require('should')
 async = require('async')
-util = require('util')
 request = require('request')
 
-{nanoAdmin, nano, dbUrl, ADMINS} = require('config')
-{getUserDbName, hash} = require('lib/helpers')
+{TestUser, TestEmailAddress} = require('lib/test_models')
 
 
-describe 'GET /email_addresses', () ->
+describe 'yyy GET /email_addresses', () ->
 
-  ## from the test/toy data
-  _username = hash('user2@test.com')
-  _userId = 'user2_id'
-  _password = 'pass2'
-  cookie = null
-  _emailAddressesNano = []
+  user = new TestUser('get_email_user')
+  emailAddress1 = new TestEmailAddress('get_email1', user)
+  emailAddress2 = new TestEmailAddress('get_email2', user)
 
-  mainDb = nanoAdmin.db.use('lifeswap')
-  usersDb = nanoAdmin.db.use('_users')
-  userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
+  before (ready) ->
+    ## start webserver
+    app = require('app')
+    ## insert user and email addresses
+    async.series [
+      user.create
+      emailAddress1.create
+      emailAddress2.create
+    ], ready
 
-  describe 'correctness:', () ->
+  after (finished) ->
+    ## destroy user (destroys emails too)
+    user.destroy(finished)
 
-    before (ready) ->
-      ## start webserver
-      app = require('app')
-      ## authenticate user
-      authUser = (cb) ->
-        nano.auth _username, _password, (err, body, headers) ->
-          should.not.exist(err)
-          should.exist(headers and headers['set-cookie'])
-          cookie = headers['set-cookie'][0]
-          cb()
-      ## get email addresses
-      getEmailAddresses = (cb) ->
-        opts =
-          key: 'email_address'
-          include_docs: true
-        userDb.view 'userddoc', 'docs_by_type', opts, (err, res) ->
-          should.not.exist(err)
-          _emailAddressesNano = (row.doc for row in res?.rows)
-          cb()
-      ## in parallel
-      async.parallel [
-        authUser
-        getEmailAddresses
-      ], ready
-
-    it 'should GET all emails', (done) ->
-      opts =
-        method: 'GET'
-        url: "http://localhost:3001/email_addresses"
-        json: true
-        headers: cookie: cookie
-      request opts, (err, res, emailAddresses) ->
-        should.not.exist(err)
-        res.statusCode.should.eql(200)
-        emailAddresses.should.eql(_emailAddressesNano)
-        done()
+  it 'should GET all emails', (done) ->
+    opts =
+      method: 'GET'
+      url: "http://localhost:3001/email_addresses"
+      json: true
+      headers: cookie: user.cookie
+    request opts, (err, res, emailAddresses) ->
+      should.not.exist(err)
+      res.should.have.property('statusCode', 200)
+      _emailAddressesNano = [
+        emailAddress1.attributes()
+        emailAddress2.attributes()
+      ]
+      emailAddresses.should.eql(_emailAddressesNano)
+      done()

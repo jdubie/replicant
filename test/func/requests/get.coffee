@@ -1,53 +1,33 @@
 should  = require('should')
-util    = require('util')
 async   = require('async')
 request = require('request')
-_       = require('underscore')
 
-{nanoAdmin} = require('config')
-{hash}      = require('lib/helpers')
+{TestUser, TestRequest} = require('lib/test_models')
 
 
-describe 'GET /requests', () ->
+describe 'yyy GET /requests', () ->
 
-  _ctime = _mtime = 12345
-  _requests = [
-    {
-      _id: 'getrequests1'
-      type: 'request'
-      name: hash('user1@test.com')
-      user_id: 'user1_id'
-      ctime: _ctime
-      mtime: _mtime
-      foo: 'bar'
-    }
-    {
-      _id: 'getrequests2'
-      type: 'request'
-      name: hash('user2@test.com')
-      user_id: 'user2_id'
-      ctime: _ctime
-      mtime: _mtime
-      foo: 'bar'
-    }
-  ]
-
-  mainDb = nanoAdmin.db.use('lifeswap')
+  user1 = new TestUser('getrequestsuser1')
+  user2 = new TestUser('getrequestsuser2')
+  request1 = new TestRequest('getrequests1', user1)
+  request2 = new TestRequest('getrequests2', user2)
 
   before (ready) ->
     # start webserver
     app = require('app')
-    ## insert request
-    insertRequest = (_request, cb) ->
-      mainDb.insert _request, _request._id, (err, res) ->
-        _request._rev = res.rev
-        cb()
-    async.map(_requests, insertRequest, ready)
+    ## insert requests
+    async.parallel [
+      request1.create
+      request2.create
+    ], ready
 
   after (finished) ->
-    destroyRequest = (_request, cb) ->
-      mainDb.destroy(_request._id, _request._rev, cb)
-    async.map(_requests, destroyRequest, finished)
+    ## destroy requests
+    async.parallel [
+      request1.destroy
+      request2.destroy
+    ], finished
+
 
   it 'should provide a list of all the correct requests', (done) ->
     opts =
@@ -56,6 +36,6 @@ describe 'GET /requests', () ->
       json: true
     request opts, (err, res, requests) ->
       should.not.exist(err)
-      requests = (request for request in requests when request._id.match /getrequests/)
-      requests.should.eql(_requests)
+      requestsNano = [request1.attributes(), request2.attributes()]
+      requests.should.eql(requestsNano)
       done()

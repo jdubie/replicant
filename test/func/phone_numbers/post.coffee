@@ -2,54 +2,44 @@ should = require('should')
 util = require('util')
 request = require('request')
 
-{nanoAdmin, nano} = require('config')
-{getUserDbName, hash} = require('lib/helpers')
+{nanoAdmin} = require('config')
+{getUserDbName} = require('lib/helpers')
+{TestUser, TestPhoneNumber} = require('lib/test_models')
 
 
-describe 'POST /phone_numbers', () ->
+describe 'yyy POST /phone_numbers', () ->
 
-  _username = hash('user2@test.com')
-  _userId = 'user2_id'
-  _password = 'pass2'
-  _ctime = _mtime = 12345
-  _phone =
-    _id: 'postphonenumbersid'
-    type: 'phone_number'
-    name: _username
-    user_id: _userId
-    phone_number: 5552097765
-    ctime: _ctime
-    mtime: _mtime
-    baz: 'bar'
-  cookie = null
+  user = new TestUser('post_phone_user')
+  phoneNumber = new TestPhoneNumber('post_phone', user)
 
-  userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
+  userDb = nanoAdmin.db.use(getUserDbName(userId: user._id))
 
   before (ready) ->
     ## start webserver
     app = require('app')
-    ## authenticate user
-    nano.auth _username, _password, (err, body, headers) ->
-      should.not.exist(err)
-      should.exist(headers and headers['set-cookie'])
-      cookie = headers['set-cookie'][0]
-      ready()
-
+    ## insert user
+    user.create(ready)
 
   after (finished) ->
-    ## destroy phone
-    userDb.get _phone._id, (err, phone) ->
-      should.not.exist(err)
-      userDb.destroy(phone._id, phone._rev, finished)
+    ## destroy user (and thus phone number)
+    user.destroy(finished)
 
   it 'should POST the phone number correctly', (done) ->
     opts =
       method: 'POST'
       url: "http://localhost:3001/phone_numbers"
-      json: _phone
-      headers: cookie: cookie
+      json: phoneNumber.attributes()
+      headers: cookie: user.cookie
     request opts, (err, res, phone) ->
       should.not.exist(err)
-      res.statusCode.should.eql(201)
+      res.should.have.property('statusCode', 201)
       phone.should.have.keys(['_id', '_rev', 'mtime', 'ctime'])
+      for key, val of phone
+        phoneNumber[key] = val
+      done()
+
+  it 'should have the phone number in the user db', (done) ->
+    userDb.get phoneNumber._id, (err, phone) ->
+      should.not.exist(err)
+      phone.should.eql(phoneNumber.attributes())
       done()

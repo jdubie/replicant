@@ -2,71 +2,42 @@ should = require('should')
 async = require('async')
 request = require('request')
 
+{TestUser, TestPayment} = require('lib/test_models')
 config = require('config')
 h = require('lib/helpers')
 
 
-describe 'PUT /payments/:id', () ->
-
-  _username = h.hash('user2@test.com')
-  _userId = 'user2_id'
-  _password = 'pass2'
-  _ctime = _mtime = 12345
-  _payment =
-    _id: 'putpaymentid'
-    type: 'payment'
-    name: _username
-    user_id: _userId
-    event_id: 'eventid'
-    card_id: 'cardid'
-    amount: 7.77
-    status: "1"
-    ctime: _ctime
-    mtime: _mtime
-    foo: 'bar'
-  _cookie = null
-
-  userDb = config.nanoAdmin.db.use(h.getUserDbName(userId: _userId))
+describe 'yyyy PUT /payments/:id', () ->
+  
+  user = new TestUser('put_payments_user')
+  payment = new TestPayment('put_payments', user)
+  userDb = config.nanoAdmin.db.use("users_#{user._id}")
 
   before (ready) ->
-    ## start webserver
     app = require('app')
-    ## authenticate user
-    authUser = (callback) ->
-      config.nano.auth _username, _password, (err, body, headers) ->
-        should.not.exist(err)
-        should.exist(headers and headers['set-cookie'])
-        _cookie = headers['set-cookie'][0]
-        callback()
-    ## insert payment
-    insertPayment = (callback) ->
-      userDb.insert _payment, (err, res) ->
-        should.not.exist(err)
-        _payment._rev = res.rev
-        callback()
-
-    async.series [
-      authUser
-      insertPayment
-    ], ready
-
+    async.series([user.create, payment.create], ready)
 
   after (finished) ->
-    ## destroy payment
-    userDb.get _payment._id, (err, payment) ->
-      should.not.exist(err)
-      userDb.destroy(payment._id, payment._rev, finished)
+    user.destroy(finished)
 
-
-  it 'should PUT the payment correctly', (done) ->
-    _payment.foo = 'c3p0'
+  it 'should fail on put', (done) ->
+    oldAmount = payment.amount
+    newAmount = 444
+    payment.amount.should.not.eql(newAmount)
+    payment.amount = newAmount
     opts =
       method: 'PUT'
-      url: "http://localhost:3001/payments/#{_payment._id}"
-      json: _payment
-      headers: cookie: _cookie
+      url: "http://localhost:3001/payments/#{payment._id}"
+      json: payment.attributes()
+      headers: cookie: user.cookie
     request opts, (err, res, payment) ->
       should.not.exist(err)
-      res.statusCode.should.eql(201)
-      payment.should.have.keys(['_rev', 'mtime'])
+      res.statusCode.should.eql(403)
+      done()
+    payment.amount = oldAmount
+
+  it 'should have not actually have changed the doc', (done) ->
+    userDb.get payment._id, (err, paymentDoc) ->
+      should.not.exist(err)
+      paymentDoc.should.eql(payment.attributes())
       done()

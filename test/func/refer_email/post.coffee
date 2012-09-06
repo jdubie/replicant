@@ -5,10 +5,12 @@ config  = require('config')
 debug   = require('debug')('replicants/test/func/refer_email/post')
 kue     = require('kue')
 
-describe 'POST /refer_emails', () ->
+{TestUser} = require('lib/test_models')
 
-  _username = h.hash('user2@test.com')
-  _userId = 'user2_id'
+describe 'yyyy POST /refer_emails', () ->
+
+  user = new TestUser('post_refer_emails')
+
   _password = 'pass2'
   _requestId = 'request1'
   _email_address = 'test@thelifeswap.com'
@@ -17,26 +19,20 @@ describe 'POST /refer_emails', () ->
   _referEmail =
     _id: 'post_refer_email_id'
     type: 'refer_email'
-    name: _username
-    user_id: _userId
+    name: user.name
+    user_id: user._id
     request_id: _requestId
     email_address: _email_address
     personal_message: _personal_message
     ctime: _ctime
     mtime: _mtime
-  cookie = null
 
-  userDb = config.nanoAdmin.db.use(h.getUserDbName(userId: _userId))
+  userDb = config.nanoAdmin.db.use(h.getUserDbName(userId: user._id))
 
   before (ready) ->
-    ## start webserver
+    # start webserver
     app = require('app')
-    ## authenticate user
-    config.nano.auth _username, _password, (err, body, headers) ->
-      should.not.exist(err)
-      should.exist(headers and headers['set-cookie'])
-      cookie = headers['set-cookie'][0]
-      config.jobs.client.flushall(ready)
+    user.create(ready)
 
   after (finished) ->
     ## destroy refer_email
@@ -44,14 +40,14 @@ describe 'POST /refer_emails', () ->
       should.not.exist(err)
       userDb.destroy _referEmail._id, referEmail._rev, (err) ->
         should.not.exist(err)
-        config.jobs.client.flushall(finished)
+        user.destroy(finished)
 
   it 'should POST the refer_email correctly', (done) ->
     opts =
       method: 'POST'
       url: "http://localhost:3001/refer_emails"
       json: _referEmail
-      headers: cookie: cookie
+      headers: cookie: user.cookie
     request opts, (err, res, referEmail) ->
       should.not.exist(err)
       res.statusCode.should.eql(201)

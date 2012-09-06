@@ -2,7 +2,6 @@ async = require('async')
 request = require('request')
 debug = require('debug')('replicant:helpers')
 crypto = require('crypto')
-
 config = require('config')
 
 h = {}
@@ -132,7 +131,7 @@ h.nanoCallback = (next, opts) ->
   {error, reason} = opts if opts?
   (err, res...) ->
     if err?
-      debug 'err', err
+      debug '#nanoCallback: err', err
       errorRes =
         statusCode: err.status_code ? 500
         error: err.error ? error

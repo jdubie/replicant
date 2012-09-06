@@ -1,68 +1,46 @@
 should = require('should')
 async = require('async')
-util = require('util')
 request = require('request')
 
-{nanoAdmin, nano, dbUrl} = require('config')
-{getUserDbName, hash} = require('lib/helpers')
+{nanoAdmin} = require('config')
+{getUserDbName} = require('lib/helpers')
+{TestUser, TestEmailAddress} = require('lib/test_models')
 
 
-describe 'PUT /email_addresses/:id', () ->
+describe 'yyy PUT /email_addresses/:id', () ->
 
-  _username = hash('user2@test.com')
-  _userId = 'user2_id'
-  _password = 'pass2'
-  _ctime = _mtime = 12345
-  _email =
-    _id: 'putemailid'
-    type: 'email_address'
-    name: _username
-    user_id: _userId
-    email_address: 'user2@test.com'
-    ctime: _ctime
-    mtime: _mtime
-    foo: 'bar'
+  user = new TestUser('put_email_user')
+  emailAddress = new TestEmailAddress('put_email', user, foo: 'bar')
 
-  cookie = null
-
-  userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
+  userDb = nanoAdmin.db.use(getUserDbName(userId: user._id))
 
   before (ready) ->
     ## start webserver
     app = require('app')
-    ## authenticate user
-    authUser = (callback) ->
-      nano.auth _username, _password, (err, body, headers) ->
-        should.not.exist(err)
-        should.exist(headers and headers['set-cookie'])
-        cookie = headers['set-cookie'][0]
-        callback()
-    ## insert email
-    insertEmail = (callback) ->
-      userDb.insert _email, (err, res) ->
-        should.not.exist(err)
-        _email._rev = res.rev
-        callback()
-    ## in series
-    async.series([authUser, insertEmail], ready)
-
+    ## insert user and email address
+    async.series([user.create, emailAddress.create], ready)
 
   after (finished) ->
-    ## destroy email
-    userDb.get _email._id, (err, email) ->
-      should.not.exist(err)
-      userDb.destroy(email._id, email._rev, finished)
-
+    ## destroy user (and thus email address)
+    user.destroy(finished)
 
   it 'should PUT the email_address correctly', (done) ->
-    _email.foo = 'c3p0'
+    emailAddress.foo = 'c3p0'
     opts =
       method: 'PUT'
-      url: "http://localhost:3001/email_addresses/#{_email._id}"
-      json: _email
-      headers: cookie: cookie
+      url: "http://localhost:3001/email_addresses/#{emailAddress._id}"
+      json: emailAddress.attributes()
+      headers: cookie: user.cookie
     request opts, (err, res, email) ->
       should.not.exist(err)
-      res.statusCode.should.eql(201)
+      res.should.have.property('statusCode', 201)
       email.should.have.keys(['_rev', 'mtime'])
+      for key, val of email
+        emailAddress[key] = val
+      done()
+
+  it 'should put the email address in the user db', (done) ->
+    userDb.get emailAddress._id, (err, email) ->
+      should.not.exist(err)
+      email.should.eql(emailAddress.attributes())
       done()
