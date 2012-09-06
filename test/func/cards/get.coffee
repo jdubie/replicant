@@ -3,83 +3,35 @@ async = require('async')
 util = require('util')
 request = require('request')
 
+{TestUser, TestCard} = require('lib/test_models')
 {nanoAdmin, nano} = require('config')
 {getUserDbName, hash} = require('lib/helpers')
 
 
-describe 'GET /cards', () ->
+describe 'yyyy GET /cards', () ->
 
-  ## from the test/toy data
-  _username = hash('user2@test.com')
-  _userId = 'user2_id'
-  _password = 'pass2'
-  _ctime = _mtime = 12345
-  _cards = [
-    {
-      _id: 'getcards1'
-      type: 'card'
-      name: _username
-      user_id: _userId
-      balanced_url: 'balanced1'
-      ctime: _ctime
-      mtime: _mtime
-    }
-    {
-      _id: 'getcards2'
-      type: 'card'
-      name: _username
-      user_id: _userId
-      balanced_url: 'balanced2'
-      ctime: _ctime
-      mtime: _mtime
-    }
-  ]
-  cookie = null
-
-  mainDb = nanoAdmin.db.use('lifeswap')
-  userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
+  user = new TestUser('get_cards_user')
+  cards = (new TestCard(id, user) for id in ['get_card1', 'get_card2', 'get_card3'])
 
   describe 'correctness:', () ->
 
     before (ready) ->
-      ## start webserver
       app = require('app')
-      ## authenticate user
-      authUser = (cb) ->
-        nano.auth _username, _password, (err, body, headers) ->
-          should.not.exist(err)
-          should.exist(headers and headers['set-cookie'])
-          cookie = headers['set-cookie'][0]
-          cb()
-      ## insert card
-      insertCard = (card, cb) ->
-        userDb.insert card, card._id, (err, res) ->
-          card._rev = res.rev
-          cb()
-      insertCards = (cb) -> async.map(_cards, insertCard, cb)
-      ## in parallel
-      async.parallel [
-        authUser
-        insertCards
-      ], ready
-
+      user.create () ->
+        create = (card, callback) -> card.create(callback)
+        async.map(cards, create, ready)
 
     after (finished) ->
-      ## destroy cards
-      destroyCard = (card, callback) ->
-        userDb.destroy(card._id, card._rev, callback)
-      ## in parallel
-      async.map(_cards, destroyCard, finished)
-
+      user.destroy(finished)
 
     it 'should GET all cards', (done) ->
       opts =
         method: 'GET'
         url: "http://localhost:3001/cards"
         json: true
-        headers: cookie: cookie
-      request opts, (err, res, cards) ->
+        headers: cookie: user.cookie
+      request opts, (err, res, cardDocs) ->
         should.not.exist(err)
         res.statusCode.should.eql(200)
-        cards.should.eql(_cards)
+        cardDocs.should.eql(card.attributes() for card in cards)
         done()
