@@ -313,4 +313,52 @@ m.TestEmailAddress = class TestEmailAddress
       @userDb.destroy(@_id, userDoc._rev, callback)
 
 
+m.TestPhoneNumber = class TestPhoneNumber
+  @attributes: [
+    '_id'
+    '_rev'
+    'type'
+    'name'
+    'user_id'
+    'ctime'
+    'mtime'
+    'phone_number'
+  ]
+
+  attributes: =>
+    result = {}
+    for key in @constructor.attributes when key of this
+      result[key] = @[key]
+    result
+
+  constructor: (id, user, opts) ->
+
+    def =
+      _id: id
+      name: user.name
+      user_id: user._id
+      type: 'phone_number'
+      ctime: 12345
+      mtime: 12345
+      phone_number: "8602097765"
+      
+    opts ?= {}
+    _.defaults(opts, def)
+    _.extend(this, opts)
+
+    @userDb = config.nanoAdmin.db.use("users_#{user._id}")
+
+  create: (callback) =>
+    @userDb.insert @attributes(), @_id, (err, res) =>
+      return callback(err) if err
+      @_rev = res.rev
+      callback()
+
+  destroy: (callback) =>
+    @userDb.get @_id, (err, userDoc) =>
+      return callback() if err?   # should error
+      @userDb.destroy(@_id, userDoc._rev, callback)
+
+
+
 module.exports = m
