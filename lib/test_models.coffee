@@ -147,7 +147,7 @@ m.TestUser = class TestUser
       callback(err, read_docs)
 
   getMessages: (callback) =>
-    async.parallel {getAllMessages, getAllReadDocs}, (err, res) =>
+    async.parallel {@getAllMessages, @getAllReadDocs}, (err, res) =>
       return callback(err) if err
 
       messages = res.getAllMessages
@@ -730,7 +730,7 @@ m.TestMessage = class TestMessage
       mtime: 12345
       event_id: @event._id
       message: 'test message'
-      read: 'true'
+      read: true
       
     opts ?= {}
     _.defaults(opts, def)
@@ -754,16 +754,32 @@ m.TestMessage = class TestMessage
     #mapperDb = nanoAdmin.db.use('mapper')
 
     insertMessage = (user, cb) =>
+      debug 'user._id', user._id
+
       userDb = config.nanoAdmin.db.use(h.getUserDbName(userId: user._id))
       async.parallel [
+
+        # write message doc
         (_cb) =>
-          userDb.insert @attributes(), @_id, (err, res) =>
-            _cb(err) if err
+          message = @attributes()
+          delete message.read
+          userDb.insert message, @_id, (err, res) =>
+            debug 'insertMessage doc', err, res
+            return _cb(err) if err
             @_rev = res.rev
             _cb()
-            #(_cb) =>
-            #  if @read then userDb.insert(@getReadDoc(), @_id, _cb)
-            #  else _cb()
+
+        # conditionally insert read doc
+        (_cb) =>
+          debug '@getReadDoc()', @getReadDoc()
+          debug '@read', @read
+          if @read and @user_id is user._id
+            readDoc = @getReadDoc()
+            userDb.insert readDoc, readDoc._id, (err, res) ->
+              debug 'insertRead doc', err, res
+              return _cb(err) if err
+              _cb(null ,res)
+          else _cb()
       ], cb
 
     allUsers = _.union(@event.guests, @event.hosts)

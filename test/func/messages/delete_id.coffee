@@ -2,6 +2,7 @@ should = require('should')
 async = require('async')
 util = require('util')
 request = require('request')
+debug = require('debug')('replicant/test/func/message/delete_id')
 
 {TestUser, TestSwap, TestEvent, TestMessage} = require('lib/test_models')
 {nanoAdmin, nano, dbUrl, ADMINS} = require('config')
@@ -55,7 +56,9 @@ describe 'yyy DELETE /messages/:id', () ->
         userDb = nanoAdmin.db.use(userDbName)
         userDb.get message._id, (err, messageDoc) ->
           should.not.exist(err)
-          messageDoc.should.eql(message.attributes())
+          _message = message.attributes()
+          delete _message.read
+          messageDoc.should.eql(_message)
           callback()
       async.map [guest, host], checkMessageDoc, (err, res) ->
         should.not.exist(err)
