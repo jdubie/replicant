@@ -2,8 +2,6 @@ should  = require('should')
 async   = require('async')
 request = require('request')
 
-{nanoAdmin} = require('config')
-{hash}      = require('lib/helpers')
 {TestUser, TestRequest} = require('lib/test_models')
 
 
@@ -14,24 +12,18 @@ describe 'yyy GET /requests', () ->
   request1 = new TestRequest('getrequests1', user1)
   request2 = new TestRequest('getrequests2', user2)
 
-  mainDb = nanoAdmin.db.use('lifeswap')
-
   before (ready) ->
     # start webserver
     app = require('app')
-    ## insert users and requests
+    ## insert requests
     async.parallel [
-      user1.create
-      user2.create
       request1.create
       request2.create
     ], ready
 
   after (finished) ->
-    ## destroy users and requests
+    ## destroy requests
     async.parallel [
-      user1.destroy
-      user2.destroy
       request1.destroy
       request2.destroy
     ], finished
