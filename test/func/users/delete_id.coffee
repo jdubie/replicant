@@ -13,10 +13,7 @@ describe 'zzzz DELETE /users/:id', () ->
   ## simple test - for now should just 403 (forbidden)
 
   user = new TestUser('deleteuser')
-
-  #_adminName = h.hash('tester@test.com')
-  #_adminPass = 'tester'
-  #_adminCookie = null
+  constable = new TestUser('deleteconstable', roles: [ 'constable' ])
 
   mainDb = config.nanoAdmin.db.use('lifeswap')
   usersDb = config.nanoAdmin.db.use('_users')
@@ -25,12 +22,10 @@ describe 'zzzz DELETE /users/:id', () ->
   before (ready) ->
     ## start webserver
     app = require('app')
-
-    user.create(ready)
-
+    async.parallel([user.create, constable.create], ready)
 
   after (finished) ->
-    user.destroy(finished)
+    async.parallel([user.destroy, constable.destroy], finished)
 
   describe 'regular user', () ->
     it 'should return a 403 (forbidden)', (done) ->
@@ -62,32 +57,32 @@ describe 'zzzz DELETE /users/:id', () ->
         dbs.should.include(userDbName)
         done()
 
-        #  describe 'constable', () ->
-        #
-        #    it 'should return a 200 (OK)', (done) ->
-        #      opts =
-        #        method: 'DELETE'
-        #        url: "http://localhost:3001/users/#{user._id}"
-        #        json: true
-        #        headers: cookie: _adminCookie
-        #      request opts, (err, res, body) ->
-        #        should.not.exist(err)
-        #        res.should.have.property('statusCode', 200)
-        #        done()
-        #
-        #    it 'should delete the _users entry', (done) ->
-        #      usersDb.get user.couchUser, (err, userDoc) ->
-        #        should.exist(err)
-        #        err.should.have.property('status_code', 404)
-        #        done()
-        #
-        #    it 'should delete the \'user\' type entry in lifeswap db', (done) ->
-        #      mainDb.get user._id, (err, userDoc) ->
-        #        should.exist(err)
-        #        err.should.have.property('status_code', 404)
-        #        done()
-        #
-        #    it 'should delete the user DB', (done) ->
-        #      config.nanoAdmin.db.list (err, dbs) ->
-        #        dbs.should.not.include(userDbName)
-        #        done()
+  describe 'constable', () ->
+
+    it 'should return a 200 (OK)', (done) ->
+      opts =
+        method: 'DELETE'
+        url: "http://localhost:3001/users/#{user._id}"
+        json: true
+        headers: cookie: constable.cookie
+      request opts, (err, res, body) ->
+        should.not.exist(err)
+        res.should.have.property('statusCode', 200)
+        done()
+
+    it 'should delete the _users entry', (done) ->
+      usersDb.get user.couchUser, (err, userDoc) ->
+        should.exist(err)
+        err.should.have.property('status_code', 404)
+        done()
+
+    it 'should delete the \'user\' type entry in lifeswap db', (done) ->
+      mainDb.get user._id, (err, userDoc) ->
+        should.exist(err)
+        err.should.have.property('status_code', 404)
+        done()
+
+    it 'should delete the user DB', (done) ->
+      config.nanoAdmin.db.list (err, dbs) ->
+        dbs.should.not.include(user.userDbName)
+        done()

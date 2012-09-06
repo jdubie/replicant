@@ -67,7 +67,7 @@ m.TestUser = class TestUser
     @userDbName = h.getUserDbName(userId: @_id)
     @couchUser = "org.couchdb.user:#{@name}"
 
-  create: (callback) ->
+  create: (callback) =>
 
     insertUser = (callback) =>
       async.parallel
@@ -79,6 +79,7 @@ m.TestUser = class TestUser
             password: @password
             roles: @roles
             user_id: @_id
+          debug "#_userDoc", @_id
           @usersDb.insert(userDoc, cb)
         _rev: (cb) =>
           @mainDb.insert this.attributes(), @_id, (err, res) ->
@@ -106,7 +107,7 @@ m.TestUser = class TestUser
     async.waterfall([insertUser, authUser], callback)
 
 
-  destroy: (callback) ->
+  destroy: (callback) =>
 
     destroyUser = (callback) =>
       @usersDb.get @couchUser, (err, userDoc) =>
