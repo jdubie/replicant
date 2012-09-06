@@ -525,4 +525,75 @@ m.TestPayment = class TestPayment
       @userDb.destroy(@_id, userDoc._rev, callback)
 
 
+m.TestCard = class TestCard
+  @attributes: [
+    '_id'
+    '_rev'
+    'type'
+    'name'
+    'user_id'
+    'ctime'
+    'mtime'
+    'balanced_url'      # token url for balanced
+    'full_name'
+    'expiration_month'
+    'expiration_year'
+    'street_address'
+    'postal_code'
+    'country_code'
+    'city'
+    'state'
+    'card_type'
+    'last_four'         # server-only
+    'card_number'
+    'security_code'
+    'card_type'
+  ]
+
+  attributes: =>
+    result = {}
+    for key in @constructor.attributes when key of this
+      result[key] = @[key]
+    result
+
+  constructor: (id, user, opts) ->
+
+    def =
+      _id: id
+      name: user.name
+      user_id: user._id
+      type: 'card'
+      ctime: 12345
+      mtime: 12345
+      balanced_url: '/url/to/pluto'
+      full_name: 'dack jubie'
+      expiration_month: 11
+      expiration_year: 2013
+      street_address: '4123 Yeeee-ooohhh'
+      postal_code: '05452'
+      country_code: 'USA'
+      city: 'Paradise'
+      state: 'VT'
+      card_type: 'VISA'
+      last_four: '1233'
+      
+    opts ?= {}
+    _.defaults(opts, def)
+    _.extend(this, opts)
+
+    @userDb = config.nanoAdmin.db.use("users_#{user._id}")
+
+  create: (callback) =>
+    @userDb.insert @attributes(), @_id, (err, res) =>
+      debug 'err, res', err, res
+      return callback(err) if err
+      @_rev = res.rev
+      callback()
+
+  destroy: (callback) =>
+    @userDb.get @_id, (err, userDoc) =>
+      return callback() if err?   # should error
+      @userDb.destroy(@_id, userDoc._rev, callback)
+
+
 module.exports = m
