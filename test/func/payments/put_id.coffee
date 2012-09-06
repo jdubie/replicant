@@ -8,8 +8,6 @@ h = require('lib/helpers')
 
 
 describe 'yyyy PUT /payments/:id', () ->
-
-  newAmount = 444
   
   user = new TestUser('put_payments_user')
   payment = new TestPayment('put_payments', user)
@@ -22,26 +20,24 @@ describe 'yyyy PUT /payments/:id', () ->
   after (finished) ->
     user.destroy(finished)
 
-  it 'we should rething this one', () ->
+  it 'should fail on put', (done) ->
+    oldAmount = payment.amount
+    newAmount = 444
+    payment.amount.should.not.eql(newAmount)
+    payment.amount = newAmount
+    opts =
+      method: 'PUT'
+      url: "http://localhost:3001/payments/#{payment._id}"
+      json: payment.attributes()
+      headers: cookie: user.cookie
+    request opts, (err, res, payment) ->
+      should.not.exist(err)
+      res.statusCode.should.eql(403)
+      done()
+    payment.amount = oldAmount
 
-    # shouldn't be able to change amount or status?
-
-    #  it 'should PUT the payment successfully', (done) ->
-    #    payment.amount.should.not.eql(newAmount)
-    #    payment.amount = newAmount
-    #    opts =
-    #      method: 'PUT'
-    #      url: "http://localhost:3001/payments/#{payment._id}"
-    #      json: payment.attributes()
-    #      headers: cookie: user.cookie
-    #    request opts, (err, res, payment) ->
-    #      should.not.exist(err)
-    #      res.statusCode.should.eql(201)
-    #      payment.should.have.keys(['_rev', 'mtime'])
-    #      done()
-    #
-    #  it 'should have actually have change doc', (done) ->
-    #    userDb.get payment._id, (err, paymentDoc) ->
-    #      should.not.exist(err)
-    #      paymentDoc.amount.should.equal(newAmount)
-    #      done()
+  it 'should have not actually have changed the doc', (done) ->
+    userDb.get payment._id, (err, paymentDoc) ->
+      should.not.exist(err)
+      paymentDoc.should.eql(payment.attributes())
+      done()

@@ -504,7 +504,7 @@ m.TestPayment = class TestPayment
       event_id: "event_id_#{id}"
       card_id: "card_id_#{id}"
       amount: 69
-      status: '1'
+      status: '2'
       
     opts ?= {}
     _.defaults(opts, def)
