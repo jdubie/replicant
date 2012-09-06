@@ -26,9 +26,9 @@ describe 'yyyy DELETE /payments/:id', () ->
       url: "http://localhost:3001/payments/#{payment._id}"
       json: true
       headers: cookie: user.cookie
-    request opts, (err, res, body) ->
-      should.not.exist(err)
-      res.should.have.property('statusCode', 403)
+    h.request opts, (err) ->
+      should.exist(err)
+      err.should.have.property('statusCode', 403)
       done()
 
   it 'should not delete \'payment\' type entry in user db', (done) ->
