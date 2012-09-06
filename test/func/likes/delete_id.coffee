@@ -44,6 +44,9 @@ describe 'yyyy DELETE /likes/:id', () ->
       insertLike
     ], ready
 
+  after (finished) ->
+    user.destroy(finished)
+
   it 'should return a 200', (done) ->
     opts =
       method: 'DELETE'
