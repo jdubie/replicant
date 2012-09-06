@@ -1,58 +1,43 @@
-should = require('should')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
-{jobs, nanoAdmin, nano} = require('config')
-{hash} = require('lib/helpers')
 kue = require('kue')
+config = require('config')
+{TestUser, TestSwap} = require('lib/test_models')
 
-describe 'POST /swaps', () ->
+describe 'yyy POST /swaps', () ->
 
-  _username = hash('user2@test.com')
-  _userId = 'user2_id'
-  _password = 'pass2'
-  _ctime = _mtime = 12345
-  _swap =
-    _id: 'postswaps'
-    type: 'swap'
-    name: _username
-    user_id: _userId
-    status: 'pending'
-    title: 'Posted Swap'
-    zipcode: '94305'
-    industry: 'Agriculture'
-    ctime: _ctime
-    mtime: _mtime
-    foo: 'bar'
-  cookie = null
-
-  mainDb = nanoAdmin.db.use('lifeswap')
+  user = new TestUser('postswapsuser')
+  swap = new TestSwap('postswap', user)
 
   before (ready) ->
     ## start webserver
     app = require('app')
-    nano.auth _username, _password, (err, body, headers) ->
-      should.not.exist(err)
-      should.exist(headers and headers['set-cookie'])
-      cookie = headers['set-cookie'][0]
-      jobs.client.flushall(ready)
+    async.parallel [
+      user.create
+      (cb) -> config.jobs.client.flushall(cb)
+    ], ready
 
   after (finished) ->
-    mainDb.destroy _swap._id, _swap._rev, (err, res) ->
-      return finished(err) if err?
-      jobs.client.flushall(finished)
+    async.parallel [
+      user.destroy
+      swap.destroy
+      (cb) -> config.jobs.client.flushall(cb)
+    ], finished
+
 
   it 'should POST the swap correctly', (done) ->
     opts =
       method: 'POST'
       url: "http://localhost:3001/swaps"
-      json: _swap
-      headers: {cookie}
+      json: swap.attributes()
+      headers: cookie: user.cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
       body.should.have.keys(['_rev', 'mtime', 'ctime'])
       for key, val of body
-        _swap[key] = val
+        swap[key] = val
       done()
 
   it 'should add notification', (done) ->
