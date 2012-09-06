@@ -91,11 +91,11 @@ m.TestUser = class TestUser
           config.nanoAdmin.db.create "users_#{@_id}", (err) =>
             return cb(err) if err
             config.nanoAdmin.db.replicate(userDdocDbName, @userDbName, cb)
+      , callback
 
-          #, _callback
-      , (err, res) ->
-        debug '#createUser err, res', err, res
-        callback(err, res)
+      #, (err, res) ->
+      # debug '#createUser err, res', err, res
+      # callback(err, res)
 
     authUser = (res, callback) =>
       {_rev} = res
@@ -265,6 +265,66 @@ m.TestRequest = class TestRequest
       return callback() if err?   # should error
       @mainDb.destroy(@_id, userDoc._rev, callback)
 
+m.TestReview = class TestReview
+  @attributes: [
+    '_id'
+    '_rev'
+    'type'
+    'name'
+    'user_id'
+    'ctime'
+    'mtime'
+    'review_type'
+    'reviewee_id'
+    'swap_id'
+    'rating'
+    'review'
+    'fb_id'
+  ]
+
+  attributes: =>
+    result = {}
+    for key in @constructor.attributes when key of this
+      result[key] = @[key]
+    result._id = @_id if @_id
+    result
+
+  constructor: (id, user, opts) ->
+
+    user ?= {}
+    user.name ?= "user_name_#{id}"
+    user._id ?= "user_id_#{id}"
+
+    def =
+      _id: id
+      type: 'review'
+      name: user.name
+      user_id: user._id
+      ctime: 12345
+      mtime: 12345
+      review_type: 'guest'
+      reviewee_id: user._id
+      swap_id: 'swap1'
+      rating: 3
+      review: 'sucit'
+      fb_id: 'wefwefwewef'
+      
+    opts ?= {}
+    _.defaults(opts, def)
+    _.extend(this, opts)
+
+    @mainDb = config.nanoAdmin.db.use('lifeswap')
+
+  create: (callback) =>
+    @mainDb.insert @attributes(), @_id, (err, res) =>
+      return callback(err) if err
+      @_rev = res.rev
+      callback()
+
+  destroy: (callback) =>
+    @mainDb.get @_id, (err, userDoc) =>
+      return callback() if err?   # should error
+      @mainDb.destroy(@_id, userDoc._rev, callback)
 
 m.TestEmailAddress = class TestEmailAddress
   @attributes: [
@@ -312,6 +372,57 @@ m.TestEmailAddress = class TestEmailAddress
       return callback() if err?   # should error
       @userDb.destroy(@_id, userDoc._rev, callback)
 
+m.TestLike = class TestLike
+  @attributes: [
+    '_id'
+    '_rev'
+    'type'
+    'name'
+    'user_id'
+    'ctime'
+    'mtime'
+    'swap_id'     # the liked swap id
+  ]
+
+  attributes: =>
+    result = {}
+    for key in @constructor.attributes when key of this
+      result[key] = @[key]
+    result._id = @_id if @_id
+    result
+
+  constructor: (id, user, opts) ->
+
+    user ?= {}
+    user.name ?= "user_name_#{id}"
+    user._id ?= "user_id_#{id}"
+
+    def =
+      _id: id
+      type: 'like'
+      name: user.name
+      user_id: user._id
+      ctime: 12345
+      mtime: 12345
+      swap_id: "swap_id_#{id}"
+      
+    opts ?= {}
+    _.defaults(opts, def)
+    _.extend(this, opts)
+
+    @mainDb = config.nanoAdmin.db.use('lifeswap')
+
+  create: (callback) =>
+    @mainDb.insert @attributes(), @_id, (err, res) =>
+      debug 'err', err
+      return callback(err) if err
+      @_rev = res.rev
+      callback()
+
+  destroy: (callback) =>
+    @mainDb.get @_id, (err, userDoc) =>
+      return callback() if err?   # should error
+      @mainDb.destroy(@_id, userDoc._rev, callback)
 
 m.TestPhoneNumber = class TestPhoneNumber
   @attributes: [
