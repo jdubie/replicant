@@ -11,16 +11,13 @@ request = require('request')
 
 describe 'yyyy DELETE /reviews/:id', () ->
 
-  ## simple test - for now should just 403 (forbidden)
-
   user = new TestUser('delete_reviews_id_user')
   review = new TestReview('delete_reviews_id', user)
 
-  mainDb = nanoAdmin.db.use('lifeswap')
-  usersDb = nanoAdmin.db.use('_users')
+  mainDb = config.nanoAdmin.db.use('lifeswap')
+  usersDb = config.nanoAdmin.db.use('_users')
 
   before (ready) ->
-    # start webserver
     app = require('app')
     async.parallel([user.create, review.create], ready)
 

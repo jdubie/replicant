@@ -20,11 +20,9 @@ describe 'yyy DELETE /requests/:id', () ->
     ## insert user and request
     async.parallel([user.create, _request.create], ready)
 
-
   after (finished) ->
     ## destroy user and request
     async.parallel([user.destroy, _request.destroy], finished)
-
 
   it 'should return a 403 (forbidden)', (done) ->
     opts =
@@ -36,7 +34,6 @@ describe 'yyy DELETE /requests/:id', () ->
       should.not.exist(err)
       res.should.have.property('statusCode', 403)
       done()
-
 
   it 'should not delete \'request\' type entry in lifeswap db', (done) ->
     mainDb.get _request._id, (err, requestDoc) ->

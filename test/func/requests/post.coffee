@@ -15,13 +15,10 @@ describe 'yyy POST /requests', () ->
   mainDb = nanoAdmin.db.use('lifeswap')
 
   before (ready) ->
-    ## start webserver
     app = require('app')
-    ## insert user
     user.create(ready)
 
   after (finished) ->
-    ## destroy user and request
     async.parallel([user.destroy, _request.destroy], finished)
 
   it 'should return _rev, mtime, ctime', (done) ->

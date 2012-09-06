@@ -12,19 +12,14 @@ describe 'yyy PUT /requests/:id', () ->
 
   user = new TestUser('deleterequestuser')
   _request = new TestRequest('deleterequest', user)
-
   mainDb = nanoAdmin.db.use('lifeswap')
 
   before (ready) ->
-    ## start webserver
     app = require('app')
-    ## insert user and request
     async.parallel([user.create, _request.create], ready)
 
   after (finished) ->
-    ## insert user and request
     async.parallel([user.destroy, _request.destroy], finished)
-
 
   it 'should return _rev and mtime', (done) ->
     _request.foo = 'c3p0'

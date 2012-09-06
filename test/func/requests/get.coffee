@@ -28,7 +28,6 @@ describe 'yyy GET /requests', () ->
       request2.destroy
     ], finished
 
-
   it 'should provide a list of all the correct requests', (done) ->
     opts =
       method: 'GET'
