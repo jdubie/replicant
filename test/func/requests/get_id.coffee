@@ -3,13 +3,21 @@ util = require('util')
 request = require('request')
 
 {nanoAdmin} = require('config')
+h = require('lib/helpers')
 
 
 describe 'GET /requests/:id', () ->
 
+  _ctime = _mtime = 12345
   _request =
     _id: 'getrequestid'
     type: 'request'
+    name: h.hash('user2@test.com')
+    user_id: 'user2_id'
+    title: 'GET requests'
+    ctime: _ctime
+    mtime: _mtime
+    foo: 'bar'
 
   mainDb = nanoAdmin.db.use('lifeswap')
 

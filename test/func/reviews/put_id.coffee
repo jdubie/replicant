@@ -59,7 +59,7 @@ describe 'PUT /reviews/:id', () ->
     mainDb.destroy(_review._id, _review._rev, finished)
 
 
-  it 'should 403 because should not be able to modify reviews', (done) ->
+  it 'should return _rev and mtime', (done) ->
     oldFoo = _review.foo
     _review.foo = 'c3p0'
     opts =
@@ -69,8 +69,10 @@ describe 'PUT /reviews/:id', () ->
       headers: cookie: cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
-      res.statusCode.should.eql(403)
-      _review.foo = oldFoo
+      res.should.have.property('statusCode', 200)
+      body.should.have.keys(['_rev', 'mtime'])
+      for key, val of body
+        _review[key] = val
       done()
 
   it 'should modify the document in the DB', (done) ->
