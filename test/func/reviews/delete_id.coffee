@@ -4,6 +4,7 @@ util = require('util')
 request = require('request')
 
 {nanoAdmin, nano} = require('config')
+config = require('config')
 {hash} = require('lib/helpers')
 {TestUser} = require('lib/test_models')
 {TestReview} = require('lib/test_models')
