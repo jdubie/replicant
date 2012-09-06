@@ -2,35 +2,26 @@ should = require('should')
 async = require('async')
 util = require('util')
 request = require('request')
-
+{TestUser} = require('lib/test_models')
 {nanoAdmin} = require('config')
 
 
-describe 'GET /users/:id', () ->
+describe 'zzzz GET /users/:id', () ->
 
-  someUser = null
-
-  mainDb = nanoAdmin.db.use('lifeswap')
+  user = null
 
   before (ready) ->
-    ## start webserver
     app = require('app')
-    ## get one of the users
-    opts =
-      key: 'user'
-      include_docs: true
-    mainDb.view 'lifeswap', 'docs_by_type', opts, (err, res) ->
-      should.not.exist(err)
-      someUser = res.rows?[0]?.doc
-      ready()
 
+    user = new TestUser('get_users_id')
+    user.create(ready)
 
   it 'should get the correct user\'s document', (done) ->
     opts =
       method: 'GET'
-      url: "http://localhost:3001/users/#{someUser._id}"
+      url: "http://localhost:3001/users/#{user._id}"
       json: true
     request opts, (err, res, user) ->
       should.not.exist(err)
-      user.should.eql(someUser)
+      user.should.eql(user)
       done()
