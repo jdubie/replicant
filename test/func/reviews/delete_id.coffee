@@ -5,21 +5,21 @@ request = require('request')
 
 {nanoAdmin, nano} = require('config')
 {hash} = require('lib/helpers')
+{TestUser} = require('lib/test_models')
 
 
-describe 'DELETE /reviews/:id', () ->
+describe 'yyyy DELETE /reviews/:id', () ->
 
   ## simple test - for now should just 403 (forbidden)
 
-  _username = hash('user2@test.com')
-  _userId = 'user2_id'
+  user = new TestUser('delete_reviews_id')
   _password = 'pass2'
   _ctime = _mtime = 12345
   _review =
     _id: 'deletereview'
     type: 'review'
-    name: _username
-    user_id: _userId
+    name: user.name
+    user_id: user._id
     review_type: 'swap'
     reviewee_id: 'user1_id'
     swap_id: 'swap1'
@@ -28,43 +28,38 @@ describe 'DELETE /reviews/:id', () ->
     ctime: _ctime
     mtime: _mtime
     foo: 'bar'
-  cookie = null
 
   mainDb = nanoAdmin.db.use('lifeswap')
   usersDb = nanoAdmin.db.use('_users')
 
   before (ready) ->
-    ## start webserver
-    app = require('../../../app')
-    ## authenticate user
-    authUser = (callback) ->
-      nano.auth _username, _password, (err, body, headers) ->
-        should.not.exist(err)
-        should.exist(headers and headers['set-cookie'])
-        cookie = headers['set-cookie'][0]
-        callback()
-    ## insert review
+
+    # start webserver
+    app = require('app')
+
+    # insert review
     insertReview = (callback) ->
       mainDb.insert _review, (err, res) ->
         should.not.exist(err)
         _review._rev = res.rev
         callback()
+        
     async.series [
-      authUser
+      user.create
       insertReview
     ], ready
 
-
   after (finished) ->
-    mainDb.destroy(_review._id, _review._rev, finished)
-
+    mainDb.destroy _review._id, _review._rev, (err) ->
+      return finished(err) if err
+      user.destroy(finished)
 
   it 'should return a 403 (forbidden)', (done) ->
     opts =
       method: 'DELETE'
       url: "http://localhost:3001/reviews/#{_review._id}"
       json: true
-      headers: cookie: cookie
+      headers: cookie: user.cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
       res.should.have.property('statusCode', 403)
