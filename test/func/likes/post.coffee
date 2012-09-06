@@ -10,7 +10,7 @@ kue = require('kue')
 debug = require('debug')('replicant/test/func/likes/post')
 
 
-describe 'yyyy POST /likes', () ->
+describe 'y POST /likes', () ->
 
   user = new TestUser('user_post_likes')
   like = new TestLike('post_likes', user)

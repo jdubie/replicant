@@ -8,7 +8,7 @@ request = require('request')
 {TestUser, TestRequest} = require('lib/test_models')
 
 
-describe 'yyy PUT /requests/:id', () ->
+describe ' PUT /requests/:id', () ->
 
   user = new TestUser('deleterequestuser')
   _request = new TestRequest('deleterequest', user)

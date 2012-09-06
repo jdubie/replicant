@@ -8,7 +8,7 @@ debug = require('debug')('replicant/test/func/phone_numbers/delete')
 {getUserDbName, hash} = require('lib/helpers')
 
 
-describe 'yyyy GET /messages', () ->
+describe 'y GET /messages', () ->
 
   guest   = new TestUser('delete_messages_id_user1')
   host    = new TestUser('delete_messages_id_user2')

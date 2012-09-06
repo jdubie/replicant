@@ -9,7 +9,7 @@ request = require('request')
 debug = require('debug')('replicant/test/func/like/delete_id')
 
 
-describe 'yyyy DELETE /likes/:id', () ->
+describe 'y DELETE /likes/:id', () ->
 
   user = new TestUser('delete_likes_id_user')
   like = new TestLike('delete_likes_id', user)

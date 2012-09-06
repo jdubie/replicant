@@ -10,7 +10,7 @@ kue     = require('kue')
 #{getUserDbName} = require('../../../lifeswap/shared/helpers')
 getUserDbName = ({userId}) -> return "users_#{userId}"
 
-describe 'yyyy POST /users', () ->
+describe 'y POST /users', () ->
 
   _email = 'newuser@gmail.com'
   _username = hash(_email)

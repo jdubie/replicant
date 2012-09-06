@@ -6,7 +6,7 @@ request = require('request')
 {nanoAdmin} = require('config')
 
 
-describe 'yyyy GET /likes/:id', () ->
+describe 'y GET /likes/:id', () ->
 
   like = new TestLike('get_likes_id')
 

@@ -7,7 +7,7 @@ request = require('request')
 {TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
 
-describe 'yyy DELETE /events/:id', () ->
+describe ' DELETE /events/:id', () ->
 
   guest = new TestUser('delete_events_id_guest')
   host  = new TestUser('delete_events_id_host')

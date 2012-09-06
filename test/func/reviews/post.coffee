@@ -8,7 +8,7 @@ async = require('async')
 {hash} = require('lib/helpers')
 
 
-describe 'yyyy POST /reviews', () ->
+describe 'y POST /reviews', () ->
 
   user = new TestUser('post_reviews_user')
   review = new TestReview('post_reviews', user)
