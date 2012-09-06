@@ -2,53 +2,41 @@ should = require('should')
 util = require('util')
 request = require('request')
 
-{nanoAdmin, nano} = require('config')
+{TestUser, TestCard} = require('lib/test_models')
+config = require('config')
 {getUserDbName, hash} = require('lib/helpers')
 
 
-describe 'POST /cards', () ->
+describe 'yyyy POST /cards', () ->
 
-  _username = hash('user2@test.com')
-  _userId = 'user2_id'
-  _password = 'pass2'
-  _ctime = _mtime = 12345
-  _card =
-    _id: 'postcardsid'
-    type: 'card'
-    name: _username
-    user_id: _userId
-    balanced_url: 'balanced1'
-    ctime: _ctime
-    mtime: _mtime
-    baz: 'bar'
-  cookie = null
-
-  userDb = nanoAdmin.db.use(getUserDbName(userId: _userId))
+  user = new TestUser('post_card_user')
+  card = new TestCard('post_card', user)
+  userDb = config.nanoAdmin.db.use("users_#{user._id}")
 
   before (ready) ->
-    ## start webserver
     app = require('app')
-    ## authenticate user
-    nano.auth _username, _password, (err, body, headers) ->
-      should.not.exist(err)
-      should.exist(headers and headers['set-cookie'])
-      cookie = headers['set-cookie'][0]
-      ready()
+    user.create(ready)
 
   after (finished) ->
-    ## destroy card
-    userDb.get _card._id, (err, card) ->
-      should.not.exist(err)
-      userDb.destroy(card._id, card._rev, finished)
+    user.destroy(finished)
 
   it 'should POST the card correctly', (done) ->
     opts =
       method: 'POST'
       url: "http://localhost:3001/cards"
-      json: _card
-      headers: cookie: cookie
-    request opts, (err, res, card) ->
+      json: card.attributes()
+      headers: cookie: user.cookie
+    request opts, (err, res, cardDoc) ->
       should.not.exist(err)
       res.statusCode.should.eql(201)
-      card.should.have.keys(['_id', '_rev', 'mtime', 'ctime'])
+      cardDoc.should.have.keys(['_id', '_rev', 'mtime', 'ctime'])
+      card[key] = value for key, value of cardDoc
       done()
+
+  it 'should actually be there', (done) ->
+    userDb.get card._id, (err, cardDoc) ->
+      should.not.exist(err)
+      cardDoc.should.eql(card.attributes())
+      done()
+
+

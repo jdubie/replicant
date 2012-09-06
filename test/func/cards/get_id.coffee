@@ -8,10 +8,10 @@ request = require('request')
 {getUserDbName, hash} = require('lib/helpers')
 
 
-describe 'zzzz GET /cards/:id', () ->
+describe 'yyyy GET /cards/:id', () ->
 
-  user = new TestUser('delete_card_id_user')
-  card = new TestCard('delete_card_id', user)
+  user = new TestUser('get_card_id_user')
+  card = new TestCard('get_card_id', user)
 
   before (ready) ->
     app = require('app')
