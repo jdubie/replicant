@@ -18,10 +18,18 @@ describe 'yyy POST /likes', () ->
 
   before (ready) ->
     app = require('app')
-    user.create(ready)
+    async.parallel [
+      user.create
+      (cb) -> jobs.client.flushall(cb)
+    ], ready
+
 
   after (finished) ->
-    async.parallel([like.destroy, user.destroy], finished)
+    async.parallel [
+      like.destroy
+      user.destroy
+      (cb) -> jobs.client.flushall(cb)
+    ], finished
 
   it 'should return _rev, mtime, ctime', (done) ->
     opts =
