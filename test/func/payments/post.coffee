@@ -17,7 +17,7 @@ describe 'yyy POST /payments', () ->
     user.create(ready)
 
   after (finished) ->
-    user.destroy(finished)
+    async.series([payment.destroy, user.destroy], finished)
 
   it 'should POST the payment correctly', (done) ->
     opts =

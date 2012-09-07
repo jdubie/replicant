@@ -18,7 +18,7 @@ describe 'yyy PUT /payments/:id', () ->
     async.series([user.create, payment.create], ready)
 
   after (finished) ->
-    user.destroy(finished)
+    async.series([payment.destroy, user.destroy], finished)
 
   it 'should fail on put', (done) ->
     oldAmount = payment.amount
