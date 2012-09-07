@@ -473,7 +473,7 @@ app.get '/events', (req, res) ->
   debug 'userCtx', userCtx
   async.waterfall [
     (next) ->
-      rep.getTypeUserDb('event', userCtx.user_id, cookie, next)
+      rep.getTypeUserDb({type: 'event', userId: userCtx.user_id, cookie, roles: userCtx.roles}, next)
     (events, next) ->
       async.map(events, rep.addEventHostsAndGuests, next)
   ], (err, events) ->
@@ -515,7 +515,7 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers'], (model) ->
     cookie = req.headers.cookie
     type = h.singularizeModel(model)
     debug 'userCtx', userCtx
-    rep.getTypeUserDb type, userCtx.user_id, cookie, (err, docs) ->
+    rep.getTypeUserDb {type, userId: userCtx.user_id, cookie, roles: userCtx.roles}, (err, docs) ->
       return h.sendError(res, err) if err
       res.json(200, docs)
 

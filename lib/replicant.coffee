@@ -292,7 +292,7 @@ replicant.getType = (type, callback) ->
       callback(err, docs)
 
 ## gets all of a type from a user DB
-replicant.getTypeUserDb = (type, userId, cookie, callback) ->
+replicant.getTypeUserDb = ({type, userId, cookie, roles}, callback) ->
   userDbName = h.getUserDbName(userId: userId)
   nanoOpts =
     url: "#{config.dbUrl}/#{userDbName}"
