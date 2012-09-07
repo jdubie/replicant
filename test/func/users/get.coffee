@@ -1,22 +1,18 @@
-should = require('should')
-async = require('async')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
+
 {TestUser} = require('lib/test_models')
-{nano} = require('config')
 
 
-describe 'GET /users', () ->
+describe 'zzz GET /users', () ->
 
-  user1 = null
-  user2 = null
+  user1 = new TestUser('getuser1')
+  user2 = new TestUser('getuser2')
 
   before (ready) ->
     # start webserver
     app = require('app')
-
-    user1 = new TestUser('getuser1')
-    user2 = new TestUser('getuser2')
     async.parallel([user1.create, user2.create], ready)
 
   after (finished) ->
