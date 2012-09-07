@@ -392,9 +392,13 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
 
 ## gets all messages and tacks on 'read' status (true/false)
 replicant.getMessages = ({userId, cookie, roles}, callback) ->
-  userDbName = h.getUserDbName(userId: userId)
+  if 'constable' in roles
+    dbName = 'drunk_tank'
+  else
+    dbName = h.getUserDbName({userId})
+
   nanoOpts =
-    url: "#{config.dbUrl}/#{userDbName}"
+    url: "#{config.dbUrl}/#{dbName}"
     cookie: cookie
   db = require('nano')(nanoOpts)
   opts = group_level: 2
