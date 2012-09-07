@@ -9,7 +9,7 @@ kue     = require('kue')
 {TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
 
-describe ' PUT /events/:id', () ->
+describe 'yyy PUT /events/:id', () ->
 
   guest = new TestUser('put_events_id_guest')
   host  = new TestUser('put_events_id_host')
@@ -17,18 +17,14 @@ describe ' PUT /events/:id', () ->
   event = new TestEvent('put_events_id', [guest], [host], swap)
 
   before (ready) ->
-    ## start webserver
     app = require('app')
-    ## create users, swap, and event
     async.series [
       (cb) -> async.parallel([guest.create, host.create], cb)
       swap.create
       event.create
     ], ready
 
-
   after (finished) ->
-    ## destroy event and swap, then users
     async.series [
       (cb) -> async.parallel([event.destroy, swap.destroy], cb)
       (cb) -> async.parallel([guest.destroy, host.destroy], cb)
