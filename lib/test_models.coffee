@@ -448,6 +448,25 @@ m.TestCard = class TestCard extends TestTypePrivate
     }
 
 
+m.TestReferEmail = class TestReferEmail extends TestTypePrivate
+  @attributes: =>
+    attrs = super
+    [].concat(attrs, [
+      'request_id'
+      'email_address'
+      'personal_message'
+    ])
+
+  defaults: =>
+    def = super
+    _.extend def, {
+      type: 'refer_email'
+      request_id: "#{@_id}_request_id"
+      email_address: "#{@_id}@emailAddress.com"
+      personal_message: "#{@_id}_personal_message"
+    }
+
+
 m.TestEvent = class TestEvent
   @attributes: [
     '_id'

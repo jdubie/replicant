@@ -34,7 +34,7 @@ describe 'DELETE /messages/:id', () ->
 
     after (finished) ->
       async.series [
-        #message.destroy
+        message.destroy
         event.destroy
         (cb) -> async.parallel([guest.destroy, host.destroy], cb)
       ], finished
