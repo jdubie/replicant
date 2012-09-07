@@ -8,7 +8,7 @@ request = require('request')
 {TestUser, TestPhoneNumber} = require('lib/test_models')
 
 
-describe ' DELETE /phone_numbers/:id', () ->
+describe 'yyy DELETE /phone_numbers/:id', () ->
 
   user = new TestUser('delete_phone_id_user')
   phoneNumber = new TestPhoneNumber('delete_phone_id', user)
@@ -22,8 +22,8 @@ describe ' DELETE /phone_numbers/:id', () ->
     async.series([user.create, phoneNumber.create], ready)
 
   after (finished) ->
-    ## destroy user (destroys phone number as well)
-    user.destroy(finished)
+    ## destroy phone number and user
+    async.series([phoneNumber.destroy, user.destroy], finished)
 
 
   it 'should return a 403 (forbidden)', (done) ->

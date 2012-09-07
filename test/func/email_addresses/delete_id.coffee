@@ -8,7 +8,7 @@ request = require('request')
 {TestUser, TestEmailAddress} = require('lib/test_models')
 
 
-describe ' DELETE /email_addresses/:id', () ->
+describe 'yyy DELETE /email_addresses/:id', () ->
 
   user = new TestUser('delete_email_id_user')
   emailAddress = new TestEmailAddress('delete_email_id', user)
@@ -22,8 +22,8 @@ describe ' DELETE /email_addresses/:id', () ->
     async.series([user.create, emailAddress.create], ready)
 
   after (finished) ->
-    ## destroy user (destroys email address as well)
-    user.destroy(finished)
+    ## destroy email address and user
+    async.series([emailAddress.destroy, user.destroy], finished)
 
 
   it 'should return a 403 (forbidden)', (done) ->
