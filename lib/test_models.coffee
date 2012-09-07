@@ -443,67 +443,20 @@ m.TestReview = class TestReview
       return callback() if err?   # should error
       @mainDb.destroy(@_id, userDoc._rev, callback)
 
-m.TestEmailAddress = class TestEmailAddress
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'name'
-    'user_id'
-    'ctime'
-    'mtime'
-    'email_address'
-  ]
+m.TestEmailAddress = class TestEmailAddress extends TestTypePrivate
+  @attributes: =>
+    attrs = super
+    [].concat attrs, [
+      'email_address'
+    ]
 
-  attributes: =>
-    result = {}
-    for key in @constructor.attributes when key of this
-      result[key] = @[key]
-    result
-
-  constructor: (id, user, opts) ->
-
-    def =
-      _id: id
-      name: user.name
-      user_id: user._id
+  defaults: =>
+    def = super
+    _.extend def, {
       type: 'email_address'
-      ctime: 12345
-      mtime: 12345
-      email_address: "#{id}@thelifeswap.com"
-      
-    opts ?= {}
-    _.defaults(opts, def)
-    _.extend(this, opts)
+      email_address: "#{@_id}@thelifeswap.com"
+    }
 
-    @userDb = config.db.user(user._id)
-    @constableDb = config.db.constable()
-
-  create: (callback) =>
-    async.series
-      rev: (next) =>
-        cb = (err, res) ->
-          return next(err) if err
-          next(null, res.rev)
-        @constableDb.insert(@attributes(), @_id, h.nanoCallback(cb))
-      replicate: (next) =>
-        h.replicateOut([@user_id], [@_id], next)
-    , (err, res) =>
-      return callback(err) if err
-      @_rev = res.rev
-      callback()
-
-  destroy: (callback) =>
-    async.parallel [
-      (cb) =>
-        @userDb.get @_id, (err, doc) =>
-          return cb() if err?   # should error
-          @userDb.destroy(@_id, doc._rev, cb)
-      (cb) =>
-        @constableDb.get @_id, (err, doc) =>
-          return cb() if err?
-          @constableDb.destroy(@_id, doc._rev, cb)
-    ], callback
 
 m.TestLike = class TestLike
   @attributes: [
