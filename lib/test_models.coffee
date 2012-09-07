@@ -569,6 +569,7 @@ m.TestMessage = class TestMessage extends TestType
   create: (callback) =>
 
     async.series [
+
       (callback) =>
         debug 'inserting message into drunk_tank'
         message = @attributes()

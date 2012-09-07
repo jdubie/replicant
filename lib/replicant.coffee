@@ -434,26 +434,27 @@ replicant.getMessage = ({id, userId, cookie, roles}, callback) ->
     url: "#{config.dbUrl}/#{dbName}"
     cookie: cookie
   db = require('nano')(nanoOpts)
+
+  nanoOptsRead =
+    url: "#{config.dbUrl}/#{h.getUserDbName({userId})}"
+    cookie: cookie
+  dbRead = require('nano')(nanoOptsRead)
+
   message = null
   async.waterfall [
     (next) -> db.get(id, next)
     (_message, headers, next) ->
       message = _message
-      opts = key: [message.event_id, message._id]
       errorOpts =
         error : "Error getting message"
         reason: "Error getting message #{id}"
-      db.view('userddoc', 'messages', opts, h.nanoCallback(next, errorOpts))
+      dbRead.view('userddoc', 'read', {key: message._id}, h.nanoCallback(next, errorOpts))
     (res, headers, next) ->
-      if res.rows.length < 1
-        error =
-          statusCode: 404
-          error     : "Error getting message"
-          reason    : "No results for get message #{message._id}"
-        next(error)
+      if res.rows.length is 0
+        message.read = false
       else
-        message.read = if res.rows[0].value is 1 then false else true
-        next(null, message)
+        message.read = true
+      next(null, message)
   ], callback
 
 ## gets an event and tacks on 'hosts'/'guests' arrays
