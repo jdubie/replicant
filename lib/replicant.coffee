@@ -391,7 +391,7 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
 
 
 ## gets all messages and tacks on 'read' status (true/false)
-replicant.getMessages = (userId, cookie, callback) ->
+replicant.getMessages = ({userId, cookie, roles}, callback) ->
   userDbName = h.getUserDbName(userId: userId)
   nanoOpts =
     url: "#{config.dbUrl}/#{userDbName}"
@@ -420,7 +420,7 @@ replicant.getMessages = (userId, cookie, callback) ->
 
 
 ## gets a message and tacks on its 'read' status (true/false)
-replicant.getMessage = (messageId, userId, cookie, callback) ->
+replicant.getMessage = ({id, userId, cookie, roles}, callback) ->
   userDbName = h.getUserDbName(userId: userId)
   nanoOpts =
     url: "#{config.dbUrl}/#{userDbName}"
@@ -428,13 +428,13 @@ replicant.getMessage = (messageId, userId, cookie, callback) ->
   db = require('nano')(nanoOpts)
   message = null
   async.waterfall [
-    (next) -> db.get(messageId, next)
+    (next) -> db.get(id, next)
     (_message, headers, next) ->
       message = _message
       opts = key: [message.event_id, message._id]
       errorOpts =
         error : "Error getting message"
-        reason: "Error getting message #{messageId}"
+        reason: "Error getting message #{id}"
       db.view('userddoc', 'messages', opts, h.nanoCallback(next, errorOpts))
     (res, headers, next) ->
       if res.rows.length < 1

@@ -737,7 +737,7 @@ app.get '/messages', (req, res) ->
   debug "GET /messages"
   userCtx =  req.userCtx
   cookie = req.headers.cookie
-  rep.getMessages userCtx.user_id, cookie, (err, messages) ->
+  rep.getMessages {userId: userCtx.user_id, cookie, roles: userCtx.roles}, (err, messages) ->
     return h.sendError(res, err) if err
     res.json(200, messages)
 
@@ -746,7 +746,7 @@ app.get '/messages/:id', (req, res) ->
   debug "GET /messages/#{id}"
   userCtx =  req.userCtx
   cookie = req.headers.cookie
-  rep.getMessage id, userCtx.user_id, cookie, (err, message) ->
+  rep.getMessage {id, userId: userCtx.user_id, cookie, roles: userCtx.roles}, (err, message) ->
     return h.sendError(res, err) if err
     res.json(200, message)
 
