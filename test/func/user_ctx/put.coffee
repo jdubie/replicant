@@ -1,28 +1,16 @@
-should = require('should')
-async = require('async')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
-{nano, nanoAdmin, dbUrl} = require('config')
-{hash} = require('lib/helpers')
+config = require('config')
+{TestUser} = require('lib/test_models')
 
-describe 'PUT /user_ctx', () ->
+describe 'yyy PUT /user_ctx', () ->
 
-  getCouchUser = (name) -> "org.couchdb.user:#{name}"
+  user = new TestUser('put_user_ctx')
 
-  _name = 'put_userctx'
-  _oldPass = 'password'
-  _user =
-    _id: getCouchUser(_name)
-    name: _name
-    type: 'user'
-    roles: []
-    password: _oldPass
-
-  _newPass = 'passnew'
-  cookie = null
-
-  usersDb = nanoAdmin.db.use('_users')
+  _oldPass = user.password
+  _newPass = "#{user.password}_new"
 
   describe 'correctness:', () ->
 
@@ -30,46 +18,35 @@ describe 'PUT /user_ctx', () ->
     before (ready) ->
       # start webserver
       app = require('app')
-      async.series [
-        (next) ->
-          usersDb.insert(_user, _user._id, next)
-        (next) ->
-          nano.auth _name, _oldPass, (err, body, headers) ->
-            should.not.exist(err)
-            should.exist(headers and headers['set-cookie'])
-            cookie = headers['set-cookie'][0]
-            next()
-      ], ready
+      user.create(ready)
 
     after (finished) ->
-      usersDb.get getCouchUser(_name), (err, userDoc) ->
-        should.not.exist(err)
-        usersDb.destroy(getCouchUser(_name), userDoc._rev, finished)
+      user.destroy(finished)
 
     it 'should pass back a \'set-cookie\' header', (done) ->
       opts =
         url: 'http://localhost:3001/user_ctx'
         method: 'PUT'
         json:
-          name: _name
+          name: user.name
           oldPass: _oldPass
           newPass: _newPass
-        headers: {cookie}
+        headers: cookie: user.cookie
       request opts, (err, res, body) ->
         should.not.exist(err)
-        res.statusCode.should.eql(201)
+        res.should.have.property('statusCode', 201)
         res.headers.should.have.property('set-cookie')
-        cookie = res.headers['set-cookie']
+        user.cookie = res.headers['set-cookie']
         done()
 
     it 'should get the correct userCtx from _session', (done) ->
       opts =
-        url: "#{dbUrl}/_session"
+        url: "#{config.dbUrl}/_session"
         method: 'GET'
         json: true
-        headers: {cookie}
+        headers: cookie: user.cookie
       request opts, (err, res, body) ->
         should.not.exist(err)
         body.should.have.property('userCtx')
-        body.userCtx.should.eql(name: _name, roles: [])
+        body.userCtx.should.eql(name: user.name, roles: user.roles)
         done()
