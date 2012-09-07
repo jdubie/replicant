@@ -45,8 +45,10 @@ class TestType
 
     @setDbs(@user_id)
 
+  # @override
   create: =>
 
+  # @override
   destroy: =>
 
 
@@ -571,58 +573,25 @@ m.TestPhoneNumber = class TestPhoneNumber extends TestTypePrivate
     }
 
 
-m.TestPayment = class TestPayment
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'name'
-    'user_id'
-    'event_id'
-    'card_id'
-    'amount'
-    'status'
-    'ctime'
-    'mtime'
-  ]
+m.TestPayment = class TestPayment extends TestTypePrivate
+  @attributes: =>
+    attrs = super
+    [].concat(attrs, [
+      'event_id'
+      'card_id'
+      'amount'
+      'status'
+    ])
 
-  attributes: =>
-    result = {}
-    for key in @constructor.attributes when key of this
-      result[key] = @[key]
-    result
-
-  constructor: (id, user, opts) ->
-
-    def =
-      _id: id
-      name: user.name
-      user_id: user._id
+  defaults: =>
+    def = super
+    _.extend def, {
       type: 'payment'
-      ctime: 12345
-      mtime: 12345
-      event_id: "event_id_#{id}"
-      card_id: "card_id_#{id}"
+      event_id: "#{@_id}_event_id"
+      card_id: "#{@_id}_card_id"
       amount: 69
-      status: '2'     # unpaid
-      
-    opts ?= {}
-    _.defaults(opts, def)
-    _.extend(this, opts)
-
-    @userDb = config.nanoAdmin.db.use("users_#{user._id}")
-
-  create: (callback) =>
-    @userDb.insert @attributes(), @_id, (err, res) =>
-      debug 'err, res', err, res
-      return callback(err) if err
-      @_rev = res.rev
-      callback()
-
-  destroy: (callback) =>
-    @userDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
-      @userDb.destroy(@_id, userDoc._rev, callback)
+      status: '2' # unpaid
+    }
 
 
 m.TestCard = class TestCard
