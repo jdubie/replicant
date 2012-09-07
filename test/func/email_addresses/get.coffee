@@ -5,7 +5,7 @@ request = require('request')
 {TestUser, TestEmailAddress} = require('lib/test_models')
 
 
-describe ' GET /email_addresses', () ->
+describe 'yyy GET /email_addresses', () ->
 
   user = new TestUser('get_email_user')
   emailAddress1 = new TestEmailAddress('get_email1', user)
@@ -22,8 +22,12 @@ describe ' GET /email_addresses', () ->
     ], ready
 
   after (finished) ->
-    ## destroy user (destroys emails too)
-    user.destroy(finished)
+    ## destroy email addresses and user
+    async.series [
+      emailAddress1.destroy
+      emailAddress2.destroy
+      user.destroy
+    ], finished
 
   it 'should GET all emails', (done) ->
     opts =
