@@ -4,6 +4,8 @@ url = require('url')
 kue = require('kue')
 redis = require('redis')
 
+getUserDbName = ({userId}) -> "users_#{userId}"
+
 # Db connection
 switch process.env.ENV
   when 'PROD'
@@ -33,8 +35,9 @@ db = {}
 
 ## export db convience function
 nano = require('nano')
-db.user = (userId) -> nano(url.format({protocol, auth, hostname, port})).use(getUserDbName(userId))
+db.user = (userId) -> nano(url.format({protocol, auth, hostname, port})).use(getUserDbName({userId}))
 db.main = () -> nano(url.format({protocol, auth, hostname, port})).use('lifeswap')
+db._users = () -> nano(url.format({protocol, auth, hostname, port})).use('_users')
 db.mapper = () -> nano(url.format({protocol, auth, hostname, port})).use('mapper')
 db.constable = () -> nano(url.format({protocol, auth, hostname, port})).use('drunk_tank')
 

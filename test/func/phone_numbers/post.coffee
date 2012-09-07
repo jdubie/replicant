@@ -1,5 +1,5 @@
-should = require('should')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
 {nanoAdmin} = require('config')
@@ -7,7 +7,7 @@ request = require('request')
 {TestUser, TestPhoneNumber} = require('lib/test_models')
 
 
-describe ' POST /phone_numbers', () ->
+describe 'zzz POST /phone_numbers', () ->
 
   user = new TestUser('post_phone_user')
   phoneNumber = new TestPhoneNumber('post_phone', user)
@@ -22,7 +22,7 @@ describe ' POST /phone_numbers', () ->
 
   after (finished) ->
     ## destroy user (and thus phone number)
-    user.destroy(finished)
+    async.series([phoneNumber.destroy, user.destroy], finished)
 
   it 'should POST the phone number correctly', (done) ->
     opts =

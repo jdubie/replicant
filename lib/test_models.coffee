@@ -4,6 +4,93 @@ config  = require('config')
 async   = require('async')
 debug   = require('debug')('replicant/lib/test_models')
 
+class TestType
+  @attributes: => [
+    '_id'       # doc id
+    '_rev'      # revision number
+    'type'      # document type
+    'name'      # userCtx.name
+    'user_id'   # user id
+    'ctime'     # created time
+    'mtime'     # last modified
+  ]
+
+  attributes: =>
+    result = {}
+    for key in @constructor.attributes() when key of this
+      result[key] = @[key]
+    result
+
+  defaults: => {
+    _id: @_id
+    name: @user.name
+    user_id: @user._id
+    ctime: 12345
+    mtime: 12345
+  }
+
+  setDbs: (userId) =>
+    @mainDb      = config.db.main()
+    @_usersDb    = config.db._users()
+    @userDb      = config.db.user(h.getUserDbName({userId}))
+    @constableDb = config.db.constable()
+    @mapperDb    = config.db.mapper()
+
+  constructor: (id, @user, opts) ->
+    @_id = "#{id}_#{Math.round(Math.random() * 100)}"
+
+    opts ?= {}
+    _.defaults(opts, @defaults())
+    _.extend(this, opts)
+
+    @setDbs(@user_id)
+
+  create: =>
+
+  destroy: =>
+
+
+class TestTypePublic extends TestType
+  create: (callback) =>
+    @mainDb.insert @attributes(), @_id, (err, res) =>
+      return callback(err) if err
+      @_rev = res.rev
+      callback()
+
+  destroy: (callback) =>
+    @mainDb.get @_id, (err, doc) =>
+      return callback() if err
+      @mainDb.destroy(@_id, doc._rev, callback)
+
+
+class TestTypePrivate extends TestType
+  create: (callback) =>
+    async.series
+      rev: (next) =>
+        cb = (err, res) ->
+          return next(err) if err
+          next(null, res.rev)
+        @constableDb.insert(@attributes(), @_id, h.nanoCallback(cb))
+      replicate: (next) =>
+        h.replicateOut([@user_id], [@_id], next)
+    , (err, res) =>
+      return callback(err) if err
+      @_rev = res.rev
+      callback()
+
+  destroy: (callback) =>
+    async.parallel [
+      (cb) =>
+        @userDb.get @_id, (err, doc) =>
+          return cb() if err?   # should error
+          @userDb.destroy(@_id, doc._rev, cb)
+      (cb) =>
+        @constableDb.get @_id, (err, doc) =>
+          return cb() if err?
+          @constableDb.destroy(@_id, doc._rev, cb)
+    ], callback
+
+
 m = {}
 
 # createUser
@@ -387,18 +474,34 @@ m.TestEmailAddress = class TestEmailAddress
     _.defaults(opts, def)
     _.extend(this, opts)
 
-    @userDb = config.nanoAdmin.db.use("users_#{user._id}")
+    @userDb = config.db.user(user._id)
+    @constableDb = config.db.constable()
 
   create: (callback) =>
-    @userDb.insert @attributes(), @_id, (err, res) =>
+    async.series
+      rev: (next) =>
+        cb = (err, res) ->
+          return next(err) if err
+          next(null, res.rev)
+        @constableDb.insert(@attributes(), @_id, h.nanoCallback(cb))
+      replicate: (next) =>
+        h.replicateOut([@user_id], [@_id], next)
+    , (err, res) =>
       return callback(err) if err
       @_rev = res.rev
       callback()
 
   destroy: (callback) =>
-    @userDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
-      @userDb.destroy(@_id, userDoc._rev, callback)
+    async.parallel [
+      (cb) =>
+        @userDb.get @_id, (err, doc) =>
+          return cb() if err?   # should error
+          @userDb.destroy(@_id, doc._rev, cb)
+      (cb) =>
+        @constableDb.get @_id, (err, doc) =>
+          return cb() if err?
+          @constableDb.destroy(@_id, doc._rev, cb)
+    ], callback
 
 m.TestLike = class TestLike
   @attributes: [
@@ -452,51 +555,20 @@ m.TestLike = class TestLike
       return callback() if err?   # should error
       @mainDb.destroy(@_id, userDoc._rev, callback)
 
-m.TestPhoneNumber = class TestPhoneNumber
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'name'
-    'user_id'
-    'ctime'
-    'mtime'
-    'phone_number'
-  ]
 
-  attributes: =>
-    result = {}
-    for key in @constructor.attributes when key of this
-      result[key] = @[key]
-    result
+m.TestPhoneNumber = class TestPhoneNumber extends TestTypePrivate
+  @attributes: =>
+    attrs = super
+    [].concat(attrs, [
+      'phone_number'
+    ])
 
-  constructor: (id, user, opts) ->
-
-    def =
-      _id: id
-      name: user.name
-      user_id: user._id
+  defaults: =>
+    def = super
+    _.extend def, {
       type: 'phone_number'
-      ctime: 12345
-      mtime: 12345
       phone_number: "8602097765"
-      
-    opts ?= {}
-    _.defaults(opts, def)
-    _.extend(this, opts)
-
-    @userDb = config.nanoAdmin.db.use("users_#{user._id}")
-
-  create: (callback) =>
-    @userDb.insert @attributes(), @_id, (err, res) =>
-      return callback(err) if err
-      @_rev = res.rev
-      callback()
-
-  destroy: (callback) =>
-    @userDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
-      @userDb.destroy(@_id, userDoc._rev, callback)
+    }
 
 
 m.TestPayment = class TestPayment

@@ -547,21 +547,25 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers', 'refer_emails']
     id = req.params?.id
     debug "PUT /#{model}/#{id}"
     userCtx = req.userCtx   # from the app.all route
-    userDbName = h.getUserDbName(userId: userCtx.user_id)
     doc = req.body
+    # unauthorized
+    if userCtx.name isnt doc.name and not ('constable' in userCtx.roles)
+      return res.send(403)
     mtime = Date.now()
     doc.mtime = mtime
-    opts =
-      method: 'PUT'
-      url: "#{config.dbUrl}/#{userDbName}/#{id}"
-      headers: req.headers
-      json: doc
-    request opts, (err, resp, body) ->
-      statusCode = resp.statusCode
-      if statusCode isnt 201 then res.send(statusCode)
-      else
-        _rev = body.rev
-        res.json(statusCode, {_rev, mtime})
+
+    async.series
+      _rev: (next) ->
+        callback = (err, res) ->
+          return next(err) if err
+          next(null, res.rev)
+        config.db.constable().insert(doc, doc._id, h.nanoCallback(callback))
+      replicate: (next) ->
+        h.replicateOut([doc.user_id], [doc._id],next)
+    , (err, resp) ->
+      return h.sendError(res, err) if err
+      _rev = resp._rev
+      res.json(201, {_rev, mtime})
 
 
 ###

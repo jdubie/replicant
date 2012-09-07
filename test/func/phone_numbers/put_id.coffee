@@ -8,7 +8,7 @@ request = require('request')
 {TestUser, TestPhoneNumber} = require('lib/test_models')
 
 
-describe ' PUT /phone_numbers/:id', () ->
+describe 'yyy PUT /phone_numbers/:id', () ->
 
   user = new TestUser('put_phone_user')
   phoneNumber = new TestPhoneNumber('put_phone', user, foo: 'bar')
@@ -23,8 +23,8 @@ describe ' PUT /phone_numbers/:id', () ->
 
 
   after (finished) ->
-    ## destroy user (and thus phone number)
-    user.destroy(finished)
+    ## destroy phone number, then user
+    async.series([phoneNumber.destroy, user.destroy], finished)
 
 
   it 'should PUT the phone_number correctly', (done) ->
