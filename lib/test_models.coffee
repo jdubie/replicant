@@ -37,7 +37,7 @@ class TestType
     @mapperDb    = config.db.mapper()
 
   constructor: (id, @user, opts) ->
-    @_id = "#{id}_#{Math.round(Math.random() * 100)}"
+    @_id = "#{id}_#{Math.round(Math.random() * 100000)}"
 
     opts ?= {}
     _.defaults(opts, @defaults())
