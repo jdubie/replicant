@@ -1,13 +1,14 @@
 should = require('should')
 util = require('util')
 request = require('request')
+async = require('async')
 
 {TestUser, TestCard} = require('lib/test_models')
 config = require('config')
 {getUserDbName, hash} = require('lib/helpers')
 
 
-describe 'y POST /cards', () ->
+describe 'yyy POST /cards', () ->
 
   user = new TestUser('post_card_user')
   card = new TestCard('post_card', user)
@@ -18,7 +19,7 @@ describe 'y POST /cards', () ->
     user.create(ready)
 
   after (finished) ->
-    user.destroy(finished)
+    async.series([card.destroy, user.destroy], finished)
 
   it 'should POST the card correctly', (done) ->
     opts =
@@ -38,5 +39,3 @@ describe 'y POST /cards', () ->
       should.not.exist(err)
       cardDoc.should.eql(card.attributes())
       done()
-
-

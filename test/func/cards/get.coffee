@@ -8,7 +8,7 @@ request = require('request')
 {getUserDbName, hash} = require('lib/helpers')
 
 
-describe 'y GET /cards', () ->
+describe 'yyy GET /cards', () ->
 
   user = new TestUser('get_cards_user')
   cards = (new TestCard(id, user) for id in ['get_card1', 'get_card2', 'get_card3'])
@@ -23,7 +23,10 @@ describe 'y GET /cards', () ->
       async.series([user.create, createCards], ready)
 
     after (finished) ->
-      user.destroy(finished)
+      destroyCards = (cb) ->
+        destroy = (card, callback) -> card.destroy(callback)
+        async.map(cards, destroy, cb)
+      async.series([destroyCards, user.destroy], finished)
 
     it 'should GET all cards', (done) ->
       opts =

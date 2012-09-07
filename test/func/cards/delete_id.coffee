@@ -19,7 +19,7 @@ describe 'yyy DELETE /cards/:id', () ->
     async.series([user.create, card.create], ready)
 
   after (finished) ->
-    user.destroy(finished)
+    async.series([card.destroy, user.destroy], finished)
 
   it 'should return a 403 (forbidden)', (done) ->
     opts =
