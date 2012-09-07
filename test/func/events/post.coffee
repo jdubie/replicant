@@ -10,7 +10,7 @@ kue = require('kue')
 {TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
 
-describe 'zzz POST /events', () ->
+describe 'yyy POST /events', () ->
 
   guest = new TestUser('post_events_guest')
   host  = new TestUser('post_events_host')

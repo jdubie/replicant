@@ -124,9 +124,9 @@ app.put '/user_ctx', (req, res) ->
     res.set('Set-Cookie', newCookie)
     res.send(201)
 
-###
-  Get zipcode mapping
-###
+#
+# Get zipcode mapping
+#
 app.get '/zipcodes/:id', (req, res) ->
   callback = (err, body) ->
     if body.rows.length == 0
