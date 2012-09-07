@@ -32,7 +32,7 @@ class TestType
   setDbs: (userId) =>
     @mainDb      = config.db.main()
     @_usersDb    = config.db._users()
-    @userDb      = config.db.user(h.getUserDbName({userId}))
+    @userDb      = config.db.user(userId)
     @constableDb = config.db.constable()
     @mapperDb    = config.db.mapper()
 
@@ -72,9 +72,9 @@ class TestTypePrivate extends TestType
         cb = (err, res) ->
           return next(err) if err
           next(null, res.rev)
-        @constableDb.insert(@attributes(), @_id, h.nanoCallback(cb))
+        @userDb.insert(@attributes(), @_id, h.nanoCallback(cb))
       replicate: (next) =>
-        h.replicateOut([@user_id], [@_id], next)
+        h.replicateIn(@user_id, [@_id], next)
     , (err, res) =>
       return callback(err) if err
       @_rev = res.rev
