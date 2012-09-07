@@ -32,7 +32,7 @@ class TestType
   setDbs: (userId) =>
     @mainDb      = config.db.main()
     @_usersDb    = config.db._users()
-    @userDb      = config.db.user(h.getUserDbName({userId}))
+    @userDb      = config.db.user(userId)
     @constableDb = config.db.constable()
     @mapperDb    = config.db.mapper()
 
@@ -569,37 +569,35 @@ m.TestMessage = class TestMessage extends TestType
 
   create: (callback) =>
 
-    insertMessage = (user, cb) =>
-      debug 'user._id', user._id
+    async.series [
+      (callback) =>
+        debug 'inserting message into drunk_tank'
+        message = @attributes()
+        delete message.read
+        @constableDb.insert message, @_id, (err, res) =>
+          return callback(err) if err
+          @_rev = res.rev
+          callback()
 
-      userDb = config.db.user(user._id)
-      async.parallel [
+      (callback) =>
+        allUsers = _.union(@event.guests, @event.hosts)
+        userIds = (user._id for user in allUsers)
+        debug 'replicating message to users', userIds
+        h.replicateOut(userIds, [@_id], callback)
 
-        # write message doc
-        (_cb) =>
-          message = @attributes()
-          delete message.read
-          userDb.insert message, @_id, (err, res) =>
-            debug 'insertMessage doc', err, res
-            return _cb(err) if err
-            @_rev = res.rev
-            _cb()
+      (callback) =>
+        return callback() if not @read
+        readDoc = @getReadDoc()
+        @userDb.insert readDoc, readDoc._id, (err, res) ->
+          debug 'insertRead doc', err, res
+          return callback(err) if err
+          callback(null, res)
 
-        # conditionally insert read doc
-        (_cb) =>
-          debug '@getReadDoc()', @getReadDoc()
-          debug '@read', @read
-          if @read and @user_id is user._id
-            readDoc = @getReadDoc()
-            userDb.insert readDoc, readDoc._id, (err, res) ->
-              debug 'insertRead doc', err, res
-              return _cb(err) if err
-              _cb(null ,res)
-          else _cb()
-      ], cb
+    ], (err, res) =>
+      debug "CREATE MESSAGE ERROR", err if err
+      callback(err, res)
 
-    allUsers = _.union(@event.guests, @event.hosts)
-    async.map(allUsers, insertMessage, callback)
+
 
   destroy: (callback) =>
     ## todo: destroy read document

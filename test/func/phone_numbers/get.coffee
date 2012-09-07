@@ -8,7 +8,7 @@ h = require('lib/helpers')
 {TestUser, TestPhoneNumber} = require('lib/test_models')
 
 
-describe 'zzz GET /phone_numbers', () ->
+describe 'yyy GET /phone_numbers', () ->
 
   user1 = new TestUser('get_phone_user1')
   user2 = new TestUser('get_phone_user2')
