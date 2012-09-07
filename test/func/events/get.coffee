@@ -7,7 +7,7 @@ request = require('request')
 {TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
 
-describe ' GET /events', () ->
+describe 'yyy GET /events', () ->
 
   user1  = new TestUser('get_events_user2')
   user2  = new TestUser('get_events_user1')

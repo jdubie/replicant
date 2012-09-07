@@ -7,7 +7,7 @@ request = require('request')
 {TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
 
-describe 'DELETE /events/:id', () ->
+describe 'yyy DELETE /events/:id', () ->
 
   guest = new TestUser('delete_events_id_guest')
   host  = new TestUser('delete_events_id_host')
@@ -29,7 +29,6 @@ describe 'DELETE /events/:id', () ->
       (cb) -> async.parallel([event.destroy, swap.destroy], cb)
       (cb) -> async.parallel([guest.destroy, host.destroy], cb)
     ], finished
-
 
   it 'should return a 403 (forbidden)', (done) ->
     opts =
