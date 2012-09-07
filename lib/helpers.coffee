@@ -138,6 +138,22 @@ h.nanoCallback = (next, opts) ->
         reason: err.reason ? reason
     next(errorRes, res...)
 
+
+# nanoCallback
+#
+# @description normalizes nano responses that actually ROCK
+#
+h.nanoCallback2 = (next, opts) ->
+  {error, reason} = opts if opts?
+  (err, res) ->
+    if err?
+      debug '#nanoCallback: err', err
+      errorRes =
+        statusCode: err.status_code ? 500
+        error: err.error ? error
+        reason: err.reason ? reason
+    next(errorRes, res)
+
 ###
   @param model {string} plural model
   @param doc {object} model doc just created

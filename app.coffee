@@ -414,14 +414,54 @@ app.delete "/users/:id", (req, res) ->
     return {_rev, ctime, mtime, hosts, guests}
 ###
 app.post '/events', (req, res) ->
+  ## TODO: validate that event has _id, type, state, swap_id
   event = req.body    # {_id, type, state, swap_id}
   userCtx = req.userCtx
-  ## TODO: validate that event has _id, type, state, swap_id
+
   debug "POST /events"
-  debug "   event: #{event}"
-  rep.createEvent {event, userId: userCtx.user_id}, (err, _res) ->
+  debug "   event" , event
+
+  ctime = Date.now()
+  mtime = ctime
+  event.ctime = ctime
+  event.mtime = mtime
+
+  # global boy
+  swap = null
+
+  async.parallel
+
+    # insert event document into constable db
+    _rev: (done) ->
+      extractRev = (err, body) ->
+        return done(err) if err
+        done(null, body.rev)
+      config.db.constable().insert(event, h.nanoCallback(extractRev))
+
+    # put all users assosciated with swap and return them
+    mapping: (done) ->
+      async.waterfall [
+        (next) ->
+          config.db.main().get(event.swap_id, h.nanoCallback2(next))
+        (swap, next) ->
+          mapping = _id: event._id, guests: [userCtx.user_id], hosts: [swap.user_id]
+          returnUsers = (err) ->
+            return next(err) if err
+            next(null, mapping) # return users
+          config.db.mapper().insert(mapping, h.nanoCallback(returnUsers))
+      ], done
+
+  , (err, body) ->
     return h.sendError(res, err) if err
-    res.json(201, _res)    # {_rev, mtime, ctime, hosts, guests}
+    {_rev, mapping} = body
+    {guests, hosts} = mapping
+
+    h.replicateOut _.union(guests, hosts), [event._id], (err) ->
+      return h.sendError(res, err) if err
+      #h.createNotification 'event.create', {title: "event #{event._id}: event created", guests, hosts, event, swap}, (err) ->
+      #  return h.sendError(err, body) if err
+      res.json(201, {_rev, hosts, guests, ctime, mtime})
+
 
 ###
   GET /events

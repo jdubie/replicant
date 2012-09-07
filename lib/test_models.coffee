@@ -607,7 +607,7 @@ m.TestEvent = class TestEvent
   constructor: (id, @guests, @hosts, @swap, opts) ->
 
     def =
-      _id: id
+      _id: "#{id}_#{Math.round(Math.random()*1000)}"
       type: 'event'
       ctime: 12345
       mtime: 12345
@@ -618,11 +618,8 @@ m.TestEvent = class TestEvent
     _.defaults(opts, def)
     _.extend(this, opts)
 
-    @users = []
-    @users.push(guest) for guest in @guests
-    @users.push(host) for host in @hosts
+    @users = [].concat(@guests, @hosts)
     @mapperDb = config.nanoAdmin.db.use('mapper')
-
 
   create: (callback) =>
     createOneEvent = (user, callback) =>
@@ -642,7 +639,6 @@ m.TestEvent = class TestEvent
 
     async.parallel([createEvent, insertIntoMapper], callback)
 
-
   destroy: (callback) =>
     destroyOneEvent = (user, callback) =>
       userDb = config.nanoAdmin.db.use("users_#{user._id}")
@@ -655,8 +651,11 @@ m.TestEvent = class TestEvent
       @mapperDb.get @_id, (err, mapperDoc) =>
         return callback() if err?
         @mapperDb.destroy(@_id, mapperDoc._rev, callback)
-
-    async.parallel([destroyEvent, removeFromMapper], callback)
+    removeFromConstable = (callback) =>
+      config.db.constable().get @_id, (err, body) =>
+        return callback(err) if err
+        config.db.constable().destroy(@_id, body._rev, callback)
+    async.parallel([destroyEvent, removeFromMapper, removeFromConstable], callback)
 
 m.TestMessage = class TestMessage
   @attributes: [
@@ -681,7 +680,7 @@ m.TestMessage = class TestMessage
   constructor: (id, @user, @event, opts) ->
 
     def =
-      _id: id
+      _id: "#{id}_#{Math.round(Math.random()*1000)}"
       type: 'message'
       name: @user.name
       user_id: @user._id
