@@ -8,7 +8,7 @@ request = require('request')
 {TestUser, TestSwap} = require('lib/test_models')
 
 
-describe ' DELETE /swaps/:id', () ->
+describe 'yyy DELETE /swaps/:id', () ->
 
   ## simple test - for now should just 403 (forbidden)
 

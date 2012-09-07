@@ -2,18 +2,13 @@ should = require('should')
 async = require('async')
 request = require('request')
 
-{nanoAdmin, nano} = require('config')
-{hash} = require('lib/helpers')
 {TestUser, TestSwap} = require('lib/test_models')
 
 
-describe ' PUT /swaps/:id', () ->
+describe 'yyy PUT /swaps/:id', () ->
 
   user = new TestUser('putswapsiduser')
   swap = new TestSwap('putswapsid', user, foo: 'bar')
-
-  mainDb = nanoAdmin.db.use('lifeswap')
-  usersDb = nanoAdmin.db.use('_users')
 
   before (ready) ->
     ## start webserver
@@ -30,7 +25,7 @@ describe ' PUT /swaps/:id', () ->
     opts =
       method: 'PUT'
       url: "http://localhost:3001/swaps/#{swap._id}"
-      json: swap
+      json: swap.attributes()
       headers: cookie: user.cookie
     request opts, (err, res, body) ->
       should.not.exist(err)

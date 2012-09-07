@@ -5,7 +5,7 @@ async   = require('async')
 {TestUser, TestSwap} = require('lib/test_models')
 
 
-describe ' GET /swaps', () ->
+describe 'yyy GET /swaps', () ->
 
   swapsNano = []
   user1 = new TestUser('getswapsuser1')

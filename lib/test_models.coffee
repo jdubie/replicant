@@ -32,12 +32,12 @@ class TestType
   setDbs: (userId) =>
     @mainDb      = config.db.main()
     @_usersDb    = config.db._users()
-    @userDb      = config.db.user(userId)
+    @userDb      = config.db.user(h.getUserDbName({userId}))
     @constableDb = config.db.constable()
     @mapperDb    = config.db.mapper()
 
   constructor: (id, @user, opts) ->
-    @_id = "#{id}_#{Math.round(Math.random() * 100000)}"
+    @_id = "#{id}_#{Math.round(Math.random() * 100)}"
 
     opts ?= {}
     _.defaults(opts, @defaults())
@@ -45,10 +45,8 @@ class TestType
 
     @setDbs(@user_id)
 
-  # @override
   create: =>
 
-  # @override
   destroy: =>
 
 
@@ -72,9 +70,9 @@ class TestTypePrivate extends TestType
         cb = (err, res) ->
           return next(err) if err
           next(null, res.rev)
-        @userDb.insert(@attributes(), @_id, h.nanoCallback(cb))
+        @constableDb.insert(@attributes(), @_id, h.nanoCallback(cb))
       replicate: (next) =>
-        h.replicateIn(@user_id, [@_id], next)
+        h.replicateOut([@user_id], [@_id], next)
     , (err, res) =>
       return callback(err) if err
       @_rev = res.rev
@@ -253,81 +251,48 @@ m.TestUser = class TestUser
       callback(null, messages)
 
 
-m.TestSwap = class TestSwap
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'name'
-    'user_id'
-    'ctime'
-    'mtime'
-    'status'
-    'title'
-    'zipcode'
-    'city'
-    'state'
-    'entity'
-    'website'
-    'industry'
-    'description'
-    'highlights'
-    'duration'
-    'price'
-    'extra_info'
-    'num_guests'
-    'require_approval'
-    'image_original'
-    'image_huge'
-    'image_big'
-    'image_medium'
-    'image_thumbnail'
-    'image_small'
-    'image_narrow'
-    'availability'
-    'tags'
-    'address'
-    'parking'
-    'dresscode'
-  ]
+m.TestSwap = class TestSwap extends TestTypePublic
+  @attributes: =>
+    attrs = super
+    [].concat attrs, [
+      'status'
+      'title'
+      'zipcode'
+      'city'
+      'state'
+      'entity'
+      'website'
+      'industry'
+      'description'
+      'highlights'
+      'duration'
+      'price'
+      'extra_info'
+      'num_guests'
+      'require_approval'
+      'image_original'
+      'image_huge'
+      'image_big'
+      'image_medium'
+      'image_thumbnail'
+      'image_small'
+      'image_narrow'
+      'availability'
+      'tags'
+      'address'
+      'parking'
+      'dresscode'
+    ]
 
-  attributes: =>
-    result = {}
-    for key in @constructor.attributes when key of this
-      result[key] = @[key]
-    result
-
-  constructor: (id, user, opts) ->
-
-    def =
-      _id: id
-      name: user.name
-      user_id: user._id
+  defaults: =>
+    def = super
+    _.extend def, {
       type: 'swap'
-      ctime: 12345
-      mtime: 12345
       status: 'pending'
-      title: "#{id} Swap"
+      title: "#{@_id} Swap"
       zipcode: '94305'
       industry: 'Agriculture'
-      
-    opts ?= {}
-    _.defaults(opts, def)
-    _.extend(this, opts)
-
-
-    @mainDb = config.nanoAdmin.db.use('lifeswap')
-
-  create: (callback) =>
-    @mainDb.insert @attributes(), @_id, (err, res) =>
-      return callback(err) if err
-      @_rev = res.rev
-      callback()
-
-  destroy: (callback) =>
-    @mainDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
-      @mainDb.destroy(@_id, userDoc._rev, callback)
+    }
 
 
 m.TestRequest = class TestRequest
@@ -526,25 +491,58 @@ m.TestPhoneNumber = class TestPhoneNumber extends TestTypePrivate
     }
 
 
-m.TestPayment = class TestPayment extends TestTypePrivate
-  @attributes: =>
-    attrs = super
-    [].concat(attrs, [
-      'event_id'
-      'card_id'
-      'amount'
-      'status'
-    ])
+m.TestPayment = class TestPayment
+  @attributes: [
+    '_id'
+    '_rev'
+    'type'
+    'name'
+    'user_id'
+    'event_id'
+    'card_id'
+    'amount'
+    'status'
+    'ctime'
+    'mtime'
+  ]
 
-  defaults: =>
-    def = super
-    _.extend def, {
+  attributes: =>
+    result = {}
+    for key in @constructor.attributes when key of this
+      result[key] = @[key]
+    result
+
+  constructor: (id, user, opts) ->
+
+    def =
+      _id: id
+      name: user.name
+      user_id: user._id
       type: 'payment'
-      event_id: "#{@_id}_event_id"
-      card_id: "#{@_id}_card_id"
+      ctime: 12345
+      mtime: 12345
+      event_id: "event_id_#{id}"
+      card_id: "card_id_#{id}"
       amount: 69
-      status: '2' # unpaid
-    }
+      status: '2'     # unpaid
+      
+    opts ?= {}
+    _.defaults(opts, def)
+    _.extend(this, opts)
+
+    @userDb = config.nanoAdmin.db.use("users_#{user._id}")
+
+  create: (callback) =>
+    @userDb.insert @attributes(), @_id, (err, res) =>
+      debug 'err, res', err, res
+      return callback(err) if err
+      @_rev = res.rev
+      callback()
+
+  destroy: (callback) =>
+    @userDb.get @_id, (err, userDoc) =>
+      return callback() if err?   # should error
+      @userDb.destroy(@_id, userDoc._rev, callback)
 
 
 m.TestCard = class TestCard
