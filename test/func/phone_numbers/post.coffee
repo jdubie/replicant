@@ -7,7 +7,7 @@ request = require('request')
 {TestUser, TestPhoneNumber} = require('lib/test_models')
 
 
-describe 'zzz POST /phone_numbers', () ->
+describe 'yyy POST /phone_numbers', () ->
 
   user = new TestUser('post_phone_user')
   phoneNumber = new TestPhoneNumber('post_phone', user)
