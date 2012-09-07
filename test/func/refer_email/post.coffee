@@ -7,7 +7,7 @@ kue     = require('kue')
 
 {TestUser} = require('lib/test_models')
 
-describe 'y POST /refer_emails', () ->
+describe 'yyy POST /refer_emails', () ->
 
   user = new TestUser('post_refer_emails')
 
