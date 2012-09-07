@@ -1,15 +1,12 @@
 should = require('should')
 async = require('async')
-util = require('util')
 request = require('request')
 
 {TestUser, TestLike} = require('lib/test_models')
-{nano, nanoAdmin} = require('config')
-{hash} = require('lib/helpers')
-debug = require('debug')('replicant/test/func/like/delete_id')
+{nanoAdmin} = require('config')
 
 
-describe 'y DELETE /likes/:id', () ->
+describe 'yyy DELETE /likes/:id', () ->
 
   user = new TestUser('delete_likes_id_user')
   like = new TestLike('delete_likes_id', user)
@@ -28,7 +25,7 @@ describe 'y DELETE /likes/:id', () ->
       method: 'DELETE'
       url: "http://localhost:3001/likes/#{like._id}"
       headers: cookie: user.cookie
-      json: like
+      json: like.attributes()
     request opts, (err, res, body) ->
       should.not.exist(err)
       res.statusCode.should.equal(200)

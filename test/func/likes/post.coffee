@@ -4,13 +4,12 @@ request = require('request')
 async = require('async')
 
 {TestUser, TestLike} = require('lib/test_models')
-{jobs, nanoAdmin, nano} = require('config')
-{hash} = require('lib/helpers')
+{jobs, nanoAdmin} = require('config')
 kue = require('kue')
 debug = require('debug')('replicant/test/func/likes/post')
 
 
-describe 'y POST /likes', () ->
+describe 'yyy POST /likes', () ->
 
   user = new TestUser('user_post_likes')
   like = new TestLike('post_likes', user)
