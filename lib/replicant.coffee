@@ -293,9 +293,15 @@ replicant.getType = (type, callback) ->
 
 ## gets all of a type from a user DB
 replicant.getTypeUserDb = ({type, userId, cookie, roles}, callback) ->
-  userDbName = h.getUserDbName(userId: userId)
+
+  # constables should fetch from drunk tank
+  if 'constable' in roles
+    dbName = 'drunk_tank'
+  else
+    dbName = h.getUserDbName({userId})
+
   nanoOpts =
-    url: "#{config.dbUrl}/#{userDbName}"
+    url: "#{config.dbUrl}/#{dbName}"
     cookie: cookie
   db = require('nano')(nanoOpts)
   opts =
