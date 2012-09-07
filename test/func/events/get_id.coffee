@@ -4,7 +4,7 @@ request = require('request')
 
 {TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
-describe 'zzz GET /events/:id', () ->
+describe 'yyy GET /events/:id', () ->
 
   guest = new TestUser('get_events_id_guest')
   host  = new TestUser('get_events_id_host')
