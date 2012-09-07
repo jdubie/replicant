@@ -517,22 +517,27 @@ m.TestEvent = class TestEvent
     @mapperDb = config.nanoAdmin.db.use('mapper')
 
   create: (callback) =>
-    createOneEvent = (user, callback) =>
-      userDb = config.nanoAdmin.db.use("users_#{user._id}")
-      userDb.insert @attributes(), @_id, (err, res) =>
-        return callback(err) if err
-        @_rev = res.rev
-        callback()
-    createEvent = (callback) =>
-      async.map(@users, createOneEvent, callback)
-    insertIntoMapper = (callback) =>
-      mapperDoc =
-        _id   : @_id
-        guests: (guest._id for guest in @guests)
-        hosts : (host._id for host in @hosts)
-      @mapperDb.insert(mapperDoc, @_id, callback)
 
-    async.parallel([createEvent, insertIntoMapper], callback)
+    mapperDoc =
+      _id   : @_id
+      guests: (guest._id for guest in @guests)
+      hosts : (host._id for host in @hosts)
+
+    async.series [
+
+      (cb) =>
+        config.db.constable().insert @attributes(), @_id, (err, res) =>
+          return cb(err) if err
+          @_rev = res.rev
+          cb()
+
+      (cb) =>
+        @mapperDb.insert(mapperDoc, @_id, cb)
+
+      (cb) =>
+        h.replicateOut(_.union(mapperDoc.guests, mapperDoc.hosts), [@_id], cb)
+
+    ], callback
 
   destroy: (callback) =>
     destroyOneEvent = (user, callback) =>
