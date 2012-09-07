@@ -4,13 +4,12 @@ request = require('request')
 async = require('async')
 
 {TestUser, TestLike} = require('lib/test_models')
-{jobs, nanoAdmin, nano} = require('config')
-{hash} = require('lib/helpers')
+{jobs, nanoAdmin} = require('config')
 kue = require('kue')
 debug = require('debug')('replicant/test/func/likes/post')
 
 
-describe 'y POST /likes', () ->
+describe 'yyy POST /likes', () ->
 
   user = new TestUser('user_post_likes')
   like = new TestLike('post_likes', user)
@@ -19,10 +18,18 @@ describe 'y POST /likes', () ->
 
   before (ready) ->
     app = require('app')
-    user.create(ready)
+    async.parallel [
+      user.create
+      (cb) -> jobs.client.flushall(cb)
+    ], ready
+
 
   after (finished) ->
-    async.parallel([like.destroy, user.destroy], finished)
+    async.parallel [
+      like.destroy
+      user.destroy
+      (cb) -> jobs.client.flushall(cb)
+    ], finished
 
   it 'should return _rev, mtime, ctime', (done) ->
     opts =

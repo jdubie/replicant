@@ -295,118 +295,66 @@ m.TestSwap = class TestSwap extends TestTypePublic
     }
 
 
-m.TestRequest = class TestRequest
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'name'
-    'user_id'
-    'ctime'
-    'mtime'
-    'title'
-    'description'
-    'reason'
-    'zipcode'
-    'city'
-    'state'
-    'price'
-  ]
+m.TestLike = class TestLike extends TestTypePublic
+  @attributes: =>
+    attrs = super
+    [].concat attrs, [
+      'swap_id'     # the liked swap id
+    ]
 
-  attributes: =>
-    result = {}
-    for key in @constructor.attributes when key of this
-      result[key] = @[key]
-    result
+  defaults: =>
+    def = super
+    _.extend def, {
+      type: 'like'
+      swap_id: "swap_id_#{@_id}"
+    }
 
-  constructor: (id, user, opts) ->
 
-    def =
-      _id: id
-      name: user.name
-      user_id: user._id
+m.TestRequest = class TestRequest extends TestTypePublic
+  @attributes: =>
+    attrs = super
+    [].concat attrs, [
+      'title'
+      'description'
+      'reason'
+      'zipcode'
+      'city'
+      'state'
+      'price'
+    ]
+
+  defaults: =>
+    def = super
+    _.extend def, {
       type: 'request'
-      ctime: 12345
-      mtime: 12345
-      title: "#{id} Request"
-      
-    opts ?= {}
-    _.defaults(opts, def)
-    _.extend(this, opts)
+      title: "#{@_id} Request"
+    }
 
-    @mainDb = config.nanoAdmin.db.use('lifeswap')
 
-  create: (callback) =>
-    @mainDb.insert @attributes(), @_id, (err, res) =>
-      return callback(err) if err
-      @_rev = res.rev
-      callback()
+m.TestReview = class TestReview extends TestTypePublic
+  @attributes: =>
+    attrs = super
+    [].concat attrs, [
+      'review_type'
+      'reviewee_id'
+      'swap_id'
+      'rating'
+      'review'
+      'fb_id'
+    ]
 
-  destroy: (callback) =>
-    @mainDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
-      @mainDb.destroy(@_id, userDoc._rev, callback)
-
-m.TestReview = class TestReview
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'name'
-    'user_id'
-    'ctime'
-    'mtime'
-    'review_type'
-    'reviewee_id'
-    'swap_id'
-    'rating'
-    'review'
-    'fb_id'
-  ]
-
-  attributes: =>
-    result = {}
-    for key in @constructor.attributes when key of this
-      result[key] = @[key]
-    result._id = @_id if @_id
-    result
-
-  constructor: (id, user, opts) ->
-
-    user ?= {}
-    user.name ?= "user_name_#{id}"
-    user._id ?= "user_id_#{id}"
-
-    def =
-      _id: id
+  defaults: =>
+    def = super
+    _.extend def, {
       type: 'review'
-      name: user.name
-      user_id: user._id
-      ctime: 12345
-      mtime: 12345
-      review_type: 'guest'
-      reviewee_id: user._id
+      review_type: 'swap'
+      reviewee_id: @user._id
       swap_id: 'swap1'
       rating: 3
       review: 'sucit'
       fb_id: 'wefwefwewef'
-      
-    opts ?= {}
-    _.defaults(opts, def)
-    _.extend(this, opts)
+    }
 
-    @mainDb = config.nanoAdmin.db.use('lifeswap')
-
-  create: (callback) =>
-    @mainDb.insert @attributes(), @_id, (err, res) =>
-      return callback(err) if err
-      @_rev = res.rev
-      callback()
-
-  destroy: (callback) =>
-    @mainDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
-      @mainDb.destroy(@_id, userDoc._rev, callback)
 
 m.TestEmailAddress = class TestEmailAddress extends TestTypePrivate
   @attributes: =>
@@ -421,59 +369,6 @@ m.TestEmailAddress = class TestEmailAddress extends TestTypePrivate
       type: 'email_address'
       email_address: "#{@_id}@thelifeswap.com"
     }
-
-
-m.TestLike = class TestLike
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'name'
-    'user_id'
-    'ctime'
-    'mtime'
-    'swap_id'     # the liked swap id
-  ]
-
-  attributes: =>
-    result = {}
-    for key in @constructor.attributes when key of this
-      result[key] = @[key]
-    result._id = @_id if @_id
-    result
-
-  constructor: (id, user, opts) ->
-
-    user ?= {}
-    user.name ?= "user_name_#{id}"
-    user._id ?= "user_id_#{id}"
-
-    def =
-      _id: id
-      type: 'like'
-      name: user.name
-      user_id: user._id
-      ctime: 12345
-      mtime: 12345
-      swap_id: "swap_id_#{id}"
-      
-    opts ?= {}
-    _.defaults(opts, def)
-    _.extend(this, opts)
-
-    @mainDb = config.nanoAdmin.db.use('lifeswap')
-
-  create: (callback) =>
-    @mainDb.insert @attributes(), @_id, (err, res) =>
-      debug 'err', err
-      return callback(err) if err
-      @_rev = res.rev
-      callback()
-
-  destroy: (callback) =>
-    @mainDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
-      @mainDb.destroy(@_id, userDoc._rev, callback)
 
 
 m.TestPhoneNumber = class TestPhoneNumber extends TestTypePrivate
