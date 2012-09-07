@@ -204,15 +204,15 @@ m.TestUser = class TestUser
 
     destroyUser = (callback) =>
       @usersDb.get @couchUser, (err, userDoc) =>
-        return callback() if err?   # should error
+        return callback(err) if err
         @usersDb.destroy(@couchUser, userDoc._rev, callback)
     destroyLifeswapUser = (callback) =>
       @mainDb.get @_id, (err, userDoc) =>
-        return callback() if err?   # should error
+        return callback(err) if err
         @mainDb.destroy(@_id, userDoc._rev, callback)
     destroyUserDb = (callback) =>
       config.nanoAdmin.db.list (err, dbs) =>
-        return callback() if not (@userDbName in dbs)  # should callback
+        return callback("#{@userDbName} not in DBs") if not (@userDbName in dbs)
         config.nanoAdmin.db.destroy(@userDbName, callback)
     flushRedis = (callback) -> config.jobs.client.flushall(callback)
 
@@ -221,7 +221,9 @@ m.TestUser = class TestUser
       destroyLifeswapUser
       destroyUserDb
       flushRedis
-    ], callback
+    ], (err, res) ->
+      debug "DESTROY USER ERROR", err if err
+      callback(err, res)
 
   getAllMessages: (callback) =>
     @userDb.view 'userddoc', 'docs_by_type', key: 'message', include_docs: true, (err, body) ->
@@ -436,7 +438,7 @@ m.TestPayment = class TestPayment
 
   destroy: (callback) =>
     @userDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
+      return callback(err) if err
       @userDb.destroy(@_id, userDoc._rev, callback)
 
 
@@ -543,60 +545,49 @@ m.TestEvent = class TestEvent
     destroyOneEvent = (user, callback) =>
       userDb = config.nanoAdmin.db.use("users_#{user._id}")
       userDb.get @_id, (err, eventDoc) =>
-        return callback() if err?
+        return callback(err) if err
         userDb.destroy(@_id, eventDoc._rev, callback)
     destroyEvent = (callback) =>
       async.map(@users, destroyOneEvent, callback)
     removeFromMapper = (callback) =>
       @mapperDb.get @_id, (err, mapperDoc) =>
-        return callback() if err?
+        return callback(err) if err
         @mapperDb.destroy(@_id, mapperDoc._rev, callback)
     removeFromConstable = (callback) =>
       config.db.constable().get @_id, (err, body) =>
         return callback(err) if err
         config.db.constable().destroy(@_id, body._rev, callback)
-    async.parallel([destroyEvent, removeFromMapper, removeFromConstable], callback)
 
-m.TestMessage = class TestMessage
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'name'
-    'user_id'
-    'ctime'
-    'mtime'
-    'event_id'
-    'message'
-    'read'
-  ]
+    async.parallel [
+      destroyEvent
+      removeFromMapper
+      removeFromConstable
+    ], (err, res) ->
+      console.error "EVENT DESTROY ERROR", err if err
+      callback(err, res)
 
-  attributes: =>
-    result = {}
-    for key in @constructor.attributes when key of this
-      result[key] = @[key]
-    result
+m.TestMessage = class TestMessage extends TestType
+  @attributes: =>
+    attrs = super
+    [].concat attrs, [
+      'event_id'
+      'message'
+      'read'
+    ]
 
-  constructor: (id, @user, @event, opts) ->
-
-    def =
-      _id: "#{id}_#{Math.round(Math.random()*1000)}"
+  defaults: =>
+    def = super
+    _.extend def, {
       type: 'message'
-      name: @user.name
-      user_id: @user._id
-      ctime: 12345
-      mtime: 12345
       event_id: @event._id
       message: 'test message'
       read: true
-      
-    opts ?= {}
-    _.defaults(opts, def)
-    _.extend(this, opts)
+    }
 
-    @userDb = config.nanoAdmin.db.use("users_#{user._id}")
+  constructor: (id, @user, @event, opts) ->
+    super(id, @user, opts)
 
-  getReadDoc: () =>
+  getReadDoc: =>
     doc =
       _id: Math.random().toString().substring(2) # HACK
       type: 'read'
@@ -608,13 +599,11 @@ m.TestMessage = class TestMessage
       message_id: @_id
 
   create: (callback) =>
-    # TODO: user mapper to get users?
-    #mapperDb = nanoAdmin.db.use('mapper')
 
     insertMessage = (user, cb) =>
       debug 'user._id', user._id
 
-      userDb = config.nanoAdmin.db.use(h.getUserDbName(userId: user._id))
+      userDb = config.db.user(user._id)
       async.parallel [
 
         # write message doc
@@ -645,8 +634,22 @@ m.TestMessage = class TestMessage
 
   destroy: (callback) =>
     ## todo: destroy read document
-    @userDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
-      @userDb.destroy(@_id, userDoc._rev, callback)
+    removeUserMessage = (user, cb) =>
+      userDb = config.db.user(user._id)
+      userDb.get @_id, (err, doc) =>
+        return cb(err) if err
+        userDb.destroy(@_id, doc._rev, cb)
+    removeConstableMessage = (cb) =>
+      @constableDb.get @_id, (err, doc) =>
+        return cb(err) if err
+        @constableDb.destroy(@_id, doc._rev, cb)
+    async.parallel [
+      removeConstableMessage
+      (cb) =>
+        allUsers = _.union(@event.guests, @event.hosts)
+        async.map(allUsers, removeUserMessage, cb)
+    ], (err, res) ->
+      debug "MESSAGE DESTROY ERROR", err if err
+      callback(err, res)
 
 module.exports = m

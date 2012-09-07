@@ -7,7 +7,7 @@ _ = require('underscore')
 {getUserDbName} = require('lib/helpers')
 {TestUser, TestSwap, TestEvent, TestMessage} = require('lib/test_models')
 
-describe ' POST /messages', () ->
+describe 'yyy POST /messages', () ->
 
   guest   = new TestUser('post_messages_guest')
   host    = new TestUser('post_messages_host')
@@ -27,8 +27,9 @@ describe ' POST /messages', () ->
 
 
   after (finished) ->
-    ## destroy users and swap, then event
+    ## destroy message -> event -> users and swap
     async.series [
+      message.destroy
       event.destroy
       (cb) -> async.parallel([guest.destroy, host.destroy, swap.destroy], cb)
       (cb) -> jobs.client.flushall(cb)

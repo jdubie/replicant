@@ -232,4 +232,22 @@ h.replicateIn = (userId, docIds, callback) ->
   config.nanoAdmin.db.replicate(userDbName, 'drunk_tank', opts, h.nanoCallback(callback))
 
 
+# replicateEvent
+#
+# @description replicate all event-related docs from constable to users
+# @param userIds {Array.<String>} users to replicate to
+# @param eventId {String} the event id
+#
+h.replicateEvent = (userIds, eventId, callback) ->
+  userDdocName = 'userddoc'
+  opts =
+    create_target: true
+    query_params: {eventId}
+    filter: "#{userDdocName}/event_filter"
+  debug 'replicating event to', userIds
+  replicateOne = (userId, cb) ->
+    userDbName = h.getUserDbName({userId})
+    config.nanoAdmin.db.replicate('drunk_tank', userDbName, opts, h.nanoCallback(cb))
+  async.map(userIds, replicateOne, callback)
+
 module.exports = h

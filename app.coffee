@@ -664,68 +664,61 @@ app.put '/events/:id', (req, res) ->
 app.post '/messages', (req, res) ->
   debug "POST /message"
   userCtx = req.userCtx   # from the app.all route
-  userDbName = h.getUserDbName(userId: userCtx.user_id)
   message = req.body
+
+  if (message.name isnt userCtx.name or message.user_id isnt userCtx.user_id) and not ('constable' in userCtx.roles)
+    return res.send(403)
+
   ctime = mtime = Date.now()
   message.ctime = ctime
   message.mtime = mtime
-  _rev = null
   eventId = message.event_id
+  userDbName = h.getUserDbName(userId: message.user_id)
 
-  async.waterfall [
+  async.series
+    _rev: (done) ->
+      debug 'insert into constable db (drunk_tank)'
+      extractRev = (err, body) ->
+        return done(err) if err
+        done(null, body.rev)
+      config.db.constable().insert(message, h.nanoCallback(extractRev))
 
-    # write message doc to userdb
-    (next) ->
-      debug 'post message'
+    markRead: (done) ->
+      debug 'mark message read'
       opts =
         method: 'POST'
         url: "#{config.dbUrl}/#{userDbName}"
         headers: req.headers
-        json: message
-      request(opts, next) # (err, resp, body)
+        json:
+          type: 'read'
+          message_id: message._id
+          event_id: message.event_id
+          ctime: ctime
+      h.request(opts, done)
 
-    #  write read doc to userdb
-    (resp, body, next) ->
-      debug 'mark message read'
-      statusCode = resp.statusCode
-      if statusCode isnt 201 then next(statusCode: statusCode)
-      else
-        _rev = body.rev
-        opts =
-          method: 'POST'
-          url: "#{config.dbUrl}/#{userDbName}"
-          headers: req.headers
-          json:
-            type: 'read'
-            message_id: message._id
-            event_id: message.event_id
-            ctime: ctime
-        request(opts, next) # (err, resp, body)
-
-    # getting users associated with event
-    (resp, body, next) ->
+    # replicate message
+    replicate: (done) ->
       debug 'get users'
-      rep.getEventUsers({eventId}, next)  # (err, users)
-
-    # replicating message
-    (users, next) ->
-      debug 'replicate'
-      src = userCtx.user_id
-      if not (src in users) and not (src in config.ADMINS)
-        next(statusCode: 403, reason: "Not authorized to write messages to this event")
-      else
-        users.push(admin) for admin in config.ADMINS
+      rep.getEventUsers {eventId}, (err, users) ->
+        debug 'replicate'
+        src = userCtx.user_id
+        if not (src in users) and not ('constable' in userCtx.roles)
+          return next(statusCode: 403, reason: "Not authorized to write messages to this event")
         dsts = _.without(users, src)
-        rep.replicate {src, dsts, eventId}, (err) ->
-          next(err, src, dsts, eventId)
-
-    # add email jobs to messaging queue
-    (src, dsts, eventId, next) ->
-      data = {title: "event #{eventId}: message from #{src}", src, dsts, message, eventId}
-      h.createNotification('message', data, next)
-
-  ], (err, resp) ->
+        async.series [
+          (cb) ->
+            debug 'actually replicating...'
+            h.replicateEvent(users, eventId, cb)
+          ## add email jobs to messaging queue
+          (cb) ->
+            debug 'adding message email to email jobs queue'
+            data = {title: "event #{eventId}: message from #{src}", src, dsts, message, eventId}
+            h.createNotification('message', data, cb)
+        ], done
+  , (err, resp) ->
     return h.sendError(res, err) if err
+    debug 'DONE! No error'
+    {_rev} = resp
     res.json(201, {_rev, ctime, mtime})
 
 
