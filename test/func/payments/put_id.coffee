@@ -7,7 +7,7 @@ config = require('config')
 h = require('lib/helpers')
 
 
-describe 'y PUT /payments/:id', () ->
+describe 'yyy PUT /payments/:id', () ->
   
   user = new TestUser('put_payments_user')
   payment = new TestPayment('put_payments', user)
@@ -18,7 +18,7 @@ describe 'y PUT /payments/:id', () ->
     async.series([user.create, payment.create], ready)
 
   after (finished) ->
-    user.destroy(finished)
+    async.series([payment.destroy, user.destroy], finished)
 
   it 'should fail on put', (done) ->
     oldAmount = payment.amount
