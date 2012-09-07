@@ -1,23 +1,19 @@
-should = require('should')
-async = require('async')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
 {TestUser, TestSwap, TestEvent, TestMessage} = require('lib/test_models')
-{nanoAdmin, nano, dbUrl, ADMINS} = require('config')
-{getUserDbName, hash} = require('lib/helpers')
+{nanoAdmin} = require('config')
+{getUserDbName} = require('lib/helpers')
 
 
-describe ' GET /messages/:id', () ->
+describe 'yyy GET /messages/:id', () ->
 
-  guest   = new TestUser('delete_messages_id_user1')
-  host    = new TestUser('delete_messages_id_user2')
-  swap    = new TestSwap('delete_messages_id_swap', host)
-  event   = new TestEvent('delete_messages_id_event', [guest], [host], swap)
-  message = new TestMessage('delete_messages_id', guest, event)
-
-  mainDb = nanoAdmin.db.use('lifeswap')
-  userDb = nanoAdmin.db.use(getUserDbName(userId: guest._id))
+  guest   = new TestUser('get_messages_id_guest')
+  host    = new TestUser('get_messages_id_host')
+  swap    = new TestSwap('get_messages_id_swap', host)
+  event   = new TestEvent('get_messages_id_event', [guest], [host], swap)
+  message = new TestMessage('get_messages_id', guest, event)
 
   before (ready) ->
     app = require('app')
@@ -29,6 +25,7 @@ describe ' GET /messages/:id', () ->
 
   after (finished) ->
     async.series [
+      message.destroy
       event.destroy
       (cb) -> async.parallel([guest.destroy, host.destroy, swap.destroy], cb)
     ], finished

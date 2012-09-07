@@ -1,23 +1,19 @@
-should = require('should')
-async = require('async')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
 {TestUser, TestSwap, TestEvent, TestMessage} = require('lib/test_models')
-{nanoAdmin, nano, dbUrl, ADMINS} = require('config')
-{getUserDbName, hash} = require('lib/helpers')
+{nanoAdmin} = require('config')
+{getUserDbName} = require('lib/helpers')
 
 
-describe ' PUT /messages/:id', () ->
+describe 'yyy PUT /messages/:id', () ->
 
-  guest   = new TestUser('delete_messages_id_user1')
-  host    = new TestUser('delete_messages_id_user2')
-  swap    = new TestSwap('delete_messages_id_swap', host)
-  event   = new TestEvent('delete_messages_id_event', [guest], [host], swap)
-  message = new TestMessage('delete_messages_id', guest, event, read: false)
-
-  mainDb = nanoAdmin.db.use('lifeswap')
-  mapperDb = nanoAdmin.db.use('mapper')
+  guest   = new TestUser('put_messages_id_guest')
+  host    = new TestUser('put_messages_id_host')
+  swap    = new TestSwap('put_messages_id_swap', host)
+  event   = new TestEvent('put_messages_id_event', [guest], [host], swap)
+  message = new TestMessage('put_messages_id', guest, event, read: false)
 
   before (ready) ->
     app = require('app')
@@ -29,6 +25,7 @@ describe ' PUT /messages/:id', () ->
 
   after (finished) ->
     async.series [
+      message.destroy
       event.destroy
       (cb) -> async.parallel([guest.destroy, host.destroy, swap.destroy], cb)
     ], finished
@@ -42,7 +39,7 @@ describe ' PUT /messages/:id', () ->
       headers: cookie: guest.cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
-      res.statusCode.should.eql(201)
+      res.should.have.property('statusCode', 201)
       done()
 
   it 'should mark the message as \'read\'', (done) ->
