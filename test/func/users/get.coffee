@@ -5,10 +5,10 @@ request = require('request')
 {TestUser} = require('lib/test_models')
 
 
-describe 'zzz GET /users', () ->
+describe 'yyy GET /users', () ->
 
-  user1 = new TestUser('getuser1')
-  user2 = new TestUser('getuser2')
+  user1 = new TestUser('get_users_1')
+  user2 = new TestUser('get_users_2')
 
   before (ready) ->
     # start webserver

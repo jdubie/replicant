@@ -127,7 +127,6 @@ m.TestUser = class TestUser
     result = {}
     for key in @constructor.attributes when key of this
       result[key] = @[key]
-    result._id = @_id if @_id
     result
 
   constructor: (id, opts) ->

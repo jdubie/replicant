@@ -1,19 +1,16 @@
-should = require('should')
-async = require('async')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
+
 {TestUser} = require('lib/test_models')
-{nanoAdmin} = require('config')
 
 
-describe 'y GET /users/:id', () ->
+describe 'yyy GET /users/:id', () ->
 
-  user = null
+  user = new TestUser('get_users_id')
 
   before (ready) ->
     app = require('app')
-
-    user = new TestUser('get_users_id')
     user.create(ready)
 
   after (finished) ->
