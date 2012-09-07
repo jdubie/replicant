@@ -519,22 +519,24 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers', 'refer_emails']
     debug "   req.userCtx", req.userCtx
     userCtx = req.userCtx   # from the app.all route
     doc = req.body
-    # unauthorized
-    if userCtx.name isnt doc.name and not ('constable' in userCtx.roles)
-      return res.send(403)
-
     _id = doc._id
     ctime = mtime = Date.now()
     doc.ctime = ctime
     doc.mtime = mtime
+
     async.series
       _rev: (next) ->
-        callback = (err, res) ->
+        userDbName = h.getUserDbName(userId: userCtx.user_id)
+        opts =
+          method: 'POST'
+          url: "#{config.dbUrl}/#{userDbName}"
+          headers: req.headers
+          json: doc
+        h.request opts, (err, body) ->
           return next(err) if err
-          next(null, res.rev)
-        config.db.constable().insert(doc, doc._id, h.nanoCallback(callback))
+          next(null, body.rev)
       replicate: (next) ->
-        h.replicateOut([doc.user_id], [doc._id],next)
+        h.replicateIn(doc.user_id, [doc._id],next)
       notify: (next) ->
         h.createSimpleCreateNotification(model, doc, next)
     , (err, resp) ->
@@ -548,20 +550,22 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers', 'refer_emails']
     debug "PUT /#{model}/#{id}"
     userCtx = req.userCtx   # from the app.all route
     doc = req.body
-    # unauthorized
-    if userCtx.name isnt doc.name and not ('constable' in userCtx.roles)
-      return res.send(403)
     mtime = Date.now()
     doc.mtime = mtime
 
     async.series
       _rev: (next) ->
-        callback = (err, res) ->
+        userDbName = h.getUserDbName(userId: userCtx.user_id)
+        opts =
+          method: 'PUT'
+          url: "#{config.dbUrl}/#{userDbName}/#{id}"
+          headers: req.headers
+          json: doc
+        h.request opts, (err, body) ->
           return next(err) if err
-          next(null, res.rev)
-        config.db.constable().insert(doc, doc._id, h.nanoCallback(callback))
+          next(null, body.rev)
       replicate: (next) ->
-        h.replicateOut([doc.user_id], [doc._id],next)
+        h.replicateIn(userCtx.user_id, [doc._id],next)
     , (err, resp) ->
       return h.sendError(res, err) if err
       _rev = resp._rev
