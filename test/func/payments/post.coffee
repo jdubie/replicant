@@ -7,7 +7,7 @@ config = require('config')
 h = require('lib/helpers')
 
 
-describe 'yyy POST /payments', () ->
+describe 'POST /payments', () ->
 
   user = new TestUser('post_payments_user')
   payment = new TestPayment('post_payments', user)

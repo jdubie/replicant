@@ -6,7 +6,7 @@ async   = require('async')
 {TestUser, TestReview} = require('lib/test_models')
 
 
-describe 'yyy POST /reviews', () ->
+describe 'POST /reviews', () ->
 
   user = new TestUser('post_reviews_user')
   review = new TestReview('post_reviews', user)

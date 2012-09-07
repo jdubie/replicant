@@ -6,7 +6,7 @@ request = require('request')
 {TestUser, TestLike} = require('lib/test_models')
 
 
-describe 'yyy PUT /likes/:id', () ->
+describe 'PUT /likes/:id', () ->
 
   user = new TestUser('put_likes_id_user')
   like = new TestLike('putlikesid', user)

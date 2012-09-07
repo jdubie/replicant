@@ -8,7 +8,7 @@ config = require('config')
 {getUserDbName, hash} = require('lib/helpers')
 
 
-describe 'yyy POST /cards', () ->
+describe 'POST /cards', () ->
 
   user = new TestUser('post_card_user')
   card = new TestCard('post_card', user)

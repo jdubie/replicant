@@ -7,7 +7,7 @@ request = require('request')
 {TestUser, TestRequest} = require('lib/test_models')
 
 
-describe 'yyy DELETE /requests/:id', () ->
+describe 'DELETE /requests/:id', () ->
 
   user = new TestUser('deleterequestuser')
   _request = new TestRequest('deleterequest', user)

@@ -7,7 +7,7 @@ _ = require('underscore')
 {getUserDbName} = require('lib/helpers')
 {TestUser, TestSwap, TestEvent, TestMessage} = require('lib/test_models')
 
-describe 'yyy POST /messages', () ->
+describe 'POST /messages', () ->
 
   guest   = new TestUser('post_messages_guest')
   host    = new TestUser('post_messages_host')

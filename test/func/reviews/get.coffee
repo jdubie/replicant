@@ -5,7 +5,7 @@ request = require('request')
 {TestUser, TestReview} = require('lib/test_models')
 
 
-describe 'yyy GET /reviews', () ->
+describe 'GET /reviews', () ->
 
   user = new TestUser('get_reviews_user')
   reviews = (new TestReview(id, user) for id in ['get_review_1', 'get_review_2'])

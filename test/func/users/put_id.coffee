@@ -7,7 +7,7 @@ h = require('lib/helpers')
 {TestUser} = require('lib/test_models')
 
 
-describe 'yyy PUT /users/:id', () ->
+describe 'PUT /users/:id', () ->
 
   user = new TestUser('put_users_id', foo: 'put bar')
 

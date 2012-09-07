@@ -7,7 +7,7 @@ h = require('lib/helpers')
 {TestUser, TestEmailAddress} = require('lib/test_models')
 
 
-describe 'yyy GET /email_addresses', () ->
+describe 'GET /email_addresses', () ->
 
   user = new TestUser('get_email_user')
   constable = new TestUser('get_email_user_constable', roles: ['constable'])

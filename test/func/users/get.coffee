@@ -5,7 +5,7 @@ request = require('request')
 {TestUser} = require('lib/test_models')
 
 
-describe 'yyy GET /users', () ->
+describe 'GET /users', () ->
 
   user1 = new TestUser('get_users_1')
   user2 = new TestUser('get_users_2')

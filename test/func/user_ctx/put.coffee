@@ -5,7 +5,7 @@ request = require('request')
 config = require('config')
 {TestUser} = require('lib/test_models')
 
-describe 'yyy PUT /user_ctx', () ->
+describe 'PUT /user_ctx', () ->
 
   user = new TestUser('put_user_ctx')
 

@@ -6,7 +6,7 @@ request = require('request')
 {nanoAdmin} = require('config')
 
 
-describe 'yyy DELETE /likes/:id', () ->
+describe 'DELETE /likes/:id', () ->
 
   user = new TestUser('delete_likes_id_user')
   like = new TestLike('delete_likes_id', user)

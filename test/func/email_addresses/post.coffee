@@ -7,7 +7,7 @@ async   = require('async')
 {TestUser, TestEmailAddress} = require('lib/test_models')
 
 
-describe 'yyy POST /email_addresses', () ->
+describe 'POST /email_addresses', () ->
 
   user = new TestUser('post_email_user')
   emailAddress = new TestEmailAddress('post_email', user)

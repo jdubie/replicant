@@ -7,7 +7,7 @@ request = require('request')
 {getUserDbName} = require('lib/helpers')
 
 
-describe 'yyy GET /messages/:id', () ->
+describe 'GET /messages/:id', () ->
 
   guest   = new TestUser('get_messages_id_guest')
   host    = new TestUser('get_messages_id_host')

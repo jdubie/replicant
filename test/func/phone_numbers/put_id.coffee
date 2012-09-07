@@ -8,7 +8,7 @@ request = require('request')
 {TestUser, TestPhoneNumber} = require('lib/test_models')
 
 
-describe 'yyy PUT /phone_numbers/:id', () ->
+describe 'PUT /phone_numbers/:id', () ->
 
   user = new TestUser('put_phone_user')
   phoneNumber = new TestPhoneNumber('put_phone', user, foo: 'bar')

@@ -9,7 +9,7 @@ h = require('lib/helpers')
 
 {TestUser} = require('lib/test_models')
 
-describe 'yyy POST /users', () ->
+describe 'POST /users', () ->
 
   user = new TestUser('post_users', hobo: 'foo')
 

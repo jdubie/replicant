@@ -5,7 +5,7 @@ request = require('request')
 {TestUser, TestSwap} = require('lib/test_models')
 
 
-describe 'yyy PUT /swaps/:id', () ->
+describe 'PUT /swaps/:id', () ->
 
   user = new TestUser('putswapsiduser')
   swap = new TestSwap('putswapsid', user, foo: 'bar')

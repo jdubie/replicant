@@ -8,7 +8,7 @@ request = require('request')
 {getUserDbName, hash} = require('lib/helpers')
 
 
-describe 'yyy GET /cards', () ->
+describe 'GET /cards', () ->
 
   user = new TestUser('get_cards_user')
   cards = (new TestCard(id, user) for id in ['get_card1', 'get_card2', 'get_card3'])

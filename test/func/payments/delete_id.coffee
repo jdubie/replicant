@@ -7,7 +7,7 @@ h = require('lib/helpers')
 {TestUser, TestPayment} = require('lib/test_models')
 
 
-describe 'yyy DELETE /payments/:id', () ->
+describe 'DELETE /payments/:id', () ->
 
   user = new TestUser('delete_payments_id_user')
   payment = new TestPayment('delete_payments_id', user)

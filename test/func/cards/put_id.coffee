@@ -8,7 +8,7 @@ request = require('request')
 h = require('lib/helpers')
 
 
-describe 'yyy PUT /cards/:id', () ->
+describe 'PUT /cards/:id', () ->
 
   user = new TestUser('put_card_id_user')
   card = new TestCard('put_card_id', user)

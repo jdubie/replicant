@@ -7,7 +7,7 @@ request = require('request')
 {TestUser, TestEmailAddress} = require('lib/test_models')
 
 
-describe 'yyy PUT /email_addresses/:id', () ->
+describe 'PUT /email_addresses/:id', () ->
 
   user = new TestUser('put_email_user')
   emailAddress = new TestEmailAddress('put_email', user, foo: 'bar')

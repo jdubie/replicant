@@ -6,7 +6,7 @@ kue = require('kue')
 config = require('config')
 {TestUser, TestSwap} = require('lib/test_models')
 
-describe 'yyy POST /swaps', () ->
+describe 'POST /swaps', () ->
 
   user = new TestUser('postswapsuser')
   swap = new TestSwap('postswap', user)

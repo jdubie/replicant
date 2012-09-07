@@ -8,7 +8,7 @@ config = require('config')
 h = require('lib/helpers')
 
 
-describe 'yyy GET /payments/:id', () ->
+describe 'GET /payments/:id', () ->
 
   user = new TestUser('get_payments_id_user')
   payment = new TestPayment('get_payments_id', user)

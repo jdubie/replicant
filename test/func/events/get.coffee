@@ -9,7 +9,7 @@ h = require('lib/helpers')
 {TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
 
-describe 'yyy GET /events', () ->
+describe 'GET /events', () ->
 
   user1  = new TestUser('get_events_user2')
   user2  = new TestUser('get_events_user1')

@@ -6,7 +6,7 @@ request = require('request')
 {TestUser, TestEmailAddress} = require('lib/test_models')
 
 
-describe 'yyy GET /email_addresses/:id', () ->
+describe 'GET /email_addresses/:id', () ->
 
   user = new TestUser('get_email_id_user')
   emailAddress = new TestEmailAddress('get_email_id', user)

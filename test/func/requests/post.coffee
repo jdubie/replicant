@@ -6,7 +6,7 @@ request = require('request')
 {TestUser, TestRequest} = require('lib/test_models')
 
 
-describe 'yyy POST /requests', () ->
+describe 'POST /requests', () ->
 
   user = new TestUser('postrequestuser')
   _request = new TestRequest('postrequest', user)

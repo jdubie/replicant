@@ -8,7 +8,7 @@ request = require('request')
 {TestUser, TestEmailAddress} = require('lib/test_models')
 
 
-describe 'yyy DELETE /email_addresses/:id', () ->
+describe 'DELETE /email_addresses/:id', () ->
 
   user = new TestUser('delete_email_id_user')
   emailAddress = new TestEmailAddress('delete_email_id', user)

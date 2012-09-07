@@ -9,7 +9,7 @@ kue     = require('kue')
 {TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
 
-describe 'yyy PUT /events/:id', () ->
+describe 'PUT /events/:id', () ->
 
   guest = new TestUser('put_events_id_guest')
   host  = new TestUser('put_events_id_host')
