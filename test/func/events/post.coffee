@@ -71,17 +71,18 @@ describe 'POST /events', () ->
       (cb) -> checkEventDoc(host, cb)
     ], done
 
-    #  it 'should create event.create notification on work queue', (done) ->
-    #    kue.Job.get 1, (err, job) ->
-    #      should.not.exist(err)
-    #      job.should.have.property('type', 'notification.event.create')
-    #      job.should.have.property('data')
-    #      job.data.should.have.property('hosts')
-    #      job.data.should.have.property('guests')
-    #      job.data.hosts.should.eql([host._id])
-    #      job.data.guests.should.eql([guest._id])
-    #      job.data.should.have.property('swap')
-    #      job.data.should.have.property('event')
-    #      job.data.event.should.have.property('_id', event._id)
-    #      job.data.swap.should.have.property('_id', event.swap_id)
-    #      done()
+  it 'should create event.create notification on work queue', (done) ->
+    kue.Job.get 1, (err, job) ->
+      should.not.exist(err)
+      should.exist(job)
+      job.should.have.property('type', 'notification.event.create')
+      job.should.have.property('data')
+      job.data.should.have.property('hosts')
+      job.data.should.have.property('guests')
+      job.data.hosts.should.eql([host._id])
+      job.data.guests.should.eql([guest._id])
+      job.data.should.have.property('swap')
+      job.data.should.have.property('event')
+      job.data.event.should.have.property('_id', event._id)
+      job.data.swap.should.have.property('_id', event.swap_id)
+      done()

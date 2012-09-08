@@ -492,7 +492,7 @@ m.TestEvent = class TestEvent
       ctime: 12345
       mtime: 12345
       state: 'requested'    # put EVENT_STATE.requested
-      swap_id: swap._id
+      swap_id: @swap._id
       
     opts ?= {}
     _.defaults(opts, def)

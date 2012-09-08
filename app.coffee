@@ -443,8 +443,9 @@ app.post '/events', (req, res) ->
       async.waterfall [
         (next) ->
           config.db.main().get(event.swap_id, h.nanoCallback2(next))
-        (swap, next) ->
-          mapping = _id: event._id, guests: [userCtx.user_id], hosts: [swap.user_id]
+        (_swap, next) ->
+          swap = _swap
+          mapping = _id: event._id, guests: [userCtx.user_id], hosts: [_swap.user_id]
           returnUsers = (err) ->
             return next(err) if err
             next(null, mapping) # return users
@@ -458,9 +459,9 @@ app.post '/events', (req, res) ->
 
     h.replicateOut _.union(guests, hosts), [event._id], (err) ->
       return h.sendError(res, err) if err
-      #h.createNotification 'event.create', {title: "event #{event._id}: event created", guests, hosts, event, swap}, (err) ->
-      #  return h.sendError(err, body) if err
-      res.json(201, {_rev, hosts, guests, ctime, mtime})
+      h.createNotification 'event.create', {title: "event #{event._id}: event created", guests, hosts, event, swap}, (err) ->
+        return h.sendError(err, body) if err
+        res.json(201, {_rev, hosts, guests, ctime, mtime})
 
 
 ###
