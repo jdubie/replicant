@@ -180,10 +180,6 @@ m.TestUser = class TestUser
             config.nanoAdmin.db.replicate(userDdocDbName, @userDbName, cb)
       , callback
 
-      #, (err, res) ->
-      # debug '#createUser err, res', err, res
-      # callback(err, res)
-
     authUser = (res, callback) =>
       {_rev} = res
       @_rev = _rev
