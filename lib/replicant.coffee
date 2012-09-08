@@ -293,6 +293,7 @@ replicant.getType = (type, callback) ->
 
 ## gets all of a type from a user DB
 replicant.getTypeUserDb = ({type, userId, cookie, roles}, callback) ->
+  roles ?= []
 
   # constables should fetch from drunk tank
   if 'constable' in roles
@@ -392,43 +393,22 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
 
 ## gets all messages and tacks on 'read' status (true/false)
 replicant.getMessages = ({userId, cookie, roles}, callback) ->
-  if 'constable' in roles
-    dbName = 'drunk_tank'
-  else
-    dbName = h.getUserDbName({userId})
-
-  nanoOpts =
-    url: "#{config.dbUrl}/#{dbName}"
-    cookie: cookie
-  db = require('nano')(nanoOpts)
-  opts = group_level: 2
-  db.view 'userddoc', 'messages', opts, (err, res) ->
-    getMessageDoc = (row, cb) ->
-      messageId = row.key[1]
-      db.get messageId, (err, message) ->
-        if err?
-          error =
-            statusCode: err.statusCode ? err.status_code
-            error     : err.error ? "Error getting message"
-            reason    : err.reason ? "Error getting message: #{userId}"
-        else
-          message.read = if row.value is 1 then false else true
-        cb(error, message)
-    if err?
-      error =
-        statusCode: err.statusCode ? err.status_code
-        error     : err.error ? "Error getting messages"
-        reason    : err.reason ? "Error getting messages: #{userId}"
-      callback(error)
-    else async.map(res.rows, getMessageDoc, callback)  # messages
+  async.parallel
+    messages: (callback) ->
+      replicant.getTypeUserDb({type: 'message', userId, cookie, roles}, callback)
+    reads: (callback) ->
+      replicant.getTypeUserDb({type: 'read', userId, cookie}, callback) # not constable
+  , (err, body) ->
+    return callback(err) if err
+    {reads, messages} = body
+    reads = (read.message_id for read in reads)
+    message.read = message._id in reads for message in messages
+    callback(null, messages)
 
 
 ## gets a message and tacks on its 'read' status (true/false)
 replicant.getMessage = ({id, userId, cookie, roles}, callback) ->
-  if 'constable' in roles
-    dbName = 'drunk_tank'
-  else
-    dbName = h.getUserDbName({userId})
+  dbName = if 'constable' in roles then 'drunk_tank' else h.getUserDbName({userId})
 
   nanoOpts =
     url: "#{config.dbUrl}/#{dbName}"

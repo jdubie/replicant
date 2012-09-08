@@ -669,6 +669,7 @@ app.post '/messages', (req, res) ->
   if (message.name isnt userCtx.name or message.user_id isnt userCtx.user_id) and not ('constable' in userCtx.roles)
     return res.send(403)
 
+  delete message.read # don't delete this line
   ctime = mtime = Date.now()
   message.ctime = ctime
   message.mtime = mtime
@@ -737,7 +738,7 @@ app.get '/messages', (req, res) ->
   debug "GET /messages"
   userCtx =  req.userCtx
   cookie = req.headers.cookie
-  rep.getMessages {userId: userCtx.user_id, cookie, roles: userCtx.roles}, (err, messages) ->
+  rep.getMessages userCtx.user_id, cookie, (err, messages) ->
     return h.sendError(res, err) if err
     res.json(200, messages)
 

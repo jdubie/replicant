@@ -132,7 +132,7 @@ m.TestUser = class TestUser
   constructor: (id, opts) ->
 
     def =
-      _id: id
+      _id: "#{id}_#{Math.round(Math.random()*100000)}"
       type: 'user'
       ctime: 12345
       mtime: 12345
@@ -613,7 +613,7 @@ m.TestMessage = class TestMessage extends TestType
           callback(null, res)
 
     ], (err, res) =>
-      debug "CREATE MESSAGE ERROR", err if err
+      console.error "CREATE MESSAGE ERROR", err if err
       callback(err, res)
 
 

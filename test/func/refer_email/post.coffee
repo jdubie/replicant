@@ -9,7 +9,7 @@ kue     = require('kue')
 {TestUser, TestReferEmail} = require('lib/test_models')
 
 
-describe 'zzz POST /refer_emails', () ->
+describe 'POST /refer_emails', () ->
 
   user = new TestUser('post_refer_emails')
   referEmail = new TestReferEmail('post_refer_email_email', user)
