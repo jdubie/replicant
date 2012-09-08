@@ -437,13 +437,5 @@ replicant.getMessage = ({id, userId, cookie, roles}, callback) ->
       next(null, message)
   ], callback
 
-## gets an event and tacks on 'hosts'/'guests' arrays
-
 
 module.exports = replicant
-
-# shut down SMTP connection
-process.on 'SIGINT', () ->
-  #debug 'shutting down SMTP connection'
-  # @todo close db connection
-  process.exit()
