@@ -20,22 +20,34 @@ describe 'GET /phone_numbers', () ->
   before (ready) ->
     app = require('app')
     async.series [
-      user1.create
-      user2.create
-      constable.create
-      phoneNumber1.create
-      phoneNumber2.create
-      phoneNumber3.create
+      (callback) ->
+        async.parallel [
+          user1.create
+          user2.create
+          constable.create
+        ], callback
+      (callback) ->
+        async.parallel [
+          phoneNumber1.create
+          phoneNumber2.create
+          phoneNumber3.create
+        ], callback
     ], ready
 
   after (finished) ->
     async.series [
-      phoneNumber1.destroy
-      phoneNumber2.destroy
-      phoneNumber3.destroy
-      constable.destroy
-      user2.destroy
-      user1.destroy
+      (callback) ->
+        async.parallel [
+          phoneNumber1.destroy
+          phoneNumber2.destroy
+          phoneNumber3.destroy
+        ], callback
+      (callback) ->
+        async.parallel [
+          constable.destroy
+          user2.destroy
+          user1.destroy
+        ], callback
     ], finished
 
   it 'should GET all phone numbers', (done) ->

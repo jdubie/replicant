@@ -192,6 +192,7 @@ h.sendError = (res, err) ->
 
 h.request = (opts, callback) ->
   request opts, (err, res, body) ->
+    debug 'h.request headers', res?.headers
     if err?                         ## request error
       error =
         statusCode: 500
