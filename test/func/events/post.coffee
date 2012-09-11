@@ -10,7 +10,7 @@ kue = require('kue')
 {TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
 
-describe ' POST /events', () ->
+describe 'POST /events', () ->
 
   guest = new TestUser('post_events_guest')
   host  = new TestUser('post_events_host')
@@ -18,9 +18,7 @@ describe ' POST /events', () ->
   event = new TestEvent('post_events_id', [guest], [host], swap)
 
   before (ready) ->
-    ## start webserver
     app = require('app')
-    ## create users and swap
     async.series [
       (cb) -> async.parallel([guest.create, host.create], cb)
       swap.create
@@ -28,7 +26,6 @@ describe ' POST /events', () ->
     ], ready
 
   after (finished) ->
-    ## destroy event and swap, then users
     async.series [
       (cb) -> async.parallel([event.destroy, swap.destroy], cb)
       (cb) -> async.parallel([guest.destroy, host.destroy], cb)
@@ -77,6 +74,7 @@ describe ' POST /events', () ->
   it 'should create event.create notification on work queue', (done) ->
     kue.Job.get 1, (err, job) ->
       should.not.exist(err)
+      should.exist(job)
       job.should.have.property('type', 'notification.event.create')
       job.should.have.property('data')
       job.data.should.have.property('hosts')

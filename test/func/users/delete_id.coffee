@@ -1,19 +1,16 @@
-should = require('should')
-async = require('async')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
-{TestUser} = require('lib/test_models')
 
 config = require('config')
 h = require('lib/helpers')
+{TestUser} = require('lib/test_models')
 
 
-describe 'y DELETE /users/:id', () ->
+describe 'DELETE /users/:id', () ->
 
-  ## simple test - for now should just 403 (forbidden)
-
-  user = new TestUser('deleteuser')
-  constable = new TestUser('deleteconstable', roles: [ 'constable' ])
+  user = new TestUser('delete_user_id')
+  constable = new TestUser('delete_user_id_constable', roles: [ 'constable' ])
 
   mainDb = config.nanoAdmin.db.use('lifeswap')
   usersDb = config.nanoAdmin.db.use('_users')
@@ -25,7 +22,7 @@ describe 'y DELETE /users/:id', () ->
     async.parallel([user.create, constable.create], ready)
 
   after (finished) ->
-    async.parallel([user.destroy, constable.destroy], finished)
+    constable.destroy(finished)
 
   describe 'regular user', () ->
     it 'should return a 403 (forbidden)', (done) ->

@@ -1,17 +1,15 @@
-should = require('should')
-async = require('async')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
+{nanoAdmin} = require('config')
 {TestUser, TestReview} = require('lib/test_models')
-{nanoAdmin, nano} = require('config')
-{hash} = require('lib/helpers')
 
 
-describe 'y PUT /reviews/:id', () ->
+describe 'PUT /reviews/:id', () ->
 
-  user = new TestUser('post_reviews_user')
-  review = new TestReview('post_reviews', user)
+  user = new TestUser('put_reviews_id_user')
+  review = new TestReview('put_reviews_id', user)
   mainDb = nanoAdmin.db.use('lifeswap')
 
   before (ready) ->

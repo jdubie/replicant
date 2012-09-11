@@ -8,7 +8,7 @@ request = require('request')
 h = require('lib/helpers')
 
 
-describe 'y PUT /cards/:id', () ->
+describe 'PUT /cards/:id', () ->
 
   user = new TestUser('put_card_id_user')
   card = new TestCard('put_card_id', user)
@@ -19,7 +19,7 @@ describe 'y PUT /cards/:id', () ->
     async.series([user.create, card.create], ready)
 
   after (finished) ->
-    user.destroy(finished)
+    async.series([card.destroy, user.destroy], finished)
 
   it 'should not allow editing of balanced url on a card', (done) ->
     oldUrl = card.balanced_url

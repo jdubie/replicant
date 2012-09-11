@@ -7,7 +7,7 @@ h = require('lib/helpers')
 {TestUser, TestPayment} = require('lib/test_models')
 
 
-describe 'y DELETE /payments/:id', () ->
+describe 'DELETE /payments/:id', () ->
 
   user = new TestUser('delete_payments_id_user')
   payment = new TestPayment('delete_payments_id', user)
@@ -18,7 +18,7 @@ describe 'y DELETE /payments/:id', () ->
     async.series([user.create, payment.create], ready)
 
   after (finished) ->
-    user.destroy(finished) # destroys payment too
+    async.series([payment.destroy, user.destroy], finished)
 
   it 'should return a 403 (forbidden)', (done) ->
     opts =

@@ -4,6 +4,96 @@ config  = require('config')
 async   = require('async')
 debug   = require('debug')('replicant/lib/test_models')
 
+class TestType
+  @attributes: => [
+    '_id'       # doc id
+    '_rev'      # revision number
+    'type'      # document type
+    'name'      # userCtx.name
+    'user_id'   # user id
+    'ctime'     # created time
+    'mtime'     # last modified
+  ]
+
+  attributes: =>
+    result = {}
+    for key in @constructor.attributes() when key of this
+      result[key] = @[key]
+    result
+
+  defaults: => {
+    _id: @_id
+    name: @user.name
+    user_id: @user._id
+    ctime: 12345
+    mtime: 12345
+  }
+
+  setDbs: (userId) =>
+    @mainDb      = config.db.main()
+    @_usersDb    = config.db._users()
+    @userDb      = config.db.user(userId)
+    @constableDb = config.db.constable()
+    @mapperDb    = config.db.mapper()
+
+  constructor: (id, @user, opts) ->
+    @_id = "#{id}_#{Math.round(Math.random() * 100)}"
+
+    opts ?= {}
+    _.defaults(opts, @defaults())
+    _.extend(this, opts)
+
+    @setDbs(@user_id)
+
+  create: =>
+
+  destroy: =>
+
+
+class TestTypePublic extends TestType
+  create: (callback) =>
+    @mainDb.insert @attributes(), @_id, (err, res) =>
+      return callback(err) if err
+      @_rev = res.rev
+      callback()
+
+  destroy: (callback) =>
+    @mainDb.get @_id, (err, doc) =>
+      return callback() if err
+      @mainDb.destroy(@_id, doc._rev, callback)
+
+
+class TestTypePrivate extends TestType
+  create: (callback) =>
+    debug '#create TestTypePrivate: id', @_id
+    async.series
+      rev: (next) =>
+        cb = (err, res) ->
+          return next(err) if err
+          next(null, res.rev)
+        @constableDb.insert(@attributes(), @_id, h.nanoCallback(cb))
+      replicate: (next) =>
+        h.replicateOut([@user_id], [@_id], next)
+    , (err, res) =>
+      return callback(err) if err
+      @_rev = res.rev
+      debug '#create TestTypePrivate (done): id', @_id
+      callback()
+
+  destroy: (callback) =>
+    debug '#destroy TestTypePrivate: id', @_id
+    async.parallel [
+      (cb) =>
+        @userDb.get @_id, (err, doc) =>
+          return cb() if err?   # should error
+          @userDb.destroy(@_id, doc._rev, cb)
+      (cb) =>
+        @constableDb.get @_id, (err, doc) =>
+          return cb() if err?
+          @constableDb.destroy(@_id, doc._rev, cb)
+    ], callback
+
+
 m = {}
 
 # createUser
@@ -40,13 +130,12 @@ m.TestUser = class TestUser
     result = {}
     for key in @constructor.attributes when key of this
       result[key] = @[key]
-    result._id = @_id if @_id
     result
 
   constructor: (id, opts) ->
 
     def =
-      _id: id
+      _id: "#{id}_#{Math.round(Math.random()*100000)}"
       type: 'user'
       ctime: 12345
       mtime: 12345
@@ -94,10 +183,6 @@ m.TestUser = class TestUser
             config.nanoAdmin.db.replicate(userDdocDbName, @userDbName, cb)
       , callback
 
-      #, (err, res) ->
-      # debug '#createUser err, res', err, res
-      # callback(err, res)
-
     authUser = (res, callback) =>
       {_rev} = res
       @_rev = _rev
@@ -117,15 +202,15 @@ m.TestUser = class TestUser
 
     destroyUser = (callback) =>
       @usersDb.get @couchUser, (err, userDoc) =>
-        return callback() if err?   # should error
+        return callback(err) if err
         @usersDb.destroy(@couchUser, userDoc._rev, callback)
     destroyLifeswapUser = (callback) =>
       @mainDb.get @_id, (err, userDoc) =>
-        return callback() if err?   # should error
+        return callback(err) if err
         @mainDb.destroy(@_id, userDoc._rev, callback)
     destroyUserDb = (callback) =>
       config.nanoAdmin.db.list (err, dbs) =>
-        return callback() if not (@userDbName in dbs)  # should callback
+        return callback("#{@userDbName} not in DBs") if not (@userDbName in dbs)
         config.nanoAdmin.db.destroy(@userDbName, callback)
     flushRedis = (callback) -> config.jobs.client.flushall(callback)
 
@@ -134,7 +219,9 @@ m.TestUser = class TestUser
       destroyLifeswapUser
       destroyUserDb
       flushRedis
-    ], callback
+    ], (err, res) ->
+      debug "DESTROY USER ERROR", err if err
+      callback(err, res)
 
   getAllMessages: (callback) =>
     @userDb.view 'userddoc', 'docs_by_type', key: 'message', include_docs: true, (err, body) ->
@@ -164,435 +251,188 @@ m.TestUser = class TestUser
       callback(null, messages)
 
 
-m.TestSwap = class TestSwap
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'name'
-    'user_id'
-    'ctime'
-    'mtime'
-    'status'
-    'title'
-    'zipcode'
-    'city'
-    'state'
-    'entity'
-    'website'
-    'industry'
-    'description'
-    'highlights'
-    'duration'
-    'price'
-    'extra_info'
-    'num_guests'
-    'require_approval'
-    'image_original'
-    'image_huge'
-    'image_big'
-    'image_medium'
-    'image_thumbnail'
-    'image_small'
-    'image_narrow'
-    'availability'
-    'tags'
-    'address'
-    'parking'
-    'dresscode'
-  ]
+m.TestSwap = class TestSwap extends TestTypePublic
+  @attributes: =>
+    attrs = super
+    [].concat attrs, [
+      'status'
+      'title'
+      'zipcode'
+      'city'
+      'state'
+      'entity'
+      'website'
+      'industry'
+      'description'
+      'highlights'
+      'duration'
+      'price'
+      'extra_info'
+      'num_guests'
+      'require_approval'
+      'image_original'
+      'image_huge'
+      'image_big'
+      'image_medium'
+      'image_thumbnail'
+      'image_small'
+      'image_narrow'
+      'availability'
+      'tags'
+      'address'
+      'parking'
+      'dresscode'
+    ]
 
-  attributes: =>
-    result = {}
-    for key in @constructor.attributes when key of this
-      result[key] = @[key]
-    result
-
-  constructor: (id, user, opts) ->
-
-    def =
-      _id: id
-      name: user.name
-      user_id: user._id
+  defaults: =>
+    def = super
+    _.extend def, {
       type: 'swap'
-      ctime: 12345
-      mtime: 12345
       status: 'pending'
-      title: "#{id} Swap"
+      title: "#{@_id} Swap"
       zipcode: '94305'
       industry: 'Agriculture'
-      
-    opts ?= {}
-    _.defaults(opts, def)
-    _.extend(this, opts)
+    }
 
 
-    @mainDb = config.nanoAdmin.db.use('lifeswap')
+m.TestLike = class TestLike extends TestTypePublic
+  @attributes: =>
+    attrs = super
+    [].concat attrs, [
+      'swap_id'     # the liked swap id
+    ]
 
-  create: (callback) =>
-    @mainDb.insert @attributes(), @_id, (err, res) =>
-      return callback(err) if err
-      @_rev = res.rev
-      callback()
-
-  destroy: (callback) =>
-    @mainDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
-      @mainDb.destroy(@_id, userDoc._rev, callback)
+  defaults: =>
+    def = super
+    _.extend def, {
+      type: 'like'
+      swap_id: "swap_id_#{@_id}"
+    }
 
 
-m.TestRequest = class TestRequest
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'name'
-    'user_id'
-    'ctime'
-    'mtime'
-    'title'
-    'description'
-    'reason'
-    'zipcode'
-    'city'
-    'state'
-    'price'
-  ]
+m.TestRequest = class TestRequest extends TestTypePublic
+  @attributes: =>
+    attrs = super
+    [].concat attrs, [
+      'title'
+      'description'
+      'reason'
+      'zipcode'
+      'city'
+      'state'
+      'price'
+    ]
 
-  attributes: =>
-    result = {}
-    for key in @constructor.attributes when key of this
-      result[key] = @[key]
-    result
-
-  constructor: (id, user, opts) ->
-
-    def =
-      _id: id
-      name: user.name
-      user_id: user._id
+  defaults: =>
+    def = super
+    _.extend def, {
       type: 'request'
-      ctime: 12345
-      mtime: 12345
-      title: "#{id} Request"
-      
-    opts ?= {}
-    _.defaults(opts, def)
-    _.extend(this, opts)
+      title: "#{@_id} Request"
+    }
 
-    @mainDb = config.nanoAdmin.db.use('lifeswap')
 
-  create: (callback) =>
-    @mainDb.insert @attributes(), @_id, (err, res) =>
-      return callback(err) if err
-      @_rev = res.rev
-      callback()
+m.TestReview = class TestReview extends TestTypePublic
+  @attributes: =>
+    attrs = super
+    [].concat attrs, [
+      'review_type'
+      'reviewee_id'
+      'swap_id'
+      'rating'
+      'review'
+      'fb_id'
+    ]
 
-  destroy: (callback) =>
-    @mainDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
-      @mainDb.destroy(@_id, userDoc._rev, callback)
-
-m.TestReview = class TestReview
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'name'
-    'user_id'
-    'ctime'
-    'mtime'
-    'review_type'
-    'reviewee_id'
-    'swap_id'
-    'rating'
-    'review'
-    'fb_id'
-  ]
-
-  attributes: =>
-    result = {}
-    for key in @constructor.attributes when key of this
-      result[key] = @[key]
-    result._id = @_id if @_id
-    result
-
-  constructor: (id, user, opts) ->
-
-    user ?= {}
-    user.name ?= "user_name_#{id}"
-    user._id ?= "user_id_#{id}"
-
-    def =
-      _id: id
+  defaults: =>
+    def = super
+    _.extend def, {
       type: 'review'
-      name: user.name
-      user_id: user._id
-      ctime: 12345
-      mtime: 12345
-      review_type: 'guest'
-      reviewee_id: user._id
+      review_type: 'swap'
+      reviewee_id: @user._id
       swap_id: 'swap1'
       rating: 3
       review: 'sucit'
       fb_id: 'wefwefwewef'
-      
-    opts ?= {}
-    _.defaults(opts, def)
-    _.extend(this, opts)
+    }
 
-    @mainDb = config.nanoAdmin.db.use('lifeswap')
 
-  create: (callback) =>
-    @mainDb.insert @attributes(), @_id, (err, res) =>
-      return callback(err) if err
-      @_rev = res.rev
-      callback()
+m.TestEmailAddress = class TestEmailAddress extends TestTypePrivate
+  @attributes: =>
+    attrs = super
+    [].concat attrs, [
+      'email_address'
+    ]
 
-  destroy: (callback) =>
-    @mainDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
-      @mainDb.destroy(@_id, userDoc._rev, callback)
-
-m.TestEmailAddress = class TestEmailAddress
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'name'
-    'user_id'
-    'ctime'
-    'mtime'
-    'email_address'
-  ]
-
-  attributes: =>
-    result = {}
-    for key in @constructor.attributes when key of this
-      result[key] = @[key]
-    result
-
-  constructor: (id, user, opts) ->
-
-    def =
-      _id: id
-      name: user.name
-      user_id: user._id
+  defaults: =>
+    def = super
+    _.extend def, {
       type: 'email_address'
-      ctime: 12345
-      mtime: 12345
-      email_address: "#{id}@thelifeswap.com"
-      
-    opts ?= {}
-    _.defaults(opts, def)
-    _.extend(this, opts)
+      email_address: "#{@_id}@thelifeswap.com"
+    }
 
-    @userDb = config.nanoAdmin.db.use("users_#{user._id}")
 
-  create: (callback) =>
-    @userDb.insert @attributes(), @_id, (err, res) =>
-      return callback(err) if err
-      @_rev = res.rev
-      callback()
+m.TestPhoneNumber = class TestPhoneNumber extends TestTypePrivate
+  @attributes: =>
+    attrs = super
+    [].concat(attrs, [
+      'phone_number'
+    ])
 
-  destroy: (callback) =>
-    @userDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
-      @userDb.destroy(@_id, userDoc._rev, callback)
-
-m.TestLike = class TestLike
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'name'
-    'user_id'
-    'ctime'
-    'mtime'
-    'swap_id'     # the liked swap id
-  ]
-
-  attributes: =>
-    result = {}
-    for key in @constructor.attributes when key of this
-      result[key] = @[key]
-    result._id = @_id if @_id
-    result
-
-  constructor: (id, user, opts) ->
-
-    user ?= {}
-    user.name ?= "user_name_#{id}"
-    user._id ?= "user_id_#{id}"
-
-    def =
-      _id: id
-      type: 'like'
-      name: user.name
-      user_id: user._id
-      ctime: 12345
-      mtime: 12345
-      swap_id: "swap_id_#{id}"
-      
-    opts ?= {}
-    _.defaults(opts, def)
-    _.extend(this, opts)
-
-    @mainDb = config.nanoAdmin.db.use('lifeswap')
-
-  create: (callback) =>
-    @mainDb.insert @attributes(), @_id, (err, res) =>
-      debug 'err', err
-      return callback(err) if err
-      @_rev = res.rev
-      callback()
-
-  destroy: (callback) =>
-    @mainDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
-      @mainDb.destroy(@_id, userDoc._rev, callback)
-
-m.TestPhoneNumber = class TestPhoneNumber
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'name'
-    'user_id'
-    'ctime'
-    'mtime'
-    'phone_number'
-  ]
-
-  attributes: =>
-    result = {}
-    for key in @constructor.attributes when key of this
-      result[key] = @[key]
-    result
-
-  constructor: (id, user, opts) ->
-
-    def =
-      _id: id
-      name: user.name
-      user_id: user._id
+  defaults: =>
+    def = super
+    _.extend def, {
       type: 'phone_number'
-      ctime: 12345
-      mtime: 12345
       phone_number: "8602097765"
-      
-    opts ?= {}
-    _.defaults(opts, def)
-    _.extend(this, opts)
-
-    @userDb = config.nanoAdmin.db.use("users_#{user._id}")
-
-  create: (callback) =>
-    @userDb.insert @attributes(), @_id, (err, res) =>
-      return callback(err) if err
-      @_rev = res.rev
-      callback()
-
-  destroy: (callback) =>
-    @userDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
-      @userDb.destroy(@_id, userDoc._rev, callback)
+    }
 
 
-m.TestPayment = class TestPayment
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'name'
-    'user_id'
-    'event_id'
-    'card_id'
-    'amount'
-    'status'
-    'ctime'
-    'mtime'
-  ]
+m.TestPayment = class TestPayment extends TestTypePrivate
+  @attributes: =>
+    attrs = super
+    [].concat(attrs, [
+      'phone_number'
+      'status'
+      'event_id'
+      'card_id'
+      'amount'
+    ])
 
-  attributes: =>
-    result = {}
-    for key in @constructor.attributes when key of this
-      result[key] = @[key]
-    result
-
-  constructor: (id, user, opts) ->
-
-    def =
-      _id: id
-      name: user.name
-      user_id: user._id
+  defaults: =>
+    def = super
+    _.extend def, {
       type: 'payment'
-      ctime: 12345
-      mtime: 12345
-      event_id: "event_id_#{id}"
-      card_id: "card_id_#{id}"
+      phone_number: "8602097765"
+      event_id: "event_id_#{@_id}"
+      card_id: "card_id_#{@_id}"
       amount: 69
       status: '2'     # unpaid
-      
-    opts ?= {}
-    _.defaults(opts, def)
-    _.extend(this, opts)
-
-    @userDb = config.nanoAdmin.db.use("users_#{user._id}")
-
-  create: (callback) =>
-    @userDb.insert @attributes(), @_id, (err, res) =>
-      debug 'err, res', err, res
-      return callback(err) if err
-      @_rev = res.rev
-      callback()
-
-  destroy: (callback) =>
-    @userDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
-      @userDb.destroy(@_id, userDoc._rev, callback)
+    }
 
 
-m.TestCard = class TestCard
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'name'
-    'user_id'
-    'ctime'
-    'mtime'
-    'balanced_url'      # token url for balanced
-    'full_name'
-    'expiration_month'
-    'expiration_year'
-    'street_address'
-    'postal_code'
-    'country_code'
-    'city'
-    'state'
-    'card_type'
-    'last_four'         # server-only
-    'card_number'
-    'security_code'
-    'card_type'
-  ]
+m.TestCard = class TestCard extends TestTypePrivate
+  @attributes: =>
+    attrs = super
+    [].concat(attrs, [
+      'balanced_url'      # token url for balanced
+      'full_name'
+      'expiration_month'
+      'expiration_year'
+      'street_address'
+      'postal_code'
+      'country_code'
+      'city'
+      'state'
+      'card_type'
+      'last_four'         # server-only
+      'card_number'
+      'security_code'
+      'card_type'
+    ])
 
-  attributes: =>
-    result = {}
-    for key in @constructor.attributes when key of this
-      result[key] = @[key]
-    result
-
-  constructor: (id, user, opts) ->
-
-    def =
-      _id: id
-      name: user.name
-      user_id: user._id
+  defaults: =>
+    def = super
+    _.extend def, {
       type: 'card'
-      ctime: 12345
-      mtime: 12345
       balanced_url: '/url/to/pluto'
       full_name: 'dack jubie'
       expiration_month: 11
@@ -604,24 +444,26 @@ m.TestCard = class TestCard
       state: 'VT'
       card_type: 'VISA'
       last_four: '1233'
-      
-    opts ?= {}
-    _.defaults(opts, def)
-    _.extend(this, opts)
+    }
 
-    @userDb = config.nanoAdmin.db.use("users_#{user._id}")
 
-  create: (callback) =>
-    @userDb.insert @attributes(), @_id, (err, res) =>
-      debug 'err, res', err, res
-      return callback(err) if err
-      @_rev = res.rev
-      callback()
+m.TestReferEmail = class TestReferEmail extends TestTypePrivate
+  @attributes: =>
+    attrs = super
+    [].concat(attrs, [
+      'request_id'
+      'email_address'
+      'personal_message'
+    ])
 
-  destroy: (callback) =>
-    @userDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
-      @userDb.destroy(@_id, userDoc._rev, callback)
+  defaults: =>
+    def = super
+    _.extend def, {
+      type: 'refer_email'
+      request_id: "#{@_id}_request_id"
+      email_address: "#{@_id}@emailAddress.com"
+      personal_message: "#{@_id}_personal_message"
+    }
 
 
 m.TestEvent = class TestEvent
@@ -648,97 +490,90 @@ m.TestEvent = class TestEvent
   constructor: (id, @guests, @hosts, @swap, opts) ->
 
     def =
-      _id: id
+      _id: "#{id}_#{Math.round(Math.random()*1000)}"
       type: 'event'
       ctime: 12345
       mtime: 12345
       state: 'requested'    # put EVENT_STATE.requested
-      swap_id: swap._id
+      swap_id: @swap._id
       
     opts ?= {}
     _.defaults(opts, def)
     _.extend(this, opts)
 
-    @users = []
-    @users.push(guest) for guest in @guests
-    @users.push(host) for host in @hosts
+    @users = [].concat(@guests, @hosts)
     @mapperDb = config.nanoAdmin.db.use('mapper')
 
-
   create: (callback) =>
-    createOneEvent = (user, callback) =>
-      userDb = config.nanoAdmin.db.use("users_#{user._id}")
-      userDb.insert @attributes(), @_id, (err, res) =>
-        return callback(err) if err
-        @_rev = res.rev
-        callback()
-    createEvent = (callback) =>
-      async.map(@users, createOneEvent, callback)
-    insertIntoMapper = (callback) =>
-      mapperDoc =
-        _id   : @_id
-        guests: (guest._id for guest in @guests)
-        hosts : (host._id for host in @hosts)
-      @mapperDb.insert(mapperDoc, @_id, callback)
 
-    async.parallel([createEvent, insertIntoMapper], callback)
+    mapperDoc =
+      _id   : @_id
+      guests: (guest._id for guest in @guests)
+      hosts : (host._id for host in @hosts)
 
+    async.series [
+
+      (cb) =>
+        config.db.constable().insert @attributes(), @_id, (err, res) =>
+          return cb(err) if err
+          @_rev = res.rev
+          cb()
+
+      (cb) =>
+        @mapperDb.insert(mapperDoc, @_id, cb)
+
+      (cb) =>
+        h.replicateOut(_.union(mapperDoc.guests, mapperDoc.hosts), [@_id], cb)
+
+    ], callback
 
   destroy: (callback) =>
     destroyOneEvent = (user, callback) =>
       userDb = config.nanoAdmin.db.use("users_#{user._id}")
       userDb.get @_id, (err, eventDoc) =>
-        return callback() if err?
+        return callback(err) if err
         userDb.destroy(@_id, eventDoc._rev, callback)
     destroyEvent = (callback) =>
       async.map(@users, destroyOneEvent, callback)
     removeFromMapper = (callback) =>
       @mapperDb.get @_id, (err, mapperDoc) =>
-        return callback() if err?
+        return callback(err) if err
         @mapperDb.destroy(@_id, mapperDoc._rev, callback)
+    removeFromConstable = (callback) =>
+      config.db.constable().get @_id, (err, body) =>
+        return callback(err) if err
+        config.db.constable().destroy(@_id, body._rev, callback)
 
-    async.parallel([destroyEvent, removeFromMapper], callback)
+    async.parallel [
+      destroyEvent
+      removeFromMapper
+      removeFromConstable
+    ], (err, res) ->
+      console.error "EVENT DESTROY ERROR", err if err
+      callback(err, res)
 
-m.TestMessage = class TestMessage
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'name'
-    'user_id'
-    'ctime'
-    'mtime'
-    'event_id'
-    'message'
-    'read'
-  ]
+m.TestMessage = class TestMessage extends TestType
+  @attributes: =>
+    attrs = super
+    [].concat attrs, [
+      'event_id'
+      'message'
+      'read'
+    ]
 
-  attributes: =>
-    result = {}
-    for key in @constructor.attributes when key of this
-      result[key] = @[key]
-    result
-
-  constructor: (id, @user, @event, opts) ->
-
-    def =
-      _id: id
+  defaults: =>
+    def = super
+    _.extend def, {
       type: 'message'
-      name: @user.name
-      user_id: @user._id
-      ctime: 12345
-      mtime: 12345
       event_id: @event._id
       message: 'test message'
       read: true
-      
-    opts ?= {}
-    _.defaults(opts, def)
-    _.extend(this, opts)
+    }
 
-    @userDb = config.nanoAdmin.db.use("users_#{user._id}")
+  constructor: (id, @user, @event, opts) ->
+    super(id, @user, opts)
 
-  getReadDoc: () =>
+  getReadDoc: =>
     doc =
       _id: Math.random().toString().substring(2) # HACK
       type: 'read'
@@ -750,45 +585,56 @@ m.TestMessage = class TestMessage
       message_id: @_id
 
   create: (callback) =>
-    # TODO: user mapper to get users?
-    #mapperDb = nanoAdmin.db.use('mapper')
 
-    insertMessage = (user, cb) =>
-      debug 'user._id', user._id
+    async.series [
 
-      userDb = config.nanoAdmin.db.use(h.getUserDbName(userId: user._id))
-      async.parallel [
+      (callback) =>
+        debug 'inserting message into drunk_tank'
+        message = @attributes()
+        delete message.read
+        @constableDb.insert message, @_id, (err, res) =>
+          return callback(err) if err
+          @_rev = res.rev
+          callback()
 
-        # write message doc
-        (_cb) =>
-          message = @attributes()
-          delete message.read
-          userDb.insert message, @_id, (err, res) =>
-            debug 'insertMessage doc', err, res
-            return _cb(err) if err
-            @_rev = res.rev
-            _cb()
+      (callback) =>
+        allUsers = _.union(@event.guests, @event.hosts)
+        userIds = (user._id for user in allUsers)
+        debug 'replicating message to users', userIds
+        h.replicateOut(userIds, [@_id], callback)
 
-        # conditionally insert read doc
-        (_cb) =>
-          debug '@getReadDoc()', @getReadDoc()
-          debug '@read', @read
-          if @read and @user_id is user._id
-            readDoc = @getReadDoc()
-            userDb.insert readDoc, readDoc._id, (err, res) ->
-              debug 'insertRead doc', err, res
-              return _cb(err) if err
-              _cb(null ,res)
-          else _cb()
-      ], cb
+      (callback) =>
+        return callback() if not @read
+        readDoc = @getReadDoc()
+        @userDb.insert readDoc, readDoc._id, (err, res) ->
+          debug 'insertRead doc', err, res
+          return callback(err) if err
+          callback(null, res)
 
-    allUsers = _.union(@event.guests, @event.hosts)
-    async.map(allUsers, insertMessage, callback)
+    ], (err, res) =>
+      console.error "CREATE MESSAGE ERROR", err if err
+      callback(err, res)
+
+
 
   destroy: (callback) =>
     ## todo: destroy read document
-    @userDb.get @_id, (err, userDoc) =>
-      return callback() if err?   # should error
-      @userDb.destroy(@_id, userDoc._rev, callback)
+    removeUserMessage = (user, cb) =>
+      userDb = config.db.user(user._id)
+      userDb.get @_id, (err, doc) =>
+        return cb(err) if err
+        userDb.destroy(@_id, doc._rev, cb)
+    removeConstableMessage = (cb) =>
+      @constableDb.get @_id, (err, doc) =>
+        return cb(err) if err
+        @constableDb.destroy(@_id, doc._rev, cb)
+    async.parallel [
+      removeConstableMessage
+      (cb) =>
+        allUsers = _.union(@event.guests, @event.hosts)
+        async.map(allUsers, removeUserMessage, cb)
+    ], (err, res) ->
+      debug "MESSAGE DESTROY ERROR", err if err
+      callback(err, res)
 
 module.exports = m

@@ -1,21 +1,21 @@
-should = require('should')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
-{TestReview} = require('lib/test_models')
-{nanoAdmin} = require('config')
-{hash} = require('lib/helpers')
+{TestUser, TestReview} = require('lib/test_models')
 
 
-describe 'y GET /reviews/:id', () ->
+describe 'GET /reviews/:id', () ->
 
-  review = new TestReview('get_review_id')
+  user = new TestUser('get_review_id_user')
+  review = new TestReview('get_review_id', user)
 
   before (ready) ->
     app = require('app')
-    review.create(ready)
+    async.parallel([user.create, review.create], ready)
 
-  after (finished) -> review.destroy(finished)
+  after (finished) ->
+    async.parallel([user.destroy, review.destroy], finished)
 
   it 'should get the correct review', (done) ->
     opts =

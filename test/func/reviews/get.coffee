@@ -1,25 +1,29 @@
 should = require('should')
-util = require('util')
 async = require('async')
 request = require('request')
 
-{TestReview} = require('lib/test_models')
-{nanoAdmin} = require('config')
-{hash} = require('lib/helpers')
+{TestUser, TestReview} = require('lib/test_models')
 
 
-describe 'y GET /reviews', () ->
+describe 'GET /reviews', () ->
 
-  reviews = (new TestReview(id) for id in ['get_review_1', 'get_review_2'])
+  user = new TestUser('get_reviews_user')
+  reviews = (new TestReview(id, user) for id in ['get_review_1', 'get_review_2'])
 
   before (ready) ->
     app = require('app')
     create = (review, callback) -> review.create(callback)
-    async.map(reviews, create, ready)
+    async.parallel [
+      user.create
+      (cb) -> async.map(reviews, create, cb)
+    ], ready
 
   after (finished) ->
     destroy = (review, callback) -> review.destroy(callback)
-    async.map(reviews, destroy, finished)
+    async.parallel [
+      user.destroy
+      (cb) -> async.map(reviews, destroy, cb)
+    ], finished
 
   it 'should provide a list of all the correct reviews', (done) ->
     opts =

@@ -8,7 +8,7 @@ request = require('request')
 {TestUser, TestPhoneNumber} = require('lib/test_models')
 
 
-describe ' PUT /phone_numbers/:id', () ->
+describe 'PUT /phone_numbers/:id', () ->
 
   user = new TestUser('put_phone_user')
   phoneNumber = new TestPhoneNumber('put_phone', user, foo: 'bar')
@@ -16,16 +16,11 @@ describe ' PUT /phone_numbers/:id', () ->
   userDb = nanoAdmin.db.use(getUserDbName(userId: user._id))
 
   before (ready) ->
-    ## start webserver
     app = require('app')
-    ## insert user and phone number
     async.series([user.create, phoneNumber.create], ready)
 
-
   after (finished) ->
-    ## destroy user (and thus phone number)
-    user.destroy(finished)
-
+    async.series([phoneNumber.destroy, user.destroy], finished)
 
   it 'should PUT the phone_number correctly', (done) ->
     phoneNumber.foo = 'c3p0'

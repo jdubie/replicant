@@ -8,7 +8,7 @@ config = require('config')
 h = require('lib/helpers')
 
 
-describe 'y GET /payments/:id', () ->
+describe 'GET /payments/:id', () ->
 
   user = new TestUser('get_payments_id_user')
   payment = new TestPayment('get_payments_id', user)
@@ -18,7 +18,7 @@ describe 'y GET /payments/:id', () ->
     async.series([user.create, payment.create], ready)
 
   after (finished) ->
-    user.destroy(finished)
+    async.series([payment.destroy, user.destroy], finished)
 
   it 'should GET the payment', (done) ->
     opts =
