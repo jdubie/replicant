@@ -455,7 +455,7 @@ replicant.getMessage = ({id, userId, cookie, roles}, callback) ->
       dbRead.view('userddoc', 'read', {key: message._id}, h.nanoCallback(next, errorOpts))
     (res, _headers, next) ->
       resetDbs(_headers)
-      message.read = if res.rows.length is 0 then false else true
+      message.read = res.rows.length > 0
       next(null, message, headers)
   ], callback
 
