@@ -4,8 +4,6 @@ request = require('request')
 config  = require('config')
 
 {TestUser, TestSwap, TestEvent, TestMessage} = require('lib/test_models')
-{nanoAdmin} = require('config')
-{getUserDbName} = require('lib/helpers')
 
 
 describe 'GET /messages/:id', () ->
