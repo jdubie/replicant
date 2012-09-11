@@ -56,11 +56,13 @@ app.use (req, res, next) ->
 
 userCtxRegExp = /^\/(events|messages|cards|payments|email_addresses|phone_numbers|refer_emails)(\/.*)?$/
 app.all userCtxRegExp, (req, res, next) ->
-  h.getUserCtxFromSession req, (err, userCtx) ->
-    if err then res.json(err.statusCode ? err.status_code ? 500, err)
-    else
-      req.userCtx = userCtx
-      next()
+  debug '#before getting userCtx'
+  h.getUserCtxFromSession req, (err, userCtx, headers) ->
+    return res.json(err.statusCode ? err.status_code ? 500, err) if err
+    debug '#getUserCtxFromSession before: userCtx', userCtx
+    req.userCtx = userCtx
+    h.setCookie(res, headers)   # set-cooki if necessary
+    next()
 
 ###
   Login
@@ -538,8 +540,8 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers'], (model) ->
   app.get "/#{model}", (req, res) ->
     debug "GET /#{model}"
     userCtx = req.userCtx   # from the app.all route
-    cookie = req.headers.cookie
-    type = h.singularizeModel(model)
+    cookie  = req.headers.cookie
+    type    = h.singularizeModel(model)
     debug 'userCtx', userCtx
     rep.getTypeUserDb {type, userId: userCtx.user_id, cookie, roles: userCtx.roles}, (err, docs, headers) ->
       h.setCookie(res, headers)

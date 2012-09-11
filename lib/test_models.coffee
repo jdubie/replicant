@@ -65,6 +65,7 @@ class TestTypePublic extends TestType
 
 class TestTypePrivate extends TestType
   create: (callback) =>
+    debug '#create TestTypePrivate: id', @_id
     async.series
       rev: (next) =>
         cb = (err, res) ->
@@ -76,9 +77,11 @@ class TestTypePrivate extends TestType
     , (err, res) =>
       return callback(err) if err
       @_rev = res.rev
+      debug '#create TestTypePrivate (done): id', @_id
       callback()
 
   destroy: (callback) =>
+    debug '#destroy TestTypePrivate: id', @_id
     async.parallel [
       (cb) =>
         @userDb.get @_id, (err, doc) =>

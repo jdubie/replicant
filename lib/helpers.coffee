@@ -50,8 +50,7 @@ h.getUserId = ({cookie, userCtx}, callback) ->
 ###
 h.getUserCtxFromSession = ({headers}, callback) ->
   unless headers?.cookie?
-    callback(statusCode: 403, reason: "No session")
-    return
+    return callback(statusCode: 403, reason: "No session")
   cookie = headers.cookie
   async.waterfall [
     (next) ->
@@ -62,7 +61,9 @@ h.getUserCtxFromSession = ({headers}, callback) ->
         json: true
       h.request(opts, next)   # (err, {userCtx}, headers)
     ({userCtx}, _headers, next) ->
+      debug '#getUserCtxFromSession userCtx, headers', userCtx, _headers
       if _headers?['set-cookie']
+        debug '#getUserCtxFromSession set-cookie', _headers
         headers = _headers
         cookie = headers['set-cookie']
       h.getUserId({cookie, userCtx}, next)  # (err, userCtx, headers)
@@ -212,6 +213,7 @@ h.sendError = (res, err) ->
 # @param headers {object} the headers given in a (couchdb) response
 h.setCookie = (res, headers) ->
   if headers?['set-cookie']?
+    debug 'Set-Cookie', headers
     res.set('Set-Cookie', headers?['set-cookie'])
 
 
@@ -219,11 +221,13 @@ h.request = (opts, callback) ->
   request opts, (err, res, body) ->
     debug 'h.request headers', res?.headers
     if err?                         ## request error
+      debug '#h.request err:', err
       error =
         statusCode: 500
         error     : 'Request error'
         reason    : err
     else if res.statusCode >= 400   ## couch error
+      debug '#h.request couch err:', res
       error =
         statusCode: res.statusCode
         error     : body.error
