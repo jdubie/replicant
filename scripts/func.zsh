@@ -3,7 +3,7 @@
 #DEBUG='*' \
 NODE_PATH=`pwd` ENV=TEST \
 	./node_modules/.bin/mocha \
-    --timeout 5000 \
+    --timeout 8000 \
 		--compilers coffee:coffee-script \
 		--reporter nyan \
 		--require should \

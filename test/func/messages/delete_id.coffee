@@ -1,12 +1,11 @@
-should = require('should')
-async = require('async')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
-debug = require('debug')('replicant/test/func/message/delete_id')
 
+debug   = require('debug')('replicant:test/func/message/delete_id')
+
+config = require('config')
 {TestUser, TestSwap, TestEvent, TestMessage} = require('lib/test_models')
-{nanoAdmin} = require('config')
-{getUserDbName} = require('lib/helpers')
 
 
 describe 'DELETE /messages/:id', () ->
@@ -17,8 +16,8 @@ describe 'DELETE /messages/:id', () ->
   event   = new TestEvent('delete_messages_id_event', [guest], [host], swap)
   message = new TestMessage('delete_messages_id', guest, event)
 
-  mainDb = nanoAdmin.db.use('lifeswap')
-  mapperDb = nanoAdmin.db.use('mapper')
+  mainDb = config.db.main()
+  mapperDb = config.db.mapper()
 
   describe 'correctness:', () ->
 
@@ -52,9 +51,7 @@ describe 'DELETE /messages/:id', () ->
 
     it 'should not delete message for any involved users', (done) ->
       checkMessageDoc = (user, callback) ->
-        userId = user._id
-        userDbName = getUserDbName({userId})
-        userDb = nanoAdmin.db.use(userDbName)
+        userDb = config.db.user(user._id)
         userDb.get message._id, (err, messageDoc) ->
           should.not.exist(err)
           _message = message.attributes()

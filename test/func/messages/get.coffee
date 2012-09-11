@@ -5,8 +5,6 @@ config  = require('config')
 debug   = require('debug')('replicant/test/func/phone_numbers/delete')
 
 {TestUser, TestSwap, TestEvent, TestMessage} = require('lib/test_models')
-{nanoAdmin} = require('config')
-{getUserDbName} = require('lib/helpers')
 
 
 describe 'GET /messages', () ->
