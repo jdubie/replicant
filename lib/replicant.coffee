@@ -1,8 +1,6 @@
-async = require('async')
 request = require('request')
-_ = require('underscore')
-async = require('async')
-debug = require('debug')('replicant:lib')
+async   = require('async')
+debug   = require('debug')('replicant:lib')
 
 config = require('config')
 h = require('lib/helpers')
@@ -81,10 +79,9 @@ replicant.createUserDb = ({userId, name}, callback) ->
 
 
 replicant.changePassword = ({name, oldPass, newPass, cookie}, callback) ->
-  nanoOpts =
-    url: "#{config.dbUrl}/_users"
-    cookie: cookie
-  db = require('nano')(nanoOpts)
+  db = h.getDbWithCookie({cookie, dbName: '_users'})
+  ## no need to watch for set-cookie header b/c will re-auth after
+  ##    changing password
   async.waterfall [
     ## get _user document
     (next) ->
@@ -128,9 +125,8 @@ replicant.createEvent = ({event, userId}, callback) ->
 
   createEventDoc = (_userId, cb) ->
     # @todo replace with getting this from cookies
-    userDbName = h.getUserDbName(userId: _userId)
-    debug 'userDbName:', userDbName
-    userDb = config.nanoAdmin.db.use(userDbName)
+    debug '#createEvent user id:', _userId
+    userDb = config.db.user(_userId)
     errorOpts =
       error : "Error creating event"
       reason: "Error inserting event doc #{event._id} for #{_userId}"
@@ -143,7 +139,7 @@ replicant.createEvent = ({event, userId}, callback) ->
 
   getMembers = (next) ->
     debug 'getMembers'
-    db = config.nano.db.use('lifeswap')
+    db = config.db.main()
     db.get event.swap_id, (err, _swap) ->
       # @todo swap.user_id will be array in future
       if err?
@@ -159,7 +155,7 @@ replicant.createEvent = ({event, userId}, callback) ->
   createDocs = (next) ->
     ## create doc in mapping DB
     createMapping = (cb) ->
-      mapper = config.nanoAdmin.db.use('mapper')
+      mapper = config.db.mapper()
       debug 'createMapping', event._id, userId, hosts
       mapperDoc =
         _id: event._id
@@ -238,13 +234,12 @@ replicant.addEventHostsAndGuests = (event, callback) ->
 replicant.replicate = ({src, dsts, eventId}, callback) ->
   userDdocName = 'userddoc'
   src = h.getUserDbName({userId: src})
-  dsts = _.map dsts, (userId) -> return h.getUserDbName({userId})
+  dsts = (h.getUserDbName({userId}) for userId in dsts)
   opts =
     create_target: true
     query_params: {eventId}
     filter: "#{userDdocName}/event_filter"
-  params = _.map dsts, (dst) ->
-    return {src, dst, opts}
+  params = ({src, dst, opts} for dst in dsts)
   debug 'replicating', src, dsts
   replicateEach = ({src,dst,opts}, cb) ->
     config.nanoAdmin.db.replicate(src, dst, opts, cb)
@@ -296,40 +291,49 @@ replicant.getTypeUserDb = ({type, userId, cookie, roles}, callback) ->
   roles ?= []
 
   # constables should fetch from drunk tank
-  if 'constable' in roles
-    dbName = 'drunk_tank'
-  else
-    dbName = h.getUserDbName({userId})
+  userDbName = h.getUserDbName({userId})
+  dbName = if 'constable' in roles then 'drunk_tank' else userDbName
+  db = h.getDbWithCookie({dbName, cookie})
 
-  nanoOpts =
-    url: "#{config.dbUrl}/#{dbName}"
-    cookie: cookie
-  db = require('nano')(nanoOpts)
   opts =
     key: type
     include_docs: true
-  db.view 'userddoc', 'docs_by_type', opts, (err, res) ->
+  db.view 'userddoc', 'docs_by_type', opts, (err, res, headers) ->
     if err
       error =
         statusCode: err.status_code ? 500
         error     : err.error ? "GET error"
         reason    : err.reason ? "Error getting '#{type}' docs from #{userDbName} DB"
-      callback(error)
-    else
-      docs = (row.doc for row in res.rows)
-      callback(err, docs)
+      return callback(error)
+    docs = (row.doc for row in res.rows)
+    callback(err, docs, headers)
 
 
 ## marks a message read/unread if specified
+# TODO: don't get read status with view anymore!!
+#       (differences when using constable)
 replicant.markReadStatus = (message, userId, cookie, callback) ->
   markRead = message.read   # true/false
   debug 'markReadStatus', markRead
+  if not markRead?
+    return callback {
+      statusCode: 403
+      error: "Error message status"
+      reason: "Read/unread status undefined"
+    }
+
   delete message.read
-  userDbName = h.getUserDbName(userId: userId)
-  nanoOpts =
-    url: "#{config.dbUrl}/#{userDbName}"
-    cookie: cookie
-  db = require('nano')(nanoOpts)
+  userDbName = h.getUserDbName({userId})
+  db = h.getDbWithCookie({cookie, dbName: userDbName})
+  headers = null    # in case a set-cookie header is sent in response
+
+  ## ensure that we have the right cookie set on the database
+  resetDbWithHeaders = (_headers) ->
+    if _headers?['set-cookie']?
+      headers = _headers                # update headers
+      cookie = _headers['set-cookie']   # update cookie
+      db = h.getDbWithCookie({dbName: userDbName, cookie})  # reset db
+    db
 
   ## mark a message read
   markMessageRead = (callback) ->
@@ -341,100 +345,124 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
     errorOpts =
       error : "Error marking message read"
       reason: "Error marking message #{message._id} read for #{userId}"
-    db.insert(readDoc, h.nanoCallback(callback, errorOpts))
+
+    getHeaders = (err, _headers, res) ->
+      db = resetDbWithHeaders(_headers)
+      callback(err, _headers, res)
+
+    db.insert(readDoc, h.nanoCallback(getHeaders, errorOpts))
+
   ## destroy 'read' document
   destroyReadDoc = (row, callback) ->
     doc = row.doc
-    if doc.type is 'read'
-      errorOpts =
-        error : "Error marking message unread"
-        reason: "Error removing 'read' doc read for #{userId} (#{message._id})"
-      db.destroy(doc._id, doc._rev, h.nanoCallback(callback, errorOpts))
-    else callback()
+    return callback() if doc.type isnt 'read'
+
+    errorOpts =
+      error : "Error marking message unread"
+      reason: "Error removing 'read' doc read for #{userId} (#{message._id})"
+
+    getHeaders = (err, _headers, res) ->
+      db = resetDbWithHeaders(_headers)
+      callback(err, _headers, res)
+
+    db.destroy(doc._id, doc._rev, h.nanoCallback(getHeaders, errorOpts))
+
   ## mark a message unread
   markMessageUnread = (callback) ->
     opts =
       include_docs: true
       reduce: false
       key: [message.event_id, message._id]
-    db.view 'userddoc', 'messages', opts, (err, res) ->
+    db.view 'userddoc', 'messages', opts, (err, res, _headers) ->
       if err?
         error =
           statusCode: err.status_code ? 500
           error     : err.error ? "Error getting message status"
           reason    : err.reason ? "message #{message._id} for #{userId}"
-        callback(error)
-      else async.map(res.rows, destroyReadDoc, callback)
+        return callback(error)
+      db = resetDbWithHeaders(_headers)
+      async.map(res.rows, destroyReadDoc, callback)
 
   async.waterfall [
     (next) ->
-      if not markRead?
-        next(statusCode: 403, error: "Error message status", reason: "Read/unread status undefined")
-      else
-        opts = key: [message.event_id, message._id]
-        errorOpts =
-          error : "Error getting message status"
-          reason: "For message #{message._id}, user #{userId}, event #{message.event_id}"
-        db.view('userddoc', 'messages', opts, h.nanoCallback(next, errorOpts)) # (err, res, hdr)
-    (res, hdr, next) ->
+      opts = key: [message.event_id, message._id]
+      errorOpts =
+        error : "Error getting message status"
+        reason: "For message #{message._id}, user #{userId}, event #{message.event_id}"
+      db.view('userddoc', 'messages', opts, h.nanoCallback(next, errorOpts)) # (err, res, headers)
+    (res, _headers, next) ->
+      db = resetDbWithHeaders(_headers)
       if res.rows.length < 1
-        next(statusCode: 404, error: "Error message status", reason: "Too many messages found.")
+        return next(statusCode: 404, error: "Error message status", reason: "Too many messages found.")
+
+      row = res.rows[0]
+      isRead = if row.value is 1 then false else true
+      if markRead isnt isRead then next()
       else
-        row = res.rows[0]
-        isRead = if row.value is 1 then false else true
-        if markRead isnt isRead then next()
-        else
-          next(statusCode: 403, error: "Error message status", reason: "Can only change read/unread status of message")
+        next(statusCode: 403, error: "Error message status", reason: "Can only change read/unread status of message")
     (next) ->
       if markRead then markMessageRead(next)
       else markMessageUnread(next)
-  ], (err, res) -> callback(err)
+  ], (err, res) ->
+    callback(err, res, headers)
 
 
 ## gets all messages and tacks on 'read' status (true/false)
 replicant.getMessages = ({userId, cookie, roles}, callback) ->
+  headers = null
+  updateCookie = (_headers) ->
+    headers = _headers if _headers?['set-cookie']?
+
   async.parallel
     messages: (callback) ->
-      replicant.getTypeUserDb({type: 'message', userId, cookie, roles}, callback)
+      replicant.getTypeUserDb {type: 'message', userId, cookie, roles}, (err, messages, _headers) ->
+        updateCookie(_headers)
+        callback(err, messages)
     reads: (callback) ->
-      replicant.getTypeUserDb({type: 'read', userId, cookie}, callback) # not constable
+      replicant.getTypeUserDb {type: 'read', userId, cookie}, (err, reads, _headers) ->
+        updateCookie(_headers)
+        callback(err, reads) # not constable
   , (err, body) ->
     return callback(err) if err
     {reads, messages} = body
     reads = (read.message_id for read in reads)
     message.read = message._id in reads for message in messages
-    callback(null, messages)
+    callback(null, messages, headers)
 
 
 ## gets a message and tacks on its 'read' status (true/false)
 replicant.getMessage = ({id, userId, cookie, roles}, callback) ->
-  dbName = if 'constable' in roles then 'drunk_tank' else h.getUserDbName({userId})
 
-  nanoOpts =
-    url: "#{config.dbUrl}/#{dbName}"
-    cookie: cookie
-  db = require('nano')(nanoOpts)
+  userDbName = h.getUserDbName({userId})
+  dbRead  = h.getDbWithCookie({dbName: userDbName, cookie})
 
-  nanoOptsRead =
-    url: "#{config.dbUrl}/#{h.getUserDbName({userId})}"
-    cookie: cookie
-  dbRead = require('nano')(nanoOptsRead)
+  dbName  = if 'constable' in roles then 'drunk_tank' else userDbName
+  db      = h.getDbWithCookie({dbName, cookie})
+  headers = null
+
+  ## ensure that we have the right cookie set on the databases
+  resetDbs = (_headers) ->
+    if _headers?['set-cookie']?
+      headers = _headers                        # update headers
+      cookie = _headers['set-cookie']           # update cookie
+      # reset DBs
+      db     = h.getDbWithCookie({dbName, cookie})
+      dbRead = h.getDbWithCookie({dbName: userDbName, cookie})
 
   message = null
   async.waterfall [
     (next) -> db.get(id, next)
-    (_message, headers, next) ->
+    (_message, _headers, next) ->
+      resetDbs(_headers)
       message = _message
       errorOpts =
         error : "Error getting message"
         reason: "Error getting message #{id}"
       dbRead.view('userddoc', 'read', {key: message._id}, h.nanoCallback(next, errorOpts))
-    (res, headers, next) ->
-      if res.rows.length is 0
-        message.read = false
-      else
-        message.read = true
-      next(null, message)
+    (res, _headers, next) ->
+      resetDbs(_headers)
+      message.read = if res.rows.length is 0 then false else true
+      next(null, message, headers)
   ], callback
 
 

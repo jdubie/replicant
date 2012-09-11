@@ -12,6 +12,18 @@ h = {}
 ###
 h.getUserDbName = ({userId}) -> "users_#{userId}"
 
+# getUserDbWithCookie
+#
+# @param userId {string} the user's id
+# @param cookie {string} the user's cookie
+h.getDbWithCookie = ({dbName, cookie}) ->
+  nanoOpts =
+    url: "#{config.dbUrl}/#{dbName}"
+    cookie: cookie
+  db = require('nano')(nanoOpts)
+  db
+
+
 ###
   @description returns _user id given name
   @param userId {string}
@@ -24,15 +36,12 @@ h.getCouchUserName = (name) -> "org.couchdb.user:#{name}"
 ###
 h.getUserId = ({cookie, userCtx}, callback) ->
 
-  res = (err, _userDoc) ->
+  res = (err, _userDoc, headers) ->
     userCtx.roles = _userDoc?.roles
     userCtx.user_id = _userDoc?.user_id
-    callback(err, userCtx)
+    callback(err, userCtx, headers)
 
-  nanoOpts =
-    url: "#{config.dbUrl}/_users"
-    cookie: cookie
-  userPrivateNano = require('nano')(nanoOpts)
+  userPrivateNano = h.getDbWithCookie({dbName: '_users', cookie})
   userPrivateNano.get("org.couchdb.user:#{userCtx.name}", h.nanoCallback(res))
 
 ###
@@ -51,10 +60,15 @@ h.getUserCtxFromSession = ({headers}, callback) ->
         url: "#{config.dbUrl}/_session"
         headers: headers
         json: true
-      h.request(opts, next)   ## returns body object with userCtx key
-    ({userCtx}, next) ->
-      h.getUserId({cookie, userCtx}, next)
-  ], callback
+      h.request(opts, next)   # (err, {userCtx}, headers)
+    ({userCtx}, _headers, next) ->
+      if _headers?['set-cookie']
+        headers = _headers
+        cookie = headers['set-cookie']
+      h.getUserId({cookie, userCtx}, next)  # (err, userCtx, headers)
+  ], (err, userCtx, _headers) ->
+    headers = _headers if _headers?['set-cookie']
+    callback(err, userCtx, headers)
 
 ###
   @param message {string}
@@ -190,6 +204,17 @@ h.sendError = (res, err) ->
   res.json(statusCode, error)
 
 
+# setCookie
+#
+# @description sets the set-cookie field in a response if set-cookie
+#              field is set in headers
+# @param res {object} express response object
+# @param headers {object} the headers given in a (couchdb) response
+h.setCookie = (res, headers) ->
+  if headers?['set-cookie']?
+    res.set('Set-Cookie', headers?['set-cookie'])
+
+
 h.request = (opts, callback) ->
   request opts, (err, res, body) ->
     debug 'h.request headers', res?.headers
@@ -205,7 +230,7 @@ h.request = (opts, callback) ->
         reason    : body.reason
     else
       error = null
-    callback(error, body)
+    callback(error, body, res?.headers)   # emulates nano
 
 
 # replicateOut

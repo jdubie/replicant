@@ -94,14 +94,25 @@ app.get '/user_ctx', (req, res) ->
     headers: req.headers
     url: "#{config.dbUrl}/_session"
     json: true
-  h.request opts, (err, body) ->
+  headers = null
+  cookie = req.headers.cookie
+
+  updateCookie = (_headers) ->
+    if _headers?['set-cookie']
+      debug 'set-cookie', _headers
+      headers = _headers
+      cookie  = _headers['set-cookie']
+      res.set('Set-Cookie', cookie)
+
+  h.request opts, (err, body, _headers) ->
+    updateCookie(_headers)
     return h.sendError(res, err) if err
     debug "GET /user_ctx"
     debug '   body', body
     userCtx = body.userCtx
     return res.json(200, userCtx) unless userCtx.name?
-    cookie = req.headers.cookie
-    h.getUserId {cookie, userCtx}, (err, userCtx) ->
+    h.getUserId {cookie, userCtx}, (err, userCtx, _headers) ->
+      updateCookie(_headers)
       return h.sendError(res, err) if err
       res.json(200, userCtx)
 
@@ -178,13 +189,17 @@ app.post '/users', (req, res) ->
     mtime: mtime
   cookie = null
 
+  updateCookie = (_headers) ->
+    if _headers?['set-cookie']?
+      cookie = _headers['set-cookie']
+
   async.waterfall [
     (next) ->
       ## insert document to _users
       debug '   insert document to _users'
       rep.createUnderscoreUser({email, password, user_id}, next)
 
-    (_res, next) ->
+    (_res, _headers, next) ->
       ## auth to get cookie
       debug '   auth to get cookie'
       rep.auth({username: name, password: password}, next)
@@ -198,21 +213,16 @@ app.post '/users', (req, res) ->
     (_res, next) ->
       ## create 'user' type document
       debug "   create 'user' type document"
-      nanoOpts =
-        url: "#{config.dbUrl}/lifeswap"
-        cookie: cookie
-      debug 'nanoOpts', nanoOpts
-      userNano = require('nano')(nanoOpts)
+      userNano = h.getDbWithCookie({dbName: 'lifeswap', cookie})
       userNano.insert(user, user_id, h.nanoCallback(next))
 
     (_res, headers, next) ->
+      updateCookie(headers)
       response._rev = _res?.rev    # add _rev to response
       ## create 'email_address' type private document
       debug "   create 'email_address' type private document"
-      nanoOpts =
-        url: "#{config.dbUrl}/#{h.getUserDbName(userId: user_id)}"
-        cookie: cookie
-      userPrivateNano = require('nano')(nanoOpts)
+      userDbName = h.getUserDbName(userId: user_id)
+      userPrivateNano = h.getDbWithCookie({dbName: userDbName, cookie})
       emailDoc =
         type: 'email_address'
         name: name
@@ -223,10 +233,11 @@ app.post '/users', (req, res) ->
       userPrivateNano.insert(emailDoc, h.nanoCallback(next))
 
     (_res, headers, next) ->
+      updateCookie(headers)
       data = {user, emailAddress: email}
       h.createNotification('user.create', data, next)
 
-  ], (err, body, headers) ->
+  ], (err, body, headers) ->    # w/ createNotification, will be (err?)
     return h.sendError(res, err) if err
     res.set('Set-Cookie', cookie)
     res.json(201, response)       # {name, roles, id}
@@ -251,7 +262,8 @@ _.each ['swaps', 'reviews', 'likes', 'requests'], (model) ->
       url: "#{config.dbUrl}/lifeswap"
       headers: req.headers
       json: doc
-    h.request opts, (err, body) ->
+    h.request opts, (err, body, headers) ->
+      h.setCookie(res, headers)
       return h.sendError(res, err) if err
       h.createSimpleCreateNotification model, doc, (err) ->
         return h.sendError(res, err) if err
@@ -297,7 +309,8 @@ _.each ['users', 'swaps', 'reviews', 'likes', 'requests'], (model) ->
       url: "#{config.dbUrl}/lifeswap/#{id}"
       headers: req.headers
       json: doc
-    h.request opts, (err, body) ->
+    h.request opts, (err, body, headers) ->
+      h.setCookie(res, headers)
       return h.sendError(res, err) if err
       _rev = body.rev
       res.json(200, {_rev, mtime})
@@ -338,31 +351,37 @@ _.each ['likes'], (model) ->
 ###
   DELETE /users/:id
 ###
-app.delete "/users/:id", (req, res) ->
+app.delete '/users/:id', (req, res) ->
   userId = req.params?.id
   debug "DELETE /users/#{userId}"
+  headers = null
+  cookie = req.headers.cookie
+
+  updateCookie = (_headers) ->
+    if _headers?['set-cookie']?
+      debug 'set-cookie', _headers
+      headers = _headers
+      cookie = _headers['set-cookie']
+
   async.waterfall [
     ## get user ctx
     (next) ->
       h.getUserCtxFromSession(req, next)
-    (userCtx, next) ->
+    (userCtx, _headers, next) ->
+      updateCookie(_headers)
       if not ('constable' in userCtx.roles) then next(statusCode: 403)
       else next(null, userCtx)
     ## if a constable!
     (userCtx, next) ->
-      cookie = req.headers.cookie
       userName = userRev = null
       userRev = null
 
       async.waterfall [
         (_next) ->
           debug 'get user document'
-          nanoOpts =
-            url: "#{config.dbUrl}/lifeswap"
-            cookie: cookie
-          db = require('nano')(nanoOpts)
+          db = h.getDbWithCookie({dbName: 'lifeswap', cookie})
           db.get(userId, h.nanoCallback(_next))
-        (userDoc, hdr, _next) ->
+        (userDoc, _headers, _next) ->
           userRev = userDoc._rev
           userName = userDoc.name
 
@@ -370,7 +389,7 @@ app.delete "/users/:id", (req, res) ->
             ## delete _user document
             (cb) ->
               debug 'delete _user'
-              db = config.nanoAdmin.use('_users')
+              db = config.db._users()
               _username = h.getCouchUserName(userName)
               async.waterfall [
                 (done) ->
@@ -384,11 +403,12 @@ app.delete "/users/:id", (req, res) ->
             ## delete user type document
             (cb) ->
               debug 'delete user'
-              nanoOpts =
-                url: "#{config.dbUrl}/lifeswap"
-                cookie: cookie
-              db = require('nano')(nanoOpts)
-              db.destroy(userId, userRev, h.nanoCallback(cb))
+              db = h.getDbWithCookie({dbName: 'lifeswap', cookie})
+              updateCookieCallback = (err, _res, _headers) ->
+                updateCookie(_headers)
+                cb(err, _res, _headers)
+
+              db.destroy(userId, userRev, h.nanoCallback(updateCookieCallback))
 
             ## delete user DB
             (cb) ->
@@ -400,6 +420,7 @@ app.delete "/users/:id", (req, res) ->
       ], next
   ], (err, _res) ->
     return h.sendError(res, err) if err?
+    h.setCookie(res, headers)
     res.send(200)
 
 
@@ -472,13 +493,16 @@ app.get '/events', (req, res) ->
   userCtx = req.userCtx   # from the app.all route
   cookie = req.headers.cookie
   debug 'userCtx', userCtx
+  headers = null
   async.waterfall [
     (next) ->
       rep.getTypeUserDb({type: 'event', userId: userCtx.user_id, cookie, roles: userCtx.roles}, next)
-    (events, next) ->
+    (events, _headers, next) ->
+      headers = _headers
       async.map(events, rep.addEventHostsAndGuests, next)
   ], (err, events) ->
     return h.sendError(res, err) if err
+    h.setCookie(res, headers)
     res.json(200, events)
 
 ###
@@ -489,16 +513,17 @@ app.get "/events/:id", (req, res) ->
   debug "GET /events/#{id}"
   userCtx = req.userCtx   # from the app.all route
   cookie = req.headers.cookie
-  nanoOpts =
-    url: "#{config.dbUrl}/#{h.getUserDbName(userId: userCtx.user_id)}"
-    cookie: cookie
-  userPrivateNano = require('nano')(nanoOpts)
+  userDbName = h.getUserDbName(userId: userCtx.user_id)
+  userPrivateNano = h.getDbWithCookie({dbName: userDbName, cookie})
+  headers = null
   async.waterfall [
     (next) -> userPrivateNano.get(id, h.nanoCallback(next))
-    (event, hdrs, next) ->
+    (event, _headers, next) ->
+      headers = _headers
       rep.addEventHostsAndGuests(event, next)
   ], (err, event) ->
     return h.sendError(res, err) if err
+    h.setCookie(res, headers)
     res.json(200, event)
 
 ###
@@ -516,7 +541,8 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers'], (model) ->
     cookie = req.headers.cookie
     type = h.singularizeModel(model)
     debug 'userCtx', userCtx
-    rep.getTypeUserDb {type, userId: userCtx.user_id, cookie, roles: userCtx.roles}, (err, docs) ->
+    rep.getTypeUserDb {type, userId: userCtx.user_id, cookie, roles: userCtx.roles}, (err, docs, headers) ->
+      h.setCookie(res, headers)
       return h.sendError(res, err) if err
       res.json(200, docs)
 
@@ -573,7 +599,8 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers', 'refer_emails']
           url: "#{config.dbUrl}/#{userDbName}"
           headers: req.headers
           json: doc
-        h.request opts, (err, body) ->
+        h.request opts, (err, body, headers) ->
+          h.setCookie(res, headers)
           return next(err) if err
           next(null, body.rev)
       replicate: (next) ->
@@ -602,7 +629,8 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers', 'refer_emails']
           url: "#{config.dbUrl}/#{userDbName}/#{id}"
           headers: req.headers
           json: doc
-        h.request opts, (err, body) ->
+        h.request opts, (err, body, headers) ->
+          h.setCookie(res, headers)
           return next(err) if err
           next(null, body.rev)
       replicate: (next) ->
@@ -696,7 +724,9 @@ app.post '/messages', (req, res) ->
           message_id: message._id
           event_id: message.event_id
           ctime: ctime
-      h.request(opts, done)
+      h.request opts, (err, _res, headers) ->
+        h.setCookie(res, headers)
+        done(err)
 
     # replicate message
     replicate: (done) ->
@@ -731,16 +761,18 @@ app.put '/messages/:id', (req, res) ->
   userCtx = req.userCtx
   cookie = req.headers.cookie
   message = req.body
-  rep.markReadStatus message, userCtx.user_id, cookie, (err, _res) ->
+  rep.markReadStatus message, userCtx.user_id, cookie, (err, _res, headers) ->
     return h.sendError(res, err) if err
+    h.setCookie(res, headers)
     res.send(201)
 
 app.get '/messages', (req, res) ->
   debug "GET /messages"
   userCtx =  req.userCtx
   cookie = req.headers.cookie
-  rep.getMessages {userId: userCtx.user_id, cookie, roles: userCtx.roles}, (err, messages) ->
+  rep.getMessages {userId: userCtx.user_id, cookie, roles: userCtx.roles}, (err, messages, headers) ->
     return h.sendError(res, err) if err
+    h.setCookie(res, headers)
     res.json(200, messages)
 
 app.get '/messages/:id', (req, res) ->
@@ -748,8 +780,9 @@ app.get '/messages/:id', (req, res) ->
   debug "GET /messages/#{id}"
   userCtx =  req.userCtx
   cookie = req.headers.cookie
-  rep.getMessage {id, userId: userCtx.user_id, cookie, roles: userCtx.roles}, (err, message) ->
+  rep.getMessage {id, userId: userCtx.user_id, cookie, roles: userCtx.roles}, (err, message, headers) ->
     return h.sendError(res, err) if err
+    h.setCookie(res, headers)
     res.json(200, message)
 
 # fire up HTTP server
