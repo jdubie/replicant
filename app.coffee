@@ -68,7 +68,7 @@ app.all userCtxRegExp, (req, res, next) ->
   Login
 ###
 app.post '/user_ctx', (req, res) ->
-  username = h.hash(req.body.username)
+  username = h.hash(req.body.username.toLowerCase())
   password = req.body.password
   debug "POST /user_ctx"
   debug "   username: #{username}"
