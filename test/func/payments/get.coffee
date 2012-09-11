@@ -7,7 +7,7 @@ h = require('lib/helpers')
 {TestPayment, TestUser} = require('lib/test_models')
 
 
-describe 'y GET /payments', () ->
+describe 'GET /payments', () ->
 
   user = new TestUser('get_payments_user')
   payments = ['get_payments_1', 'get_payments_2', 'get_payments_3']
@@ -24,7 +24,11 @@ describe 'y GET /payments', () ->
       ], ready
 
     after (finished) ->
-      user.destroy(finished)
+      destroy = (payment, callback) -> payment.destroy(callback)
+      async.series [
+        (callback) -> async.map(payments, destroy, callback)
+        user.destroy
+      ], finished
 
     it 'should GET all payments', (done) ->
       opts =

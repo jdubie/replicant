@@ -3,22 +3,29 @@ util = require('util')
 async = require('async')
 request = require('request')
 
-{TestLike} = require('lib/test_models')
+{TestUser, TestLike} = require('lib/test_models')
 {nanoAdmin} = require('config')
 
 
-describe 'y GET /likes', () ->
+describe 'GET /likes', () ->
 
-  likes = (new TestLike(id) for id in ['get_likes_1', 'get_likes_2'])
+  user = new TestUser('get_likes_user')
+  likes = (new TestLike(id, user) for id in ['get_likes_1', 'get_likes_2'])
 
   before (ready) ->
     app = require('app')
     create = (like, callback) -> like.create(callback)
-    async.map(likes, create, ready)
+    async.parallel [
+      user.create
+      (cb) -> async.map(likes, create, cb)
+    ], ready
 
   after (finished) ->
     destroy = (like, callback) -> like.destroy(callback)
-    async.map(likes, destroy, finished)
+    async.parallel [
+      user.destroy
+      (cb) -> async.map(likes, destroy, cb)
+    ], finished
 
   it 'should provide a list of all the correct likes', (done) ->
     opts =

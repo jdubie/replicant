@@ -7,7 +7,7 @@ request = require('request')
 {TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
 
-describe ' DELETE /events/:id', () ->
+describe 'DELETE /events/:id', () ->
 
   guest = new TestUser('delete_events_id_guest')
   host  = new TestUser('delete_events_id_host')
@@ -17,9 +17,7 @@ describe ' DELETE /events/:id', () ->
   userDb = nanoAdmin.db.use(getUserDbName(userId: guest._id))
 
   before (ready) ->
-    ## start webserver
     app = require('app')
-    ## create users, swap, and event
     async.series [
       (cb) -> async.parallel([guest.create, host.create], cb)
       swap.create
@@ -27,12 +25,10 @@ describe ' DELETE /events/:id', () ->
     ], ready
 
   after (finished) ->
-    ## destroy event and swap, then users
     async.series [
       (cb) -> async.parallel([event.destroy, swap.destroy], cb)
       (cb) -> async.parallel([guest.destroy, host.destroy], cb)
     ], finished
-
 
   it 'should return a 403 (forbidden)', (done) ->
     opts =

@@ -7,7 +7,7 @@ request = require('request')
 {TestUser, TestEmailAddress} = require('lib/test_models')
 
 
-describe ' PUT /email_addresses/:id', () ->
+describe 'PUT /email_addresses/:id', () ->
 
   user = new TestUser('put_email_user')
   emailAddress = new TestEmailAddress('put_email', user, foo: 'bar')
@@ -22,7 +22,7 @@ describe ' PUT /email_addresses/:id', () ->
 
   after (finished) ->
     ## destroy user (and thus email address)
-    user.destroy(finished)
+    async.series([emailAddress.destroy, user.destroy], finished)
 
   it 'should PUT the email_address correctly', (done) ->
     emailAddress.foo = 'c3p0'

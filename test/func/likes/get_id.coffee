@@ -1,21 +1,22 @@
-should = require('should')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
-{TestLike} = require('lib/test_models')
+{TestUser, TestLike} = require('lib/test_models')
 {nanoAdmin} = require('config')
 
 
-describe 'y GET /likes/:id', () ->
+describe 'GET /likes/:id', () ->
 
-  like = new TestLike('get_likes_id')
+  user = new TestUser('get_likes_id_user')
+  like = new TestLike('get_likes_id', user)
 
   before (ready) ->
     app = require('app')
-    like.create(ready)
+    async.parallel([user.create, like.create], ready)
 
   after (finished) ->
-    like.destroy(finished)
+    async.parallel([user.destroy, like.destroy], finished)
 
   it 'should get the correct like', (done) ->
     opts =

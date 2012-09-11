@@ -1,14 +1,12 @@
 should = require('should')
 async = require('async')
-util = require('util')
 request = require('request')
 
+{nanoAdmin} = require('config')
 {TestUser, TestLike} = require('lib/test_models')
-{nanoAdmin, nano} = require('config')
-{hash} = require('lib/helpers')
 
 
-describe 'y PUT /likes/:id', () ->
+describe 'PUT /likes/:id', () ->
 
   user = new TestUser('put_likes_id_user')
   like = new TestLike('putlikesid', user)

@@ -1,14 +1,12 @@
 should = require('should')
 async = require('async')
-util = require('util')
 request = require('request')
 
-{nanoAdmin, nano} = require('config')
-{hash} = require('lib/helpers')
+{nanoAdmin} = require('config')
 {TestUser, TestRequest} = require('lib/test_models')
 
 
-describe ' PUT /requests/:id', () ->
+describe 'PUT /requests/:id', () ->
 
   user = new TestUser('deleterequestuser')
   _request = new TestRequest('deleterequest', user)

@@ -1,14 +1,12 @@
-should = require('should')
-util = require('util')
+should  = require('should')
 request = require('request')
-async = require('async')
+async   = require('async')
 
+{nanoAdmin} = require('config')
 {TestUser, TestReview} = require('lib/test_models')
-{nanoAdmin, nano} = require('config')
-{hash} = require('lib/helpers')
 
 
-describe 'y POST /reviews', () ->
+describe 'POST /reviews', () ->
 
   user = new TestUser('post_reviews_user')
   review = new TestReview('post_reviews', user)

@@ -1,13 +1,13 @@
-should = require('should')
-util = require('util')
+should  = require('should')
 request = require('request')
+async   = require('async')
 
 {nanoAdmin} = require('config')
 {getUserDbName} = require('lib/helpers')
 {TestUser, TestEmailAddress} = require('lib/test_models')
 
 
-describe ' POST /email_addresses', () ->
+describe 'POST /email_addresses', () ->
 
   user = new TestUser('post_email_user')
   emailAddress = new TestEmailAddress('post_email', user)
@@ -22,7 +22,7 @@ describe ' POST /email_addresses', () ->
 
   after (finished) ->
     ## destroy user (and thus email address)
-    user.destroy(finished)
+    async.series([emailAddress.destroy, user.destroy], finished)
 
   it 'should POST the email address correctly', (done) ->
     opts =

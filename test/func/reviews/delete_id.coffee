@@ -10,7 +10,7 @@ config = require('config')
 {TestReview} = require('lib/test_models')
 
 
-describe 'y DELETE /reviews/:id', () ->
+describe 'DELETE /reviews/:id', () ->
 
   user = new TestUser('delete_reviews_id_user')
   review = new TestReview('delete_reviews_id', user)

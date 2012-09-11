@@ -6,7 +6,7 @@ request = require('request')
 {TestUser, TestPhoneNumber} = require('lib/test_models')
 
 
-describe ' GET /phone_numbers/:id', () ->
+describe 'GET /phone_numbers/:id', () ->
 
   user = new TestUser('get_phone_id_user')
   phoneNumber = new TestPhoneNumber('get_phone_id', user)
@@ -18,8 +18,8 @@ describe ' GET /phone_numbers/:id', () ->
     async.series([user.create, phoneNumber.create], ready)
 
   after (finished) ->
-    ## destroy user (and thus phone number)
-    user.destroy(finished)
+    ## destroy phone number and user
+    async.series([phoneNumber.destroy, user.destroy], finished)
 
   it 'should GET the phone_number', (done) ->
     opts =

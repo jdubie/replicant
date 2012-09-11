@@ -5,34 +5,28 @@ request = require('request')
 kue     = require('kue')
 
 {nanoAdmin, jobs} = require('config')
-{hash} = require('lib/helpers')
+h = require('lib/helpers')
 
-#{getUserDbName} = require('../../../lifeswap/shared/helpers')
-getUserDbName = ({userId}) -> return "users_#{userId}"
+{TestUser} = require('lib/test_models')
 
-describe 'y POST /users', () ->
+describe 'POST /users', () ->
 
-  _email = 'newuser@gmail.com'
-  _username = hash(_email)
-  _password = 'sekr1t'
-  _userId = '1234567890'
-  _userDbName = getUserDbName(userId: _userId)
-  _ctime = _mtime = 12345
+  user = new TestUser('post_users', hobo: 'foo')
+
   _userDoc =
-    email_address: _email
-    password: _password
-    _id: _userId
+    email_address: user.email_address
+    password: user.password
+    _id: user._id
     type: 'user'
-    name: _username
-    ctime: _ctime
-    mtime: _mtime
-    hobo: 'foo'   # make sure 'user' doc is just this
-  cookie = null
+    name: user.name
+    ctime: user.ctime
+    mtime: user.mtime
+    hobo: user.hobo   # make sure 'user' doc is just this
 
   usersDb = nanoAdmin.db.use('_users')
   mainDb = nanoAdmin.db.use('lifeswap')
-  userDb = nanoAdmin.db.use(_userDbName)
-  couchUser = "org.couchdb.user:#{_username}"
+  userDb = nanoAdmin.db.use(h.getUserDbName(userId: user._id))
+  couchUser = "org.couchdb.user:#{user.name}"
 
   describe 'correctness:', () ->
 
@@ -44,25 +38,9 @@ describe 'y POST /users', () ->
 
 
     after (finished) ->
-      destroyUser = (callback) ->
-        usersDb.get couchUser, (err, userDoc) ->
-          should.not.exist(err)
-          usersDb.destroy(couchUser, userDoc._rev, callback)
-      destroyLifeswapUser = (callback) ->
-        mainDb.get _userId, (err, userDoc) ->
-          should.not.exist(err)
-          mainDb.destroy(_userId, userDoc._rev, callback)
-      destroyUserDb = (callback) ->
-        nanoAdmin.db.list (err, dbs) ->
-          dbs.should.include(_userDbName)
-          nanoAdmin.db.destroy(_userDbName, callback)
-      flushRedis = (callback) -> jobs.client.flushall(callback)
-
       async.parallel [
-        destroyUser           # destroy _users entry
-        destroyLifeswapUser   # destroy 'user' in Lifeswap
-        destroyUserDb         # destory users_... database
-        flushRedis            # flush the information in redis
+        user.destroy
+        (callback) -> jobs.client.flushall(callback)
       ], finished
 
 
@@ -73,25 +51,25 @@ describe 'y POST /users', () ->
         json: _userDoc
       request opts, (err, res, body) ->
         should.not.exist(err)
-        res.statusCode.should.eql(201)
+        res.should.have.property('statusCode', 201)
         body.should.have.keys(['name', 'roles', 'user_id', 'ctime', 'mtime', '_rev'])
-        body.name.should.eql(_username)
-        body.roles.should.eql([])
-        body.user_id.should.eql(_userId)
-        _userDoc.ctime = body.ctime
-        _userDoc.mtime = body.mtime
-        _userDoc._rev = body._rev
+        body.name.should.eql(user.name)
+        body.roles.should.eql(user.roles)   # == []
+        body.user_id.should.eql(user._id)
+        user.ctime = _userDoc.ctime = body.ctime
+        user.mtime = _userDoc.mtime = body.mtime
+        user._rev  = _userDoc._rev  = body._rev
         res.headers.should.have.property('set-cookie')
         done()
 
     it 'should create user in _users with name hash(email)', (done) ->
       usersDb.get couchUser, (err, userDoc) ->
         should.not.exist(err)
-        userDoc.should.have.property('user_id', _userId)
+        userDoc.should.have.property('user_id', user._id)
         done()
 
     it 'should create a user type document in lifeswap DB', (done) ->
-      mainDb.get _userId, (err, userDoc) ->
+      mainDb.get user._id, (err, userDoc) ->
         should.not.exist(err)
         delete _userDoc.email_address
         delete _userDoc.password
@@ -100,7 +78,7 @@ describe 'y POST /users', () ->
 
     it 'should create user database', (done) ->
       nanoAdmin.db.list (err, dbs) ->
-        dbs.should.include(_userDbName)
+        dbs.should.include(h.getUserDbName(userId: user._id))
         done()
 
     it 'should create email_address type private document', (done) ->
@@ -112,16 +90,16 @@ describe 'y POST /users', () ->
         res.rows.length.should.eql(1)
         doc = res.rows[0].doc
         doc.should.have.property('type', 'email_address')
-        doc.should.have.property('email_address', _email)
-        doc.should.have.property('user_id', _userId)
+        doc.should.have.property('email_address', user.email_address)
+        doc.should.have.property('user_id', user._id)
         done()
 
     it 'should trigger an email to user via redis', (done) ->
       kue.Job.get 1, (err, res) ->
         res.should.have.property('data')
-        res.data.should.have.property('emailAddress', _email)
+        res.data.should.have.property('emailAddress', user.email_address)
         res.data.should.have.property('user')
-        res.data.user.should.have.property('name', _username)
+        res.data.user.should.have.property('name', user.name)
         done()
 
 
@@ -133,7 +111,7 @@ describe 'y POST /users', () ->
 #
 #      # assert user database was not created
 #      nano.db.list (err, res) ->
-#        res.should.not.include(_userId)
+#        res.should.not.include(user._id)
 #        done()
 #
 #  it 'should create user data base if they are authenticated', (done) ->
@@ -148,7 +126,7 @@ describe 'y POST /users', () ->
 #
 #      # assert user database was created
 #      nano.db.list (err, res) ->
-#        userDbName = getUserDbName({userId: _userId})
+#        userDbName = h.getUserDbName({userId: user._id})
 #        res.should.include(userDbName)
 #        done()
 

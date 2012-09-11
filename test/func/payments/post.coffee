@@ -7,7 +7,7 @@ config = require('config')
 h = require('lib/helpers')
 
 
-describe 'y POST /payments', () ->
+describe 'POST /payments', () ->
 
   user = new TestUser('post_payments_user')
   payment = new TestPayment('post_payments', user)
@@ -17,7 +17,7 @@ describe 'y POST /payments', () ->
     user.create(ready)
 
   after (finished) ->
-    user.destroy(finished)
+    async.series([payment.destroy, user.destroy], finished)
 
   it 'should POST the payment correctly', (done) ->
     opts =

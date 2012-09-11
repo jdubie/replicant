@@ -5,11 +5,11 @@ request = require('request')
 debug = require('debug')('replicant/test/func/message/delete_id')
 
 {TestUser, TestSwap, TestEvent, TestMessage} = require('lib/test_models')
-{nanoAdmin, nano, dbUrl, ADMINS} = require('config')
-{getUserDbName, hash} = require('lib/helpers')
+{nanoAdmin} = require('config')
+{getUserDbName} = require('lib/helpers')
 
 
-describe ' DELETE /messages/:id', () ->
+describe 'DELETE /messages/:id', () ->
 
   guest   = new TestUser('delete_messages_id_user1')
   host    = new TestUser('delete_messages_id_user2')
@@ -33,10 +33,11 @@ describe ' DELETE /messages/:id', () ->
       ], ready
 
     after (finished) ->
-        async.series [
-          event.destroy
-          (cb) -> async.parallel([guest.destroy, host.destroy], cb)
-        ], finished
+      async.series [
+        message.destroy
+        event.destroy
+        (cb) -> async.parallel([guest.destroy, host.destroy], cb)
+      ], finished
 
     it 'should respond with 403 to DELETE /messages/:id', (done) ->
       opts =

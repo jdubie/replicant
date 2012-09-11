@@ -12,6 +12,18 @@ h = {}
 ###
 h.getUserDbName = ({userId}) -> "users_#{userId}"
 
+# getUserDbWithCookie
+#
+# @param userId {string} the user's id
+# @param cookie {string} the user's cookie
+h.getDbWithCookie = ({dbName, cookie}) ->
+  nanoOpts =
+    url: "#{config.dbUrl}/#{dbName}"
+    cookie: cookie
+  db = require('nano')(nanoOpts)
+  db
+
+
 ###
   @description returns _user id given name
   @param userId {string}
@@ -24,15 +36,12 @@ h.getCouchUserName = (name) -> "org.couchdb.user:#{name}"
 ###
 h.getUserId = ({cookie, userCtx}, callback) ->
 
-  res = (err, _userDoc) ->
+  res = (err, _userDoc, headers) ->
     userCtx.roles = _userDoc?.roles
     userCtx.user_id = _userDoc?.user_id
-    callback(err, userCtx)
+    callback(err, userCtx, headers)
 
-  nanoOpts =
-    url: "#{config.dbUrl}/_users"
-    cookie: cookie
-  userPrivateNano = require('nano')(nanoOpts)
+  userPrivateNano = h.getDbWithCookie({dbName: '_users', cookie})
   userPrivateNano.get("org.couchdb.user:#{userCtx.name}", h.nanoCallback(res))
 
 ###
@@ -41,8 +50,7 @@ h.getUserId = ({cookie, userCtx}, callback) ->
 ###
 h.getUserCtxFromSession = ({headers}, callback) ->
   unless headers?.cookie?
-    callback(statusCode: 403, reason: "No session")
-    return
+    return callback(statusCode: 403, reason: "No session")
   cookie = headers.cookie
   async.waterfall [
     (next) ->
@@ -51,10 +59,17 @@ h.getUserCtxFromSession = ({headers}, callback) ->
         url: "#{config.dbUrl}/_session"
         headers: headers
         json: true
-      h.request(opts, next)   ## returns body object with userCtx key
-    ({userCtx}, next) ->
-      h.getUserId({cookie, userCtx}, next)
-  ], callback
+      h.request(opts, next)   # (err, {userCtx}, headers)
+    ({userCtx}, _headers, next) ->
+      debug '#getUserCtxFromSession userCtx, headers', userCtx, _headers
+      if _headers?['set-cookie']
+        debug '#getUserCtxFromSession set-cookie', _headers
+        headers = _headers
+        cookie = headers['set-cookie']
+      h.getUserId({cookie, userCtx}, next)  # (err, userCtx, headers)
+  ], (err, userCtx, _headers) ->
+    headers = _headers if _headers?['set-cookie']
+    callback(err, userCtx, headers)
 
 ###
   @param message {string}
@@ -138,6 +153,22 @@ h.nanoCallback = (next, opts) ->
         reason: err.reason ? reason
     next(errorRes, res...)
 
+
+# nanoCallback
+#
+# @description normalizes nano responses that actually ROCK
+#
+h.nanoCallback2 = (next, opts) ->
+  {error, reason} = opts if opts?
+  (err, res) ->
+    if err?
+      debug '#nanoCallback: err', err
+      errorRes =
+        statusCode: err.status_code ? 500
+        error: err.error ? error
+        reason: err.reason ? reason
+    next(errorRes, res)
+
 ###
   @param model {string} plural model
   @param doc {object} model doc just created
@@ -174,21 +205,79 @@ h.sendError = (res, err) ->
   res.json(statusCode, error)
 
 
+# setCookie
+#
+# @description sets the set-cookie field in a response if set-cookie
+#              field is set in headers
+# @param res {object} express response object
+# @param headers {object} the headers given in a (couchdb) response
+h.setCookie = (res, headers) ->
+  if headers?['set-cookie']?
+    debug 'Set-Cookie', headers
+    res.set('Set-Cookie', headers?['set-cookie'])
+
+
 h.request = (opts, callback) ->
   request opts, (err, res, body) ->
+    debug 'h.request headers', res?.headers
     if err?                         ## request error
+      debug '#h.request err:', err
       error =
         statusCode: 500
         error     : 'Request error'
         reason    : err
     else if res.statusCode >= 400   ## couch error
+      debug '#h.request couch err:', res
       error =
         statusCode: res.statusCode
         error     : body.error
         reason    : body.reason
     else
       error = null
-    callback(error, body)
+    callback(error, body, res?.headers)   # emulates nano
 
+
+# replicateOut
+#
+# @description replicate from constable DB out to user databases
+# @param userIds {Array.<String>}
+# @param docIds {Array.<String>}
+#
+h.replicateOut = (userIds, docIds, callback) ->
+  replicate = (userId, cb) ->
+    userDbName = h.getUserDbName({userId})
+    opts = create: true, doc_ids: docIds
+    config.nanoAdmin.db.replicate('drunk_tank', userDbName, opts, h.nanoCallback(cb))
+  async.map(userIds, replicate, callback)
+
+# replicateIn
+#
+# @description replicate from user database to constable DB
+# @param userId {String}
+# @param docIds {Array.<String>}
+#
+h.replicateIn = (userId, docIds, callback) ->
+  userDbName = h.getUserDbName({userId})
+  opts = create: true, doc_ids: docIds
+  config.nanoAdmin.db.replicate(userDbName, 'drunk_tank', opts, h.nanoCallback(callback))
+
+
+# replicateEvent
+#
+# @description replicate all event-related docs from constable to users
+# @param userIds {Array.<String>} users to replicate to
+# @param eventId {String} the event id
+#
+h.replicateEvent = (userIds, eventId, callback) ->
+  userDdocName = 'userddoc'
+  opts =
+    create_target: true
+    query_params: {eventId}
+    filter: "#{userDdocName}/event_filter"
+  debug 'replicating event to', userIds
+  replicateOne = (userId, cb) ->
+    userDbName = h.getUserDbName({userId})
+    config.nanoAdmin.db.replicate('drunk_tank', userDbName, opts, h.nanoCallback(cb))
+  async.map(userIds, replicateOne, callback)
 
 module.exports = h
