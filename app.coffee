@@ -118,9 +118,9 @@ app.get '/user_ctx', (req, res) ->
       return h.sendError(res, err) if err
       res.json(200, userCtx)
 
-###
-  Change password
-###
+#
+# Change password
+#
 app.put '/user_ctx', (req, res) ->
   {name, oldPass, newPass} = req.body
   cookie = req.headers.cookie
