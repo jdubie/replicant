@@ -266,6 +266,7 @@ replicant.auth = ({username, password}, callback) ->
         statusCode: err?.status_code ? 403
         error     : err?.error ? "unauthorized"
         reason    : err?.reason ? "Error authorizing"
+    debug '#auth \'set-cookie\'', headers?['set-cookie']
     callback(error, headers?['set-cookie'])
 
 
