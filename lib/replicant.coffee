@@ -315,7 +315,7 @@ replicant.getTypeUserDb = ({type, userId, cookie, roles}, callback) ->
 #       (differences when using constable)
 replicant.markReadStatus = (message, userId, cookie, callback) ->
   markRead = message.read   # true/false
-  debug 'markReadStatus', markRead
+  debug '#markReadStatus markRead', markRead
   if not markRead?
     return callback {
       statusCode: 403
@@ -370,11 +370,8 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
 
   ## mark a message unread
   markMessageUnread = (callback) ->
-    opts =
-      include_docs: true
-      reduce: false
-      key: [message.event_id, message._id]
-    db.view 'userddoc', 'messages', opts, (err, res, _headers) ->
+    opts = key: message._id, include_docs: true
+    db.view 'userddoc', 'read', opts, (err, res, _headers) ->
       if err?
         error =
           statusCode: err.status_code ? 500
@@ -386,18 +383,14 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
 
   async.waterfall [
     (next) ->
-      opts = key: [message.event_id, message._id]
+      opts = key: message._id
       errorOpts =
         error : "Error getting message status"
         reason: "For message #{message._id}, user #{userId}, event #{message.event_id}"
-      db.view('userddoc', 'messages', opts, h.nanoCallback(next, errorOpts)) # (err, res, headers)
+      db.view('userddoc', 'read', opts, h.nanoCallback(next, errorOpts)) # (err, res, headers)
     (res, _headers, next) ->
       db = resetDbWithHeaders(_headers)
-      if res.rows.length < 1
-        return next(statusCode: 404, error: "Error message status", reason: "Too many messages found.")
-
-      row = res.rows[0]
-      isRead = if row.value is 1 then false else true
+      isRead = res.rows.length > 0
       if markRead isnt isRead then next()
       else
         next(statusCode: 403, error: "Error message status", reason: "Can only change read/unread status of message")
@@ -462,7 +455,7 @@ replicant.getMessage = ({id, userId, cookie, roles}, callback) ->
       dbRead.view('userddoc', 'read', {key: message._id}, h.nanoCallback(next, errorOpts))
     (res, _headers, next) ->
       resetDbs(_headers)
-      message.read = if res.rows.length is 0 then false else true
+      message.read = res.rows.length > 0
       next(null, message, headers)
   ], callback
 
