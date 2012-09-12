@@ -219,7 +219,10 @@ h.verifyRequiredFields = (req, res, fields) ->
     if not req.body[field]?
       error.reason[field] = ["Missing #{field}"]
       existMissing = true
-  res.json(400, error) if existMissing
+  if existMissing
+    missingFields = (xx for xx of error.reason)
+    debug '#verifyRequiredFields missing fields:', missingFields
+    res.json(400, error)
   existMissing
 
 

@@ -170,6 +170,9 @@ app.get '/zipcodes/:id', (req, res) ->
 ###
 app.post '/users', (req, res) ->
   debug "POST /users"
+  return if h.verifyRequiredFields req, res, [
+    'email_address', 'password', '_id'
+  ]
   user = req.body
   {email_address, password, _id} = user   # extract email and password
   user_id = _id
