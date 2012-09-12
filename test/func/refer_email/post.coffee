@@ -1,11 +1,10 @@
 should  = require('should')
 request = require('request')
 async   = require('async')
-h       = require('lib/helpers')
-config  = require('config')
-debug   = require('debug')('replicants/test/func/refer_email/post')
 kue     = require('kue')
+debug   = require('debug')('replicants/test/func/refer_email/post')
 
+config  = require('config')
 {TestUser, TestReferEmail} = require('lib/test_models')
 
 
@@ -13,6 +12,7 @@ describe 'POST /refer_emails', () ->
 
   user = new TestUser('post_refer_emails')
   referEmail = new TestReferEmail('post_refer_email_email', user)
+  userDb = config.db.user(user._id)
 
   before (ready) ->
     app = require('app')
@@ -20,6 +20,28 @@ describe 'POST /refer_emails', () ->
 
   after (finished) ->
     async.series([user.destroy, referEmail.destroy], finished)
+
+
+  it 'should 400 on bad input', (done) ->
+    json = referEmail.attributes()
+    verifyField = (field, callback) ->
+      value = json[field]
+      delete json[field]
+      opts =
+        method: 'POST'
+        url: "http://localhost:3001/refer_emails"
+        json: json
+        headers: cookie: user.cookie
+      request opts, (err, res, body) ->
+        should.not.exist(err)
+        res.should.have.property('statusCode', 400)
+        body.should.have.keys(['error', 'reason'])
+        body.reason.should.have.property(field)
+
+        json[field] = value
+        callback()
+    async.map(['_id', 'user_id'], verifyField, done)
+
 
   it 'should POST the refer_email correctly', (done) ->
     opts =
@@ -29,8 +51,16 @@ describe 'POST /refer_emails', () ->
       headers: cookie: user.cookie
     request opts, (err, res, referEmailDoc) ->
       should.not.exist(err)
-      res.statusCode.should.eql(201)
+      res.should.have.property('statusCode', 201)
       referEmailDoc.should.have.keys(['_id', '_rev', 'mtime', 'ctime'])
+      referEmail[key] = value for key, value of referEmailDoc
+      done()
+
+
+  it 'should actually be there', (done) ->
+    userDb.get referEmail._id, (err, referEmailDoc) ->
+      should.not.exist(err)
+      referEmailDoc.should.eql(referEmail.attributes())
       done()
 
   it 'should add notification', (done) ->

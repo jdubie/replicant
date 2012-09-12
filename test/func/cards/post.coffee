@@ -1,18 +1,17 @@
-should = require('should')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
-async = require('async')
 
+config  = require('config')
 {TestUser, TestCard} = require('lib/test_models')
-config = require('config')
-{getUserDbName, hash} = require('lib/helpers')
 
 
 describe 'POST /cards', () ->
 
   user = new TestUser('post_card_user')
   card = new TestCard('post_card', user)
-  userDb = config.nanoAdmin.db.use("users_#{user._id}")
+
+  userDb = config.db.user(user._id)
 
   before (ready) ->
     app = require('app')
@@ -20,6 +19,28 @@ describe 'POST /cards', () ->
 
   after (finished) ->
     async.series([card.destroy, user.destroy], finished)
+
+
+  it 'should 400 on bad input', (done) ->
+    json = card.attributes()
+    verifyField = (field, callback) ->
+      value = json[field]
+      delete json[field]
+      opts =
+        method: 'POST'
+        url: "http://localhost:3001/cards"
+        json: json
+        headers: cookie: user.cookie
+      request opts, (err, res, body) ->
+        should.not.exist(err)
+        res.should.have.property('statusCode', 400)
+        body.should.have.keys(['error', 'reason'])
+        body.reason.should.have.property(field)
+
+        json[field] = value
+        callback()
+    async.map(['_id', 'user_id'], verifyField, done)
+
 
   it 'should POST the card correctly', (done) ->
     opts =
@@ -29,7 +50,7 @@ describe 'POST /cards', () ->
       headers: cookie: user.cookie
     request opts, (err, res, cardDoc) ->
       should.not.exist(err)
-      res.statusCode.should.eql(201)
+      res.should.have.property('statusCode', 201)
       cardDoc.should.have.keys(['_id', '_rev', 'mtime', 'ctime'])
       card[key] = value for key, value of cardDoc
       done()

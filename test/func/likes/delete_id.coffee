@@ -1,9 +1,9 @@
-should = require('should')
-async = require('async')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
+config = require('config')
 {TestUser, TestLike} = require('lib/test_models')
-{nanoAdmin} = require('config')
 
 
 describe 'DELETE /likes/:id', () ->
@@ -11,7 +11,7 @@ describe 'DELETE /likes/:id', () ->
   user = new TestUser('delete_likes_id_user')
   like = new TestLike('delete_likes_id', user)
 
-  mainDb = nanoAdmin.db.use('lifeswap')
+  mainDb = config.db.main()
 
   before (ready) ->
     app = require('app')
@@ -19,6 +19,27 @@ describe 'DELETE /likes/:id', () ->
 
   after (finished) ->
     async.parallel([user.destroy, like.destroy], finished)
+
+
+  it 'should 400 on bad input', (done) ->
+    json = like.attributes()
+    verifyField = (field, callback) ->
+      value = json[field]
+      delete json[field]
+      opts =
+        url: "http://localhost:3001/likes/#{like._id}"
+        method: 'DELETE'
+        json: json
+        headers: cookie: user.cookie
+      request opts, (err, res, body) ->
+        should.not.exist(err)
+        res.should.have.property('statusCode', 400)
+        body.should.have.keys(['error', 'reason'])
+        body.reason.should.have.property(field)
+
+        json[field] = value
+        callback()
+    async.map(['_rev'], verifyField, done)
 
   it 'should return a 200', (done) ->
     opts =
@@ -32,6 +53,7 @@ describe 'DELETE /likes/:id', () ->
       body.should.have.property('ok', true)
       body.should.have.property('id', like._id)
       done()
+
 
   it 'should actually remove document', (done) ->
     mainDb.get like._id, (err, likeDoc) ->

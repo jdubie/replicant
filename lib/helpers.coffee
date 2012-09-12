@@ -205,6 +205,27 @@ h.sendError = (res, err) ->
   res.json(statusCode, error)
 
 
+# verifyRequiredFields
+#
+# @description ensures that required fields exist in the request body
+#              if any fields do not exist, sends an error and returns false
+#              otherwise, returns true
+h.verifyRequiredFields = (req, res, fields) ->
+  existMissing = false
+  error =
+    error : 'Missing required request body data'
+    reason: {}
+  for field in fields
+    if not req.body[field]?
+      error.reason[field] = ["Missing #{field}"]
+      existMissing = true
+  if existMissing
+    missingFields = (xx for xx of error.reason)
+    debug '#verifyRequiredFields missing fields:', missingFields
+    res.json(400, error)
+  existMissing
+
+
 # setCookie
 #
 # @description sets the set-cookie field in a response if set-cookie

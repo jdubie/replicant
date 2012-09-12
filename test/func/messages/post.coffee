@@ -1,7 +1,6 @@
-should = require('should')
-async = require('async')
+should  = require('should')
+async   = require('async')
 request = require('request')
-_ = require('underscore')
 
 config = require('config')
 {TestUser, TestSwap, TestEvent, TestMessage} = require('lib/test_models')
@@ -35,6 +34,26 @@ describe 'POST /messages', () ->
 
   describe 'normal user', () ->
 
+    it 'should 400 on bad input', (done) ->
+      json = message.attributes()
+      verifyField = (field, callback) ->
+        value = json[field]
+        delete json[field]
+        opts =
+          method: 'POST'
+          url: "http://localhost:3001/messages"
+          json: json
+          headers: cookie: guest.cookie
+        request opts, (err, res, body) ->
+          should.not.exist(err)
+          res.should.have.property('statusCode', 400)
+          body.should.have.keys(['error', 'reason'])
+          body.reason.should.have.property(field)
+
+          json[field] = value
+          callback()
+      async.map(['name', 'user_id', 'read', 'event_id'], verifyField, done)
+
     it 'should POST without failure', (done) ->
       opts =
         method: 'POST'
@@ -45,8 +64,7 @@ describe 'POST /messages', () ->
         should.not.exist(err)
         res.should.have.property('statusCode', 201)
         body.should.have.keys(['_rev', 'ctime', 'mtime'])
-        for key, val of body
-          message[key] = val
+        message[key] = val for key, val of body
         done()
 
     it 'should replicate the message to all involved users', (done) ->
@@ -91,6 +109,26 @@ describe 'POST /messages', () ->
 
   describe 'constable user', () ->
 
+    it 'should 400 on bad input', (done) ->
+      json = messageC.attributes()
+      verifyField = (field, callback) ->
+        value = json[field]
+        delete json[field]
+        opts =
+          method: 'POST'
+          url: "http://localhost:3001/messages"
+          json: json
+          headers: cookie: constable.cookie
+        request opts, (err, res, body) ->
+          should.not.exist(err)
+          res.should.have.property('statusCode', 400)
+          body.should.have.keys(['error', 'reason'])
+          body.reason.should.have.property(field)
+
+          json[field] = value
+          callback()
+      async.map(['name', 'user_id', 'read', 'event_id'], verifyField, done)
+
     it 'should POST correctly for constable', (done) ->
       opts =
         method: 'POST'
@@ -101,8 +139,7 @@ describe 'POST /messages', () ->
         should.not.exist(err)
         res.should.have.property('statusCode', 201)
         body.should.have.keys(['_rev', 'ctime', 'mtime'])
-        for key, val of body
-          message[key] = val
+        message[key] = val for key, val of body
         done()
 
     it 'should write a read doc to the constable\'s user db', (done) ->

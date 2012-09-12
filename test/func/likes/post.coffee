@@ -1,12 +1,11 @@
-should = require('should')
-util = require('util')
+should  = require('should')
 request = require('request')
-async = require('async')
+async   = require('async')
+kue     = require('kue')
+debug   = require('debug')('replicant/test/func/likes/post')
+config  = require('config')
 
 {TestUser, TestLike} = require('lib/test_models')
-{jobs, nanoAdmin} = require('config')
-kue = require('kue')
-debug = require('debug')('replicant/test/func/likes/post')
 
 
 describe 'POST /likes', () ->
@@ -14,13 +13,13 @@ describe 'POST /likes', () ->
   user = new TestUser('user_post_likes')
   like = new TestLike('post_likes', user)
 
-  mainDb = nanoAdmin.db.use('lifeswap')
+  mainDb = config.db.main()
 
   before (ready) ->
     app = require('app')
     async.parallel [
       user.create
-      (cb) -> jobs.client.flushall(cb)
+      (cb) -> config.jobs.client.flushall(cb)
     ], ready
 
 
@@ -28,7 +27,7 @@ describe 'POST /likes', () ->
     async.parallel [
       like.destroy
       user.destroy
-      (cb) -> jobs.client.flushall(cb)
+      (cb) -> config.jobs.client.flushall(cb)
     ], finished
 
   it 'should return _rev, mtime, ctime', (done) ->

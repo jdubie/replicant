@@ -1,18 +1,17 @@
-should = require('should')
-async = require('async')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
+config = require('config')
+h      = require('lib/helpers')
 {TestUser, TestCard} = require('lib/test_models')
-{nanoAdmin, nano, dbUrl} = require('config')
-h = require('lib/helpers')
 
 
 describe 'PUT /cards/:id', () ->
 
   user = new TestUser('put_card_id_user')
   card = new TestCard('put_card_id', user)
-  userDb = nanoAdmin.db.use(h.getUserDbName(userId: user._id))
+  userDb = config.db.user(user._id)
 
   before (ready) ->
     app = require('app')

@@ -68,6 +68,7 @@ app.all userCtxRegExp, (req, res, next) ->
   Login
 ###
 app.post '/user_ctx', (req, res) ->
+  return if h.verifyRequiredFields(req, res, ['username', 'password'])
   username = h.hash(req.body.username.toLowerCase())
   password = req.body.password
   debug "POST /user_ctx"
@@ -122,6 +123,7 @@ app.get '/user_ctx', (req, res) ->
 # Change password
 #
 app.put '/user_ctx', (req, res) ->
+  return if h.verifyRequiredFields(req, res, ['name', 'oldPass', 'newPass'])
   {name, oldPass, newPass} = req.body
   cookie = req.headers.cookie
   debug "PUT /user_ctx"
@@ -168,6 +170,9 @@ app.get '/zipcodes/:id', (req, res) ->
 ###
 app.post '/users', (req, res) ->
   debug "POST /users"
+  return if h.verifyRequiredFields req, res, [
+    'email_address', 'password', '_id'
+  ]
   user = req.body
   {email_address, password, _id} = user   # extract email and password
   user_id = _id
@@ -341,6 +346,7 @@ _.each ['likes'], (model) ->
     debug "DELETE /#{model}/#{id}"
     doc = req.body
     debug "   req.body", doc
+    return if h.verifyRequiredFields(req, res, ['_rev'])
     opts =
       method: 'DELETE'
       url: "#{config.dbUrl}/lifeswap/#{id}"
@@ -443,6 +449,7 @@ app.post '/events', (req, res) ->
 
   debug "POST /events"
   debug "   event" , event
+  return if h.verifyRequiredFields(req, res, ['swap_id', '_id'])
 
   ctime = Date.now()
   mtime = ctime
@@ -588,6 +595,7 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers', 'refer_emails']
     debug "   req.userCtx", req.userCtx
     userCtx = req.userCtx   # from the app.all route
     doc = req.body
+    return if h.verifyRequiredFields(req, res, ['_id', 'user_id'])
     _id = doc._id
     ctime = mtime = Date.now()
     doc.ctime = ctime
@@ -636,7 +644,7 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers', 'refer_emails']
           return next(err) if err
           next(null, body.rev)
       replicate: (next) ->
-        h.replicateIn(userCtx.user_id, [doc._id],next)
+        h.replicateIn(userCtx.user_id, [id],next)
     , (err, resp) ->
       return h.sendError(res, err) if err
       _rev = resp._rev
@@ -649,6 +657,8 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers', 'refer_emails']
 app.put '/events/:id', (req, res) ->
   id = req.params?.id
   debug "PUT /events/#{id}"
+  return if h.verifyRequiredFields(req, res, ['_rev'])
+
   userCtx = req.userCtx   # from the app.all route
   userDbName = h.getUserDbName(userId: userCtx.user_id)
   event = req.body
@@ -671,11 +681,11 @@ app.put '/events/:id', (req, res) ->
       if statusCode isnt 201 then next(statusCode: statusCode)
       else
         _rev = body.rev
-        rep.getEventUsers({eventId: event._id}, next)   # (err, users)
+        rep.getEventUsers({eventId: id}, next)   # (err, users)
     (users, next) ->
       debug 'replicate'
       src = userCtx.user_id
-      eventId = event._id
+      eventId = id
       if not (src in users) and not (src in config.ADMINS)
         next(statusCode: 403, reason: "Not authorized to modify this event")
       else
@@ -694,6 +704,10 @@ app.put '/events/:id', (req, res) ->
 
 app.post '/messages', (req, res) ->
   debug "POST /message"
+  return if h.verifyRequiredFields req, res, [
+    'name', 'user_id', 'read', 'event_id'
+  ]
+
   userCtx = req.userCtx   # from the app.all route
   message = req.body
 
@@ -760,6 +774,10 @@ app.put '/messages/:id', (req, res) ->
   ## TODO: _allow_ change only when read => true (write 'read' doc)
   id = req.params?.id
   debug "PUT /messages/#{id}"
+  return if h.verifyRequiredFields req, res, [
+    '_id', 'read', 'event_id'
+  ]
+
   userCtx = req.userCtx
   cookie = req.headers.cookie
   message = req.body
@@ -767,6 +785,7 @@ app.put '/messages/:id', (req, res) ->
     return h.sendError(res, err) if err
     h.setCookie(res, headers)
     res.send(201)
+
 
 app.get '/messages', (req, res) ->
   debug "GET /messages"

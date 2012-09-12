@@ -1,12 +1,10 @@
 should  = require('should')
 async   = require('async')
-util    = require('util')
 request = require('request')
 kue     = require('kue')
 
-{nanoAdmin, jobs} = require('config')
-h = require('lib/helpers')
-
+config     = require('config')
+h          = require('lib/helpers')
 {TestUser} = require('lib/test_models')
 
 describe 'POST /users', () ->
@@ -23,9 +21,9 @@ describe 'POST /users', () ->
     mtime: user.mtime
     hobo: user.hobo   # make sure 'user' doc is just this
 
-  usersDb = nanoAdmin.db.use('_users')
-  mainDb = nanoAdmin.db.use('lifeswap')
-  userDb = nanoAdmin.db.use(h.getUserDbName(userId: user._id))
+  usersDb = config.db._users()
+  mainDb  = config.db.main()
+  userDb  = config.db.user(user._id)
   couchUser = "org.couchdb.user:#{user.name}"
 
   describe 'correctness:', () ->
@@ -40,7 +38,7 @@ describe 'POST /users', () ->
     after (finished) ->
       async.parallel [
         user.destroy
-        (callback) -> jobs.client.flushall(callback)
+        (callback) -> config.jobs.client.flushall(callback)
       ], finished
 
 
@@ -77,7 +75,7 @@ describe 'POST /users', () ->
         done()
 
     it 'should create user database', (done) ->
-      nanoAdmin.db.list (err, dbs) ->
+      config.nanoAdmin.db.list (err, dbs) ->
         dbs.should.include(h.getUserDbName(userId: user._id))
         done()
 
@@ -101,6 +99,27 @@ describe 'POST /users', () ->
         res.data.should.have.property('user')
         res.data.user.should.have.property('name', user.name)
         done()
+
+
+    it 'should 400 on bad input', (done) ->
+      json = _userDoc
+      verifyField = (field, callback) ->
+        value = json[field]
+        delete json[field]
+        opts =
+          url: 'http://localhost:3001/users'
+          method: 'POST'
+          json: json
+          headers: cookie: user.cookie
+        request opts, (err, res, body) ->
+          should.not.exist(err)
+          res.should.have.property('statusCode', 400)
+          body.should.have.keys(['error', 'reason'])
+          body.reason.should.have.property(field)
+
+          json[field] = value
+          callback()
+      async.map(['email_address', 'password', '_id'], verifyField, done)
 
 
 #  it 'should 403 when user is unauthenticated', (done) ->

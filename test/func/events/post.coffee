@@ -86,3 +86,24 @@ describe 'POST /events', () ->
       job.data.event.should.have.property('_id', event._id)
       job.data.swap.should.have.property('_id', event.swap_id)
       done()
+
+
+  it 'should 400 on bad input', (done) ->
+    json = event.attributes()
+    verifyField = (field, callback) ->
+      value = json[field]
+      delete json[field]
+      opts =
+        url: "http://localhost:3001/events"
+        method: 'POST'
+        json: json
+        headers: cookie: guest.cookie
+      request opts, (err, res, body) ->
+        should.not.exist(err)
+        res.should.have.property('statusCode', 400)
+        body.should.have.keys(['error', 'reason'])
+        body.reason.should.have.property(field)
+
+        json[field] = value
+        callback()
+    async.map(['_id', 'swap_id'], verifyField, done)
