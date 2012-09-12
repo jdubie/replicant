@@ -2,8 +2,7 @@ should  = require('should')
 request = require('request')
 async   = require('async')
 
-{nanoAdmin} = require('config')
-{getUserDbName} = require('lib/helpers')
+config  = require('config')
 {TestUser, TestEmailAddress} = require('lib/test_models')
 
 
@@ -12,7 +11,7 @@ describe 'POST /email_addresses', () ->
   user = new TestUser('post_email_user')
   emailAddress = new TestEmailAddress('post_email', user)
 
-  userDb = nanoAdmin.db.use(getUserDbName(userId: user._id))
+  userDb = config.db.user(user._id)
 
   before (ready) ->
     ## start webserver
@@ -24,6 +23,27 @@ describe 'POST /email_addresses', () ->
     ## destroy user (and thus email address)
     async.series([emailAddress.destroy, user.destroy], finished)
 
+
+  it 'should 400 on bad input', (done) ->
+    json = emailAddress.attributes()
+    verifyField = (field, callback) ->
+      value = json[field]
+      delete json[field]
+      opts =
+        method: 'POST'
+        url: "http://localhost:3001/email_addresses"
+        json: json
+        headers: cookie: user.cookie
+      request opts, (err, res, body) ->
+        should.not.exist(err)
+        res.should.have.property('statusCode', 400)
+        body.should.have.keys(['error', 'reason'])
+        body.reason.should.have.property(field)
+
+        json[field] = value
+        callback()
+    async.map(['_id', 'user_id'], verifyField, done)
+
   it 'should POST the email address correctly', (done) ->
     opts =
       method: 'POST'
@@ -32,10 +52,9 @@ describe 'POST /email_addresses', () ->
       headers: cookie: user.cookie
     request opts, (err, res, email) ->
       should.not.exist(err)
-      res.statusCode.should.eql(201)
+      res.should.have.property('statusCode', 201)
       email.should.have.keys(['_id', '_rev', 'mtime', 'ctime'])
-      for key, val of email
-        emailAddress[key] = val
+      emailAddress[key] = val for key, val of email
       done()
 
   it 'should have the email address in the user db', (done) ->

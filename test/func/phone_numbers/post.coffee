@@ -2,8 +2,7 @@ should  = require('should')
 async   = require('async')
 request = require('request')
 
-{nanoAdmin} = require('config')
-{getUserDbName} = require('lib/helpers')
+config  = require('config')
 {TestUser, TestPhoneNumber} = require('lib/test_models')
 
 
@@ -12,7 +11,7 @@ describe 'POST /phone_numbers', () ->
   user = new TestUser('post_phone_user')
   phoneNumber = new TestPhoneNumber('post_phone', user)
 
-  userDb = nanoAdmin.db.use(getUserDbName(userId: user._id))
+  userDb = config.db.user(user._id)
 
   before (ready) ->
     ## start webserver
@@ -24,6 +23,28 @@ describe 'POST /phone_numbers', () ->
     ## destroy user (and thus phone number)
     async.series([phoneNumber.destroy, user.destroy], finished)
 
+
+  it 'should 400 on bad input', (done) ->
+    json = phoneNumber.attributes()
+    verifyField = (field, callback) ->
+      value = json[field]
+      delete json[field]
+      opts =
+        method: 'POST'
+        url: "http://localhost:3001/phone_numbers"
+        json: json
+        headers: cookie: user.cookie
+      request opts, (err, res, body) ->
+        should.not.exist(err)
+        res.should.have.property('statusCode', 400)
+        body.should.have.keys(['error', 'reason'])
+        body.reason.should.have.property(field)
+
+        json[field] = value
+        callback()
+    async.map(['_id', 'user_id'], verifyField, done)
+
+
   it 'should POST the phone number correctly', (done) ->
     opts =
       method: 'POST'
@@ -34,8 +55,7 @@ describe 'POST /phone_numbers', () ->
       should.not.exist(err)
       res.should.have.property('statusCode', 201)
       phone.should.have.keys(['_id', '_rev', 'mtime', 'ctime'])
-      for key, val of phone
-        phoneNumber[key] = val
+      phoneNumber[key] = val for key, val of phone
       done()
 
   it 'should have the phone number in the user db', (done) ->

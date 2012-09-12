@@ -595,6 +595,7 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers', 'refer_emails']
     debug "   req.userCtx", req.userCtx
     userCtx = req.userCtx   # from the app.all route
     doc = req.body
+    return if h.verifyRequiredFields(req, res, ['_id', 'user_id'])
     _id = doc._id
     ctime = mtime = Date.now()
     doc.ctime = ctime
