@@ -449,6 +449,7 @@ app.post '/events', (req, res) ->
 
   debug "POST /events"
   debug "   event" , event
+  return if h.verifyRequiredFields(req, res, ['swap_id', '_id'])
 
   ctime = Date.now()
   mtime = ctime
