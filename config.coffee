@@ -81,7 +81,7 @@ switch process.env.ENV
   when 'PROD'
     exports.port = 3000
   when 'DEV'
-    exports.port = 3000
+    exports.port = 3002
   else
     console.error 'You must set ENV environment variable'
     process.exit()
