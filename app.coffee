@@ -68,6 +68,7 @@ app.all userCtxRegExp, (req, res, next) ->
   Login
 ###
 app.post '/user_ctx', (req, res) ->
+  return if h.verifyRequiredFields(req, res, ['username', 'password'])
   username = h.hash(req.body.username.toLowerCase())
   password = req.body.password
   debug "POST /user_ctx"
