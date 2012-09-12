@@ -346,6 +346,7 @@ _.each ['likes'], (model) ->
     debug "DELETE /#{model}/#{id}"
     doc = req.body
     debug "   req.body", doc
+    return if h.verifyRequiredFields(req, res, ['_rev'])
     opts =
       method: 'DELETE'
       url: "#{config.dbUrl}/lifeswap/#{id}"
