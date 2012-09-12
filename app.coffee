@@ -123,6 +123,7 @@ app.get '/user_ctx', (req, res) ->
 # Change password
 #
 app.put '/user_ctx', (req, res) ->
+  return if h.verifyRequiredFields(req, res, ['name', 'oldPass', 'newPass'])
   {name, oldPass, newPass} = req.body
   cookie = req.headers.cookie
   debug "PUT /user_ctx"

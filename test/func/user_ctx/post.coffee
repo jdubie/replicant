@@ -5,7 +5,7 @@ request = require('request')
 config = require('config')
 {TestUser} = require('lib/test_models')
 
-describe 'zzz POST /user_ctx (login)', () ->
+describe 'POST /user_ctx (login)', () ->
 
   user = new TestUser('post_user_ctx')
 

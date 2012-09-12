@@ -50,3 +50,26 @@ describe 'PUT /user_ctx', () ->
         body.should.have.property('userCtx')
         body.userCtx.should.eql(name: user.name, roles: user.roles)
         done()
+
+    it 'should 400 on bad input', (done) ->
+      json =
+        name: user.name
+        oldPass: _oldPass
+        newPass: _newPass
+      verifyField = (field, callback) ->
+        value = json[field]
+        delete json[field]
+        opts =
+          url: 'http://localhost:3001/user_ctx'
+          method: 'PUT'
+          json: json
+          headers: cookie: user.cookie
+        request opts, (err, res, body) ->
+          should.not.exist(err)
+          res.should.have.property('statusCode', 400)
+          body.should.have.keys(['error', 'reason'])
+          body.reason.should.have.property(field)
+
+          json[field] = value
+          callback()
+      async.map(['name', 'oldPass', 'newPass'], verifyField, done)
