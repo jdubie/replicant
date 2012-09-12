@@ -3,8 +3,7 @@ async   = require('async')
 request = require('request')
 kue     = require('kue')
 
-{nanoAdmin, jobs} = require('config')
-{getUserDbName} = require('lib/helpers')
+config = require('config')
 {EVENT_STATE} = require('../../../../lifeswap/userdb/shared/constants')
 {TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
@@ -28,8 +27,29 @@ describe 'PUT /events/:id', () ->
     async.series [
       (cb) -> async.parallel([event.destroy, swap.destroy], cb)
       (cb) -> async.parallel([guest.destroy, host.destroy], cb)
-      (cb) -> jobs.client.flushall(cb)    ## move this into parallel
+      (cb) -> config.jobs.client.flushall(cb)    ## move this into parallel
     ], finished
+
+
+  it 'should 400 on bad input', (done) ->
+    json = event.attributes()
+    verifyField = (field, callback) ->
+      value = json[field]
+      delete json[field]
+      opts =
+        method: 'PUT'
+        url: "http://localhost:3001/events/#{event._id}"
+        json: json
+        headers: cookie: host.cookie
+      request opts, (err, res, body) ->
+        should.not.exist(err)
+        res.should.have.property('statusCode', 400)
+        body.should.have.keys(['error', 'reason'])
+        body.reason.should.have.property(field)
+
+        json[field] = value
+        callback()
+    async.map(['_rev'], verifyField, done)
 
   it 'should PUT the event', (done) ->
     event.state = EVENT_STATE.confirmed
@@ -48,7 +68,7 @@ describe 'PUT /events/:id', () ->
 
   it 'should reflect the change in all users DBs', (done) ->
     getEvent = (user, callback) ->
-      userDb = nanoAdmin.db.use(getUserDbName(userId: user._id))
+      userDb = config.db.user(user._id)
       userDb.get event._id, (err, eventDoc) ->
         should.not.exist(err)
         eventDoc.should.eql(event.attributes())

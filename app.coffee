@@ -644,7 +644,7 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers', 'refer_emails']
           return next(err) if err
           next(null, body.rev)
       replicate: (next) ->
-        h.replicateIn(userCtx.user_id, [doc._id],next)
+        h.replicateIn(userCtx.user_id, [id],next)
     , (err, resp) ->
       return h.sendError(res, err) if err
       _rev = resp._rev
@@ -657,6 +657,8 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers', 'refer_emails']
 app.put '/events/:id', (req, res) ->
   id = req.params?.id
   debug "PUT /events/#{id}"
+  return if h.verifyRequiredFields(req, res, ['_rev'])
+
   userCtx = req.userCtx   # from the app.all route
   userDbName = h.getUserDbName(userId: userCtx.user_id)
   event = req.body
@@ -679,11 +681,11 @@ app.put '/events/:id', (req, res) ->
       if statusCode isnt 201 then next(statusCode: statusCode)
       else
         _rev = body.rev
-        rep.getEventUsers({eventId: event._id}, next)   # (err, users)
+        rep.getEventUsers({eventId: id}, next)   # (err, users)
     (users, next) ->
       debug 'replicate'
       src = userCtx.user_id
-      eventId = event._id
+      eventId = id
       if not (src in users) and not (src in config.ADMINS)
         next(statusCode: 403, reason: "Not authorized to modify this event")
       else
