@@ -2,8 +2,8 @@ should  = require('should')
 async   = require('async')
 request = require('request')
 
-{TestUser, TestSwap, TestEvent, TestMessage} = require('lib/test_models')
 config = require('config')
+{TestUser, TestSwap, TestEvent, TestMessage} = require('lib/test_models')
 
 
 describe 'PUT /messages/:id', () ->
@@ -42,6 +42,26 @@ describe 'PUT /messages/:id', () ->
 
 
   describe 'regular user', () ->
+
+    it 'should 400 on bad input', (done) ->
+      json = message.attributes()
+      verifyField = (field, callback) ->
+        value = json[field]
+        delete json[field]
+        opts =
+          method: 'PUT'
+          url: "http://localhost:3001/messages/#{message._id}"
+          json: json
+          headers: cookie: guest.cookie
+        request opts, (err, res, body) ->
+          should.not.exist(err)
+          res.should.have.property('statusCode', 400)
+          body.should.have.keys(['error', 'reason'])
+          body.reason.should.have.property(field)
+
+          json[field] = value
+          callback()
+      async.map(['_id', 'read', 'event_id'], verifyField, done)
 
     it 'should return 201 when marking read', (done) ->
       message.read = true
@@ -97,6 +117,26 @@ describe 'PUT /messages/:id', () ->
         done()
 
   describe 'constable', () ->
+
+    it 'should 400 on bad input', (done) ->
+      json = message.attributes()
+      verifyField = (field, callback) ->
+        value = json[field]
+        delete json[field]
+        opts =
+          method: 'PUT'
+          url: "http://localhost:3001/messages/#{message._id}"
+          json: json
+          headers: cookie: constable.cookie
+        request opts, (err, res, body) ->
+          should.not.exist(err)
+          res.should.have.property('statusCode', 400)
+          body.should.have.keys(['error', 'reason'])
+          body.reason.should.have.property(field)
+
+          json[field] = value
+          callback()
+      async.map(['_id', 'read', 'event_id'], verifyField, done)
 
     it 'should return 201 when marking read', (done) ->
       message.read = true

@@ -774,6 +774,10 @@ app.put '/messages/:id', (req, res) ->
   ## TODO: _allow_ change only when read => true (write 'read' doc)
   id = req.params?.id
   debug "PUT /messages/#{id}"
+  return if h.verifyRequiredFields req, res, [
+    '_id', 'read', 'event_id'
+  ]
+
   userCtx = req.userCtx
   cookie = req.headers.cookie
   message = req.body
@@ -781,6 +785,7 @@ app.put '/messages/:id', (req, res) ->
     return h.sendError(res, err) if err
     h.setCookie(res, headers)
     res.send(201)
+
 
 app.get '/messages', (req, res) ->
   debug "GET /messages"
