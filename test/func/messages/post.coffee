@@ -52,7 +52,7 @@ describe 'POST /messages', () ->
 
           json[field] = value
           callback()
-      async.map(['name', 'user_id', 'read', 'event_id'], verifyField, done)
+      async.map(['name', 'user_id', 'event_id'], verifyField, done)
 
     it 'should POST without failure', (done) ->
       opts =
@@ -127,7 +127,7 @@ describe 'POST /messages', () ->
 
           json[field] = value
           callback()
-      async.map(['name', 'user_id', 'read', 'event_id'], verifyField, done)
+      async.map(['name', 'user_id', 'event_id'], verifyField, done)
 
     it 'should POST correctly for constable', (done) ->
       opts =

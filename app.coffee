@@ -705,7 +705,7 @@ app.put '/events/:id', (req, res) ->
 app.post '/messages', (req, res) ->
   debug "POST /message"
   return if h.verifyRequiredFields req, res, [
-    'name', 'user_id', 'read', 'event_id'
+    'name', 'user_id', 'event_id'
   ]
 
   userCtx = req.userCtx   # from the app.all route
