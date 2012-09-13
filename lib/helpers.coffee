@@ -10,7 +10,8 @@ h = {}
   @param userId {string}
   @return {string}
 ###
-h.getUserDbName = ({userId}) -> "users_#{userId}"
+h.getUserDbName = ({userId}) ->
+  if userId is 'drunk_tank' then userId else "users_#{userId}"
 
 # getUserDbWithCookie
 #

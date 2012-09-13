@@ -66,16 +66,23 @@ describe 'PUT /events/:id', () ->
         event[key] = val
       done()
 
-  it 'should reflect the change in all users DBs', (done) ->
+  it 'should reflect the change in all users DBs (+ drunk_tank)', (done) ->
     getEvent = (user, callback) ->
       userDb = config.db.user(user._id)
       userDb.get event._id, (err, eventDoc) ->
         should.not.exist(err)
         eventDoc.should.eql(event.attributes())
         callback()
+    getConstableEvent = (callback) ->
+      db = config.db.constable()
+      db.get event._id, (err, eventDoc) ->
+        should.not.exist(err)
+        eventDoc.should.eql(event.attributes())
+        callback()
     async.parallel [
       (cb) -> getEvent(guest, cb)
       (cb) -> getEvent(host, cb)
+      getConstableEvent
     ], done
 
   it 'should queue up emails to be sent to the users', (done) ->
