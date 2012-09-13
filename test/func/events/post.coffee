@@ -1,12 +1,10 @@
-should = require('should')
-async = require('async')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
-debug = require('debug')('replicant:/test/func/event/post')
-kue = require('kue')
+kue     = require('kue')
+debug   = require('debug')('replicant:/test/func/event/post')
 
-{kueUrl, jobs, nanoAdmin} = require('config')
-{getUserDbName} = require('lib/helpers')
+config  = require('config')
 {TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
 
@@ -15,21 +13,22 @@ describe 'POST /events', () ->
   guest = new TestUser('post_events_guest')
   host  = new TestUser('post_events_host')
   swap  = new TestSwap('post_events_swap', host)
-  event = new TestEvent('post_events_id', [guest], [host], swap)
+  opts = hosts : [host], guests: [guest]
+  event = new TestEvent('post_events_id', [guest], [host], swap, opts)
 
   before (ready) ->
     app = require('app')
     async.series [
       (cb) -> async.parallel([guest.create, host.create], cb)
       swap.create
-      (cb) -> jobs.client.flushall(cb)
+      (cb) -> config.jobs.client.flushall(cb)
     ], ready
 
   after (finished) ->
     async.series [
       (cb) -> async.parallel([event.destroy, swap.destroy], cb)
       (cb) -> async.parallel([guest.destroy, host.destroy], cb)
-      (cb) -> jobs.client.flushall(cb)
+      (cb) -> config.jobs.client.flushall(cb)
     ], finished
 
 
@@ -49,7 +48,7 @@ describe 'POST /events', () ->
       done()
 
   it 'should create an event in the \'mapper\' DB', (done) ->
-    mapperDb = nanoAdmin.db.use('mapper')
+    mapperDb = config.db.mapper()
     mapperDb.get event._id, (err, mapperDoc) ->
       should.not.exist(err)
       mapperDoc.should.have.property('guests')
@@ -59,12 +58,14 @@ describe 'POST /events', () ->
       done()
 
   it 'should create an event document for involved users', (done) ->
+    _event = event.attributes()
+    delete _event.hosts
+    delete _event.guests
     checkEventDoc = (user, callback) ->
-      userDbName = getUserDbName(userId: user._id)
-      userDb = nanoAdmin.db.use(userDbName)
+      userDb = config.db.user(user._id)
       userDb.get event._id, (err, eventDoc) ->
         should.not.exist(err)
-        eventDoc.should.eql(event.attributes())
+        eventDoc.should.eql(_event)
         callback()
     async.parallel [
       (cb) -> checkEventDoc(guest, cb)

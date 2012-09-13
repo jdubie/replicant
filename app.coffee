@@ -451,6 +451,8 @@ app.post '/events', (req, res) ->
   debug "   event" , event
   return if h.verifyRequiredFields(req, res, ['swap_id', '_id'])
 
+  delete event.hosts
+  delete event.guests
   ctime = Date.now()
   mtime = ctime
   event.ctime = ctime
