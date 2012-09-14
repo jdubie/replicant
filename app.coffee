@@ -24,6 +24,7 @@ shouldParseBody = (req) ->
     if req.url is '/reviews' then return true
     if req.url is '/likes' then return true
     if req.url is '/requests' then return true
+    if req.url is '/entities' then return true
     # user db
     if req.url is '/events' then return true
     if req.url is '/messages' then return true
@@ -38,6 +39,7 @@ shouldParseBody = (req) ->
     if /^\/swaps\/.*$/.test(req.url) then return true
     if /^\/reviews\/.*$/.test(req.url) then return true
     if /^\/likes\/.*$/.test(req.url) then return true
+    if /^\/requests\/.*$/.test(req.url) then return true
     if /^\/requests\/.*$/.test(req.url) then return true
     # user db
     if /^\/events\/.*$/.test(req.url) then return true
@@ -257,7 +259,7 @@ app.post '/users', (req, res) ->
     /likes
     /requests
 ###
-_.each ['swaps', 'reviews', 'likes', 'requests'], (model) ->
+_.each ['swaps', 'reviews', 'likes', 'requests', 'entities'], (model) ->
   app.post "/#{model}", (req, res) ->
     debug "POST /#{model}"
     doc = req.body
@@ -286,7 +288,7 @@ _.each ['swaps', 'reviews', 'likes', 'requests'], (model) ->
     /likes
     /requests
 ###
-_.each ['users', 'swaps', 'reviews', 'likes', 'requests'], (model) ->
+_.each ['users', 'swaps', 'reviews', 'likes', 'requests', 'entities'], (model) ->
   ## GET /model
   app.get "/#{model}", (req, res) ->
     debug "GET /#{model}"
@@ -329,7 +331,7 @@ _.each ['users', 'swaps', 'reviews', 'likes', 'requests'], (model) ->
     /reviews
     /requests
 ###
-_.each ['swaps', 'reviews', 'requests'], (model) ->
+_.each ['swaps', 'reviews', 'requests', 'entities'], (model) ->
   ## DELETE /model/:id
   app.delete "/#{model}/:id", (req, res) ->
     id = req.params?.id

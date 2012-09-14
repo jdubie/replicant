@@ -90,6 +90,7 @@ h.singularizeModel = (model) ->
     reviews : 'review'
     likes   : 'like'
     requests: 'request'
+    entities: 'entity'
     # user db
     events         : 'event'
     messages       : 'message'
@@ -108,6 +109,7 @@ h.pluralizeType = (type) ->
     review : 'reviews'
     like   : 'likes'
     request: 'requests'
+    entity: 'entities'
     # user db
     event        : 'events'
     message      : 'messages'
@@ -130,9 +132,9 @@ h.getStatusFromCouchError = (error) ->
     when "file_exists" then return 409      # database already exists
     else return 500
 
-###
-  @name createNotification
-###
+#
+# @name createNotification
+#
 h.createNotification = (name, data, callback) ->
   config.jobs.create("notification.#{name}", data).save (err) ->
     return callback() unless err
