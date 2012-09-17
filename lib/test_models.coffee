@@ -85,11 +85,15 @@ class TestTypePrivate extends TestType
     async.parallel [
       (cb) =>
         @userDb.get @_id, (err, doc) =>
-          return cb() if err?   # should error
+          if err
+            debug "#destroy error getting #{@_id} from userdb", err
+            return cb()
           @userDb.destroy(@_id, doc._rev, cb)
       (cb) =>
         @constableDb.get @_id, (err, doc) =>
-          return cb() if err?
+          if err
+            debug "#destroy error getting #{@_id} from drunk_tank"
+            return cb()
           @constableDb.destroy(@_id, doc._rev, cb)
     ], callback
 
@@ -149,11 +153,11 @@ m.TestUser = class TestUser
 
     @name = h.hash(@email_address)
 
-    @mainDb = config.nanoAdmin.db.use('lifeswap')
-    @usersDb = config.nanoAdmin.db.use('_users')
+    @mainDb = config.db.main()
+    @usersDb = config.db._users()
     @userDbName = h.getUserDbName(userId: @_id)
     @couchUser = "org.couchdb.user:#{@name}"
-    @userDb = config.nanoAdmin.db.use(@userDbName)
+    @userDb = config.db.user(@_id)
 
   create: (callback) =>
 
@@ -178,9 +182,17 @@ m.TestUser = class TestUser
             return cb(err) if err
             cb(null, res.rev)
         admin: (cb) =>
-          config.nanoAdmin.db.create "users_#{@_id}", (err) =>
-            return cb(err) if err
-            config.nanoAdmin.db.replicate(userDdocDbName, @userDbName, cb)
+          async.series [
+            (next) =>
+              config.nanoAdmin.db.create(@userDbName, next)
+            (next) =>
+              security =
+                admins: names: [], roles: []
+                members: names: [@name], roles: []
+              @userDb.insert(security, '_security', next)
+            (next) =>
+              config.nanoAdmin.db.replicate(userDdocDbName, @userDbName, next)
+          ], cb
       , callback
 
     authUser = (res, callback) =>
@@ -502,7 +514,7 @@ m.TestEvent = class TestEvent
     _.extend(this, opts)
 
     @users = [].concat(@guests, @hosts)
-    @mapperDb = config.nanoAdmin.db.use('mapper')
+    @mapperDb = config.db.mapper()
 
   create: (callback) =>
 
@@ -529,7 +541,7 @@ m.TestEvent = class TestEvent
 
   destroy: (callback) =>
     destroyOneEvent = (user, callback) =>
-      userDb = config.nanoAdmin.db.use("users_#{user._id}")
+      userDb = config.db.user(user._id)
       userDb.get @_id, (err, eventDoc) =>
         return callback(err) if err
         userDb.destroy(@_id, eventDoc._rev, callback)
