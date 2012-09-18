@@ -1,45 +1,116 @@
-should = require('should')
-async = require('async')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
-{nanoAdmin} = require('config')
-{getUserDbName} = require('lib/helpers')
 {TestUser, TestPhoneNumber} = require('lib/test_models')
+config = require('config')
 
 
 describe 'DELETE /phone_numbers/:id', () ->
 
-  user = new TestUser('delete_phone_id_user')
-  phoneNumber = new TestPhoneNumber('delete_phone_id', user)
+  owner     = new TestUser('delete_phone_id_owner')
+  badguy    = new TestUser('delete_phone_id_badguy')
+  phoneOne  = new TestPhoneNumber('delete_phone_id_1', owner)
+  phoneTwo  = new TestPhoneNumber('delete_phone_id_2', owner)
+  constable = new TestUser('delete_phone_id_constable', roles: ['constable'])
 
-  userDb = nanoAdmin.db.use(getUserDbName(userId: user._id))
+  ownerDb     = config.db.user(owner._id)
+  constableDb = config.db.constable()
 
   before (ready) ->
-    ## start webserver
     app = require('app')
-    ## insert user and phone number
-    async.series([user.create, phoneNumber.create], ready)
+    async.series [
+      (cb) ->
+        async.parallel [
+          owner.create
+          badguy.create
+          constable.create
+        ], cb
+      (cb) ->
+        async.parallel [
+          phoneOne.create
+          phoneTwo.create
+        ], cb
+    ], ready
 
   after (finished) ->
-    ## destroy phone number and user
-    async.series([phoneNumber.destroy, user.destroy], finished)
+    async.parallel [
+      owner.destroy
+      badguy.destroy
+      constable.destroy
+    ], finished
+
+  describe 'bad user', () ->
+
+    it 'should return a 401 (forbidden)', (done) ->
+      opts =
+        method: 'DELETE'
+        url: "http://localhost:3001/phone_numbers/#{phoneOne._id}"
+        json: true
+        headers: cookie: badguy.cookie
+      request opts, (err, res, body) ->
+        should.not.exist(err)
+        # 401 error from the '_security' doc of user DB
+        # (cannot access the DB)
+        res.should.have.property('statusCode', 401)
+        done()
+
+    it 'should not delete \'phone_number\' type entry in user db', (done) ->
+      ownerDb.get phoneOne._id, (err, phoneDoc) ->
+        should.not.exist(err)
+        phoneDoc.should.eql(phoneOne.attributes())
+        done()
+
+    it 'should not delete entry in constable db', (done) ->
+      constableDb.get phoneOne._id, (err, phoneDoc) ->
+        should.not.exist(err)
+        phoneDoc.should.eql(phoneOne.attributes())
+        done()
 
 
-  it 'should return a 403 (forbidden)', (done) ->
-    opts =
-      method: 'DELETE'
-      url: "http://localhost:3001/phone_numbers/#{phoneNumber._id}"
-      json: true
-      headers: cookie: user.cookie
-    request opts, (err, res, body) ->
-      should.not.exist(err)
-      res.should.have.property('statusCode', 403)
-      done()
+  describe 'normal user', () ->
+
+    it 'should return a 200', (done) ->
+      opts =
+        method: 'DELETE'
+        url: "http://localhost:3001/phone_numbers/#{phoneOne._id}"
+        json: true
+        headers: cookie: owner.cookie
+      request opts, (err, res, body) ->
+        should.not.exist(err)
+        res.should.have.property('statusCode', 200)
+        done()
+
+    it 'should delete the entry in the user db', (done) ->
+      ownerDb.get phoneOne._id, (err, phoneDoc) ->
+        should.exist(err)
+        done()
+
+    it 'should delete the entry in the constable db', (done) ->
+      constableDb.get phoneOne._id, (err, phoneDoc) ->
+        should.exist(err)
+        done()
 
 
-  it 'should not delete \'phone_number\' type entry in user db', (done) ->
-    userDb.get phoneNumber._id, (err, phone) ->
-      should.not.exist(err)
-      phone.should.eql(phoneNumber.attributes())
-      done()
+  describe 'constable', () ->
+
+    it 'should return a 200', (done) ->
+      opts =
+        method: 'DELETE'
+        url: "http://localhost:3001/phone_numbers/#{phoneTwo._id}"
+        json: true
+        headers: cookie: constable.cookie
+      request opts, (err, res, body) ->
+        should.not.exist(err)
+        res.should.have.property('statusCode', 200)
+        done()
+
+    it 'should delete the entry in the user db', (done) ->
+      ownerDb.get phoneTwo._id, (err, phoneDoc) ->
+        should.exist(err)
+        done()
+
+    it 'should delete the entry in the constable db', (done) ->
+      constableDb.get phoneTwo._id, (err, phoneDoc) ->
+        should.exist(err)
+        done()

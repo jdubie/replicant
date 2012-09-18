@@ -578,22 +578,25 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers'], (model) ->
     /email_addresses
     /phone_numbers
 ###
-_.each ['events', 'messages', 'payments', 'email_addresses', 'phone_numbers'], (model) ->
+_.each ['events', 'messages', 'payments', 'email_addresses'], (model) ->
   app.delete "/#{model}/:id", (req, res) ->
     id = req.params?.id
     debug "DELETE /#{model}/#{id}"
     res.send(403)
 
-# DELETE /cards
-app.delete '/cards/:id', (req, res) ->
-  id = req.params?.id
-  userCtx = req.userCtx   # from the app.all route
-  cookie = req.headers.cookie
-  debug "DELETE /cards/#{id}: userCtx, cookie", userCtx, cookie
+# DELETE
+#   /cards/:id
+#   /phone_numbers/:id
+_.each ['cards', 'phone_numbers'], (model) ->
+  app.delete "/#{model}/:id", (req, res) ->
+    id = req.params?.id
+    userCtx = req.userCtx   # from the app.all route
+    cookie = req.headers.cookie
+    debug "DELETE /#{model}/#{id}: userCtx, cookie", userCtx, cookie
 
-  rep.deleteDocUserDb {docId: id, cookie, roles: userCtx.roles}, (err, resp) ->
-    return h.sendError(res, err) if err
-    res.send(200)
+    rep.deleteDocUserDb {docId: id, cookie, roles: userCtx.roles}, (err, resp) ->
+      return h.sendError(res, err) if err
+      res.send(200)
 
 ###
   POST/PUT
