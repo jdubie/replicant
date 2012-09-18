@@ -40,7 +40,7 @@ shouldParseBody = (req) ->
     if /^\/reviews\/.*$/.test(req.url) then return true
     if /^\/likes\/.*$/.test(req.url) then return true
     if /^\/requests\/.*$/.test(req.url) then return true
-    if /^\/requests\/.*$/.test(req.url) then return true
+    if /^\/entities\/.*$/.test(req.url) then return true
     # user db
     if /^\/events\/.*$/.test(req.url) then return true
     if /^\/messages\/.*$/.test(req.url) then return true
