@@ -578,7 +578,7 @@ _.each ['cards', 'payments', 'email_addresses', 'phone_numbers'], (model) ->
     /email_addresses
     /phone_numbers
 ###
-_.each ['events', 'messages', 'payments', 'email_addresses'], (model) ->
+_.each ['events', 'messages', 'payments'], (model) ->
   app.delete "/#{model}/:id", (req, res) ->
     id = req.params?.id
     debug "DELETE /#{model}/#{id}"
@@ -587,7 +587,7 @@ _.each ['events', 'messages', 'payments', 'email_addresses'], (model) ->
 # DELETE
 #   /cards/:id
 #   /phone_numbers/:id
-_.each ['cards', 'phone_numbers'], (model) ->
+_.each ['cards', 'phone_numbers', 'email_addresses'], (model) ->
   app.delete "/#{model}/:id", (req, res) ->
     id = req.params?.id
     userCtx = req.userCtx   # from the app.all route
