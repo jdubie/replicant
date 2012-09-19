@@ -681,34 +681,50 @@ app.put '/events/:id', (req, res) ->
   event = req.body
   mtime = Date.now()
   event.mtime = mtime
-  _rev = null
+
+  _rev = _users = null
+  isConstable = false
   
   async.waterfall [
     (next) ->
+      debug 'get users'
+      rep.getEventUsers({eventId: id}, next)    # (err, users)
+
+    (users, next) ->
+      debug 'got users'
+      if userCtx.user_id not in users
+        if 'constable' in userCtx.roles
+          isConstable = true
+        else
+          error =
+            statusCode: 403
+            reason: "Not authorized to modify this event"
+          return next(error)
+
       debug 'put event'
+      _users = users
+      userDbName = 'drunk_tank' if isConstable
       opts =
         method: 'PUT'
         url: "#{config.dbUrl}/#{userDbName}/#{id}"
         headers: req.headers
         json: event
-      request(opts, next) # (err, resp, body)
-    (resp, body, next) ->
-      debug 'get users'
-      statusCode = resp.statusCode
-      if statusCode isnt 201 then next(statusCode: statusCode)
-      else
-        _rev = body.rev
-        rep.getEventUsers({eventId: id}, next)   # (err, users)
-    (users, next) ->
+      h.request(opts, next) # (err, resp, body)
+
+    (body, headers, next) ->
       debug 'replicate'
-      src = userCtx.user_id
+      _rev = body.rev
       eventId = id
-      if not (src in users) and not (src in config.ADMINS)
-        next(statusCode: 403, reason: "Not authorized to modify this event")
+
+      if isConstable
+        dsts = _users
+        src = 'drunk_tank'
       else
-        users.push('drunk_tank')
-        dsts = _.without(users, src)
-        rep.replicate({src, dsts, eventId}, next)   # (err)
+        _users.push('drunk_tank')
+        src = userCtx.user_id
+        dsts = (xx for xx in _users when xx isnt src)
+
+      rep.replicate({src, dsts, eventId}, next)   # (err)
 
     (next) ->
       data = {event, rev: event._rev, userId: userCtx.user_id}
