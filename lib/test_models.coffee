@@ -53,9 +53,8 @@ class TestType
 class TestTypePublic extends TestType
   create: (callback) =>
     @mainDb.insert @attributes(), @_id, (err, res) =>
-      return callback(err) if err
-      @_rev = res.rev
-      callback()
+      @_rev = res?.rev
+      callback(err, res)
 
   destroy: (callback) =>
     @mainDb.get @_id, (err, doc) =>
@@ -75,10 +74,9 @@ class TestTypePrivate extends TestType
       replicate: (next) =>
         h.replicateOut([@user_id], [@_id], next)
     , (err, res) =>
-      return callback(err) if err
-      @_rev = res.rev
-      debug '#create TestTypePrivate (done): id', @_id
-      callback()
+      debug 'CREATE ERROR: TestTypePrivate: id', @_id
+      @_rev = res?.rev
+      callback(err, res)
 
   destroy: (callback) =>
     debug '#destroy TestTypePrivate: id', @_id
@@ -386,9 +384,9 @@ m.TestEmailAddress = class TestEmailAddress extends TestTypePrivate
 m.TestPhoneNumber = class TestPhoneNumber extends TestTypePrivate
   @attributes: =>
     attrs = super
-    [].concat(attrs, [
+    [].concat attrs, [
       'phone_number'
-    ])
+    ]
 
   defaults: =>
     def = super
@@ -401,13 +399,13 @@ m.TestPhoneNumber = class TestPhoneNumber extends TestTypePrivate
 m.TestPayment = class TestPayment extends TestTypePrivate
   @attributes: =>
     attrs = super
-    [].concat(attrs, [
+    [].concat attrs, [
       'phone_number'
       'status'
       'event_id'
       'card_id'
       'amount'
-    ])
+    ]
 
   defaults: =>
     def = super
@@ -424,7 +422,7 @@ m.TestPayment = class TestPayment extends TestTypePrivate
 m.TestCard = class TestCard extends TestTypePrivate
   @attributes: =>
     attrs = super
-    [].concat(attrs, [
+    [].concat attrs, [
       'balanced_url'      # token url for balanced
       'full_name'
       'expiration_month'
@@ -439,7 +437,7 @@ m.TestCard = class TestCard extends TestTypePrivate
       'card_number'
       'security_code'
       'card_type'
-    ])
+    ]
 
   defaults: =>
     def = super
@@ -462,11 +460,11 @@ m.TestCard = class TestCard extends TestTypePrivate
 m.TestReferEmail = class TestReferEmail extends TestTypePrivate
   @attributes: =>
     attrs = super
-    [].concat(attrs, [
+    [].concat attrs, [
       'request_id'
       'email_address'
       'personal_message'
-    ])
+    ]
 
   defaults: =>
     def = super
@@ -605,9 +603,8 @@ m.TestMessage = class TestMessage extends TestType
         message = @attributes()
         delete message.read
         @constableDb.insert message, @_id, (err, res) =>
-          return callback(err) if err
-          @_rev = res.rev
-          callback()
+          @_rev = res?.rev
+          callback(err, res)
 
       (callback) =>
         allUsers = _.union(@event.guests, @event.hosts)
@@ -618,10 +615,7 @@ m.TestMessage = class TestMessage extends TestType
       (callback) =>
         return callback() if not @read
         readDoc = @getReadDoc()
-        @userDb.insert readDoc, readDoc._id, (err, res) ->
-          debug 'insertRead doc', err, res
-          return callback(err) if err
-          callback(null, res)
+        @userDb.insert(readDoc, readDoc._id, callback)
 
     ], (err, res) =>
       console.error "CREATE MESSAGE ERROR", err if err
@@ -648,5 +642,39 @@ m.TestMessage = class TestMessage extends TestType
     ], (err, res) ->
       debug "MESSAGE DESTROY ERROR", err if err
       callback(err, res)
+
+
+m.TestNotification = class TestNotification extends TestTypePrivate
+  @attributes: =>
+    attrs = super
+    [].concat attrs, [
+      'event_id'
+      'message'
+      'read'
+    ]
+
+  defaults: =>
+    def = super
+    _.extend def, {
+      type    : 'notification'
+      event_id: @event._id
+      message : 'test notification'
+      read    : true
+    }
+
+  constructor: (id, @user, @event, opts) ->
+    super(id, @user, opts)
+
+  getReadDoc: =>
+    doc =
+      _id       : Math.random().toString().substring(2) # HACK
+      type      : 'read'
+      name      : @user.name
+      user_id   : @user._id
+      ctime     : 12345
+      mtime     : 12345
+      event_id  : @event._id
+      message_id: @_id
+
 
 module.exports = m
