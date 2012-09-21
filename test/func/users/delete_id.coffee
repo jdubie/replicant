@@ -50,7 +50,7 @@ describe 'DELETE /users/:id', () ->
         done()
 
     it 'should not delete user DB', (done) ->
-      config.nanoAdmin.db.list (err, dbs) ->
+      config.couch().db.list (err, dbs) ->
         should.not.exist(err)
         dbs.should.include(userDbName)
         done()
@@ -81,6 +81,6 @@ describe 'DELETE /users/:id', () ->
         done()
 
     it 'should delete the user DB', (done) ->
-      config.nanoAdmin.db.list (err, dbs) ->
+      config.couch().db.list (err, dbs) ->
         dbs.should.not.include(user.userDbName)
         done()

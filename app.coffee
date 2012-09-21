@@ -425,7 +425,7 @@ app.delete '/users/:id', (req, res) ->
               debug 'delete user db'
               userDbName = h.getUserDbName({userId})
               debug 'userDbName', userDbName
-              config.nanoAdmin.db.destroy(userDbName, h.nanoCallback(cb))
+              config.couch().db.destroy(userDbName, h.nanoCallback(cb))
           ], _next
       ], next
   ], (err, _res) ->

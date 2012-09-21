@@ -57,8 +57,9 @@ replicant.createUserDb = ({userId, name}, callback) ->
       errorOpts =
         error: "Error creating db file"
         reason: "Error creating #{userDbName} db"
-      db = config.nanoAdmin
-      db.db.create(userDbName, h.nanoCallback(next, errorOpts))
+      config.couch().db.create(
+        userDbName, h.nanoCallback(next, errorOpts)
+      )
     ## insert _security document
     (next) ->
       db = config.db.user(userId)
@@ -68,13 +69,14 @@ replicant.createUserDb = ({userId, name}, callback) ->
       db.insert(security, '_security', h.nanoCallback(next, errorOpts))
     ## replicate user design doc
     (next) ->
-      db = config.nanoAdmin
       errorOpts =
         error : "Error replicating user ddoc"
         reason: "Error replicating userddoc to #{userDbName}"
       opts =
         doc_ids: [ "_design/#{userDdocName}" ]
-      db.db.replicate(userDdocDbName, userDbName, opts, h.nanoCallback(next, errorOpts))
+      config.couch().db.replicate(
+        userDdocDbName, userDbName, opts, h.nanoCallback(next, errorOpts)
+      )
   ], callback
 
 
@@ -159,7 +161,7 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
   params = ({src, dst, opts} for dst in dsts)
   debug 'replicating', src, dsts
   replicateEach = ({src,dst,opts}, cb) ->
-    config.nanoAdmin.db.replicate(src, dst, opts, cb)
+    config.couch().db.replicate(src, dst, opts, cb)
   async.map params, replicateEach, (err, res) ->
     if err?
       error =

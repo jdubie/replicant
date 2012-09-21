@@ -11,32 +11,26 @@ getUserDbName = ({userId}) ->
 # Db connection
 switch process.env.ENV
   when 'PROD'
-    protocol = 'http:'
-    auth = "replicant:#{process.env.REPLICANT_PWD}"
-    hostname = 'localhost'
-    port = process.env.REPLICANT_PROD_PORT_COUCH
+    protocol  = 'http:'
+    auth      = "replicant:#{process.env.REPLICANT_PWD}"
+    hostname  = 'localhost'
+    port      = process.env.REPLICANT_PROD_PORT_COUCH
   when 'STAGE'
-    protocol = 'http:'
-    auth = "replicant:#{process.env.REPLICANT_PWD}"
-    hostname = 'localhost'
-    port = process.env.REPLICANT_STAGE_PORT_COUCH
+    protocol  = 'http:'
+    auth      = "replicant:#{process.env.REPLICANT_PWD}"
+    hostname  = 'localhost'
+    port      = process.env.REPLICANT_STAGE_PORT_COUCH
   when 'DEV', 'TEST'
-    protocol = 'http:'
-    auth = 'replicant:replicant'
-    hostname = 'localhost'
-    port = 5985
+    protocol  = 'http:'
+    auth      = 'replicant:replicant'
+    hostname  = 'localhost'
+    port      = 5985
   else
     console.error 'You must set ENV environment variable'
     process.exit()
 
-module.exports.dbUrl = url.format({protocol, hostname, port})
-module.exports.nano = require('nano')(url.format({protocol,hostname,port}))
-module.exports.nanoAdmin = require('nano')(url.format({protocol,hostname,port,auth}))
-
-
 nano = require('nano')
-
-## export db convenience functions
+## export admin db convenience functions
 couch = () -> nano(url.format({protocol, auth, hostname, port}))
 module.exports.db =
   user      : (userId) -> couch().use(getUserDbName({userId}))
@@ -45,6 +39,10 @@ module.exports.db =
   mapper    : () -> couch().use('mapper')
   constable : () -> couch().use('drunk_tank')
 module.exports.couch = couch
+## export couch url and non-admin nano
+dbUrl = url.format({protocol, hostname, port})
+module.exports.nano  = nano(dbUrl)
+module.exports.dbUrl = dbUrl
 
 
 # Work Queue

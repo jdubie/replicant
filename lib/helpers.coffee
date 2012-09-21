@@ -271,7 +271,7 @@ h.replicateOut = (userIds, docIds, callback) ->
   replicate = (userId, cb) ->
     userDbName = h.getUserDbName({userId})
     opts = create: true, doc_ids: docIds
-    config.nanoAdmin.db.replicate('drunk_tank', userDbName, opts, h.nanoCallback(cb))
+    config.couch().db.replicate('drunk_tank', userDbName, opts, h.nanoCallback(cb))
   async.map(userIds, replicate, callback)
 
 # replicateIn
@@ -283,7 +283,7 @@ h.replicateOut = (userIds, docIds, callback) ->
 h.replicateIn = (userId, docIds, callback) ->
   userDbName = h.getUserDbName({userId})
   opts = create: true, doc_ids: docIds
-  config.nanoAdmin.db.replicate(userDbName, 'drunk_tank', opts, h.nanoCallback(callback))
+  config.couch().db.replicate(userDbName, 'drunk_tank', opts, h.nanoCallback(callback))
 
 
 # replicateEvent
@@ -301,7 +301,7 @@ h.replicateEvent = (userIds, eventId, callback) ->
   debug 'replicating event to', userIds
   replicateOne = (userId, cb) ->
     userDbName = h.getUserDbName({userId})
-    config.nanoAdmin.db.replicate('drunk_tank', userDbName, opts, h.nanoCallback(cb))
+    config.couch().db.replicate('drunk_tank', userDbName, opts, h.nanoCallback(cb))
   async.map(userIds, replicateOne, callback)
 
 module.exports = h

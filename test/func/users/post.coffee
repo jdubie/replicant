@@ -75,7 +75,7 @@ describe 'POST /users', () ->
         done()
 
     it 'should create user database', (done) ->
-      config.nanoAdmin.db.list (err, dbs) ->
+      config.couch().db.list (err, dbs) ->
         dbs.should.include(h.getUserDbName(userId: user._id))
         done()
 

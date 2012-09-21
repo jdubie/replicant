@@ -1,5 +1,5 @@
-should = require('should')
-async = require('async')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
 {TestUser, TestSwap, TestEvent} = require('lib/test_models')

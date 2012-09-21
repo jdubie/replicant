@@ -184,14 +184,14 @@ m.TestUser = class TestUser
         admin: (cb) =>
           async.series [
             (next) =>
-              config.nanoAdmin.db.create(@userDbName, next)
+              config.couch().db.create(@userDbName, next)
             (next) =>
               security =
                 admins: names: [], roles: []
                 members: names: [@name], roles: []
               @userDb.insert(security, '_security', next)
             (next) =>
-              config.nanoAdmin.db.replicate(userDdocDbName, @userDbName, next)
+              config.couch().db.replicate(userDdocDbName, @userDbName, next)
           ], cb
       , callback
 
@@ -221,9 +221,9 @@ m.TestUser = class TestUser
         return callback(err) if err
         @mainDb.destroy(@_id, userDoc._rev, callback)
     destroyUserDb = (callback) =>
-      config.nanoAdmin.db.list (err, dbs) =>
+      config.couch().db.list (err, dbs) =>
         return callback("#{@userDbName} not in DBs") if not (@userDbName in dbs)
-        config.nanoAdmin.db.destroy(@userDbName, callback)
+        config.couch().db.destroy(@userDbName, callback)
     flushRedis = (callback) -> config.jobs.client.flushall(callback)
 
     async.parallel [
