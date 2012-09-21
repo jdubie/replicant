@@ -659,7 +659,7 @@ m.TestNotification = class TestNotification extends TestTypePrivate
       type    : 'notification'
       event_id: @event._id
       message : 'test notification'
-      read    : true
+      read    : false
     }
 
   constructor: (id, @user, @event, opts) ->
