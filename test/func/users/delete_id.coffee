@@ -2,8 +2,8 @@ should  = require('should')
 async   = require('async')
 request = require('request')
 
-config = require('config')
-h = require('lib/helpers')
+config  = require('config')
+h       = require('lib/helpers')
 {TestUser} = require('lib/test_models')
 
 
@@ -12,8 +12,9 @@ describe 'DELETE /users/:id', () ->
   user = new TestUser('delete_user_id')
   constable = new TestUser('delete_user_id_constable', roles: [ 'constable' ])
 
-  mainDb = config.nanoAdmin.db.use('lifeswap')
-  usersDb = config.nanoAdmin.db.use('_users')
+  mainDb = config.db.main()
+  usersDb = config.db._users()
+
   userDbName = h.getUserDbName(userId: user._id)
 
   before (ready) ->

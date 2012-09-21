@@ -11,7 +11,7 @@ h = {}
   @return {string}
 ###
 h.getUserDbName = ({userId}) ->
-  if userId is 'drunk_tank' then userId else "users_#{userId}"
+  if userId is 'drunk_tank' then 'drunk_tank' else "users_#{userId}"
 
 # getUserDbWithCookie
 #

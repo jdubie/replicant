@@ -1,17 +1,18 @@
-should = require('should')
-async = require('async')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
+config  = require('config')
+h       = require('lib/helpers')
 {TestUser, TestPayment} = require('lib/test_models')
-config = require('config')
-h = require('lib/helpers')
 
 
 describe 'PUT /payments/:id', () ->
   
-  user = new TestUser('put_payments_user')
+  user    = new TestUser('put_payments_user')
   payment = new TestPayment('put_payments', user)
-  userDb = config.nanoAdmin.db.use("users_#{user._id}")
+
+  userDb  = config.db.user(user._id)
 
   before (ready) ->
     app = require('app')

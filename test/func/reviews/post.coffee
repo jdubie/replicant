@@ -2,7 +2,7 @@ should  = require('should')
 request = require('request')
 async   = require('async')
 
-{nanoAdmin} = require('config')
+config  = require('config')
 {TestUser, TestReview} = require('lib/test_models')
 
 
@@ -10,7 +10,7 @@ describe 'POST /reviews', () ->
 
   user = new TestUser('post_reviews_user')
   review = new TestReview('post_reviews', user)
-  mainDb = nanoAdmin.db.use('lifeswap')
+  mainDb = config.db.main()
 
   before (ready) ->
     ## start webserver

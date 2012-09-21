@@ -1,11 +1,10 @@
-should = require('should')
-async = require('async')
+should  = require('should')
+async   = require('async')
 request = require('request')
-config = require('config')
-h = require('lib/helpers')
 
-{nanoAdmin} = require('config')
-{getUserDbName} = require('lib/helpers')
+config = require('config')
+h      = require('lib/helpers')
+
 {TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
 
@@ -19,7 +18,7 @@ describe 'GET /events', () ->
   swap2  = new TestSwap('get_events_swap2', user2)
   event2 = new TestEvent('get_events2', [user1], [user2], swap2)
 
-  userDb = nanoAdmin.db.use(getUserDbName(userId: user1._id))
+  userDb = config.db.user(user1._id)
 
   before (ready) ->
     app = require('app')

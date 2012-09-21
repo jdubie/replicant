@@ -2,7 +2,7 @@ should  = require('should')
 async   = require('async')
 request = require('request')
 
-{nanoAdmin} = require('config')
+config  = require('config')
 {TestUser, TestReview} = require('lib/test_models')
 
 
@@ -10,7 +10,7 @@ describe 'PUT /reviews/:id', () ->
 
   user = new TestUser('put_reviews_id_user')
   review = new TestReview('put_reviews_id', user)
-  mainDb = nanoAdmin.db.use('lifeswap')
+  mainDb = config.db.main()
 
   before (ready) ->
     app = require('app')

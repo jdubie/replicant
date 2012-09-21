@@ -1,13 +1,9 @@
-should = require('should')
-async = require('async')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
-{nanoAdmin, nano} = require('config')
-config = require('config')
-{hash} = require('lib/helpers')
-{TestUser} = require('lib/test_models')
-{TestReview} = require('lib/test_models')
+config  = require('config')
+{TestUser, TestReview} = require('lib/test_models')
 
 
 describe 'DELETE /reviews/:id', () ->
@@ -15,8 +11,8 @@ describe 'DELETE /reviews/:id', () ->
   user = new TestUser('delete_reviews_id_user')
   review = new TestReview('delete_reviews_id', user)
 
-  mainDb = config.nanoAdmin.db.use('lifeswap')
-  usersDb = config.nanoAdmin.db.use('_users')
+  mainDb  = config.db.main()
+  usersDb = config.db._users()
 
   before (ready) ->
     app = require('app')

@@ -1,11 +1,8 @@
-should = require('should')
-async = require('async')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
 {TestUser, TestCard} = require('lib/test_models')
-{nanoAdmin, nano} = require('config')
-{getUserDbName, hash} = require('lib/helpers')
 
 
 describe 'GET /cards', () ->

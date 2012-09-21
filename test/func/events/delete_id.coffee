@@ -1,9 +1,8 @@
-should = require('should')
-async = require('async')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
-{nanoAdmin} = require('config')
-{getUserDbName} = require('lib/helpers')
+config  = require('config')
 {TestUser, TestSwap, TestEvent} = require('lib/test_models')
 
 
@@ -14,7 +13,7 @@ describe 'DELETE /events/:id', () ->
   swap  = new TestSwap('delete_events_id_swap', host)
   event = new TestEvent('delete_events_id', [guest], [host], swap)
 
-  userDb = nanoAdmin.db.use(getUserDbName(userId: guest._id))
+  userDb = config.db.user(guest._id)
 
   before (ready) ->
     app = require('app')

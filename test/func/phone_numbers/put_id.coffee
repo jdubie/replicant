@@ -1,10 +1,8 @@
-should = require('should')
-async = require('async')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
-{nanoAdmin} = require('config')
-{getUserDbName} = require('lib/helpers')
+config  = require('config')
 {TestUser, TestPhoneNumber} = require('lib/test_models')
 
 
@@ -13,7 +11,7 @@ describe 'PUT /phone_numbers/:id', () ->
   user = new TestUser('put_phone_user')
   phoneNumber = new TestPhoneNumber('put_phone', user, foo: 'bar')
 
-  userDb = nanoAdmin.db.use(getUserDbName(userId: user._id))
+  userDb = config.db.user(user._id)
 
   before (ready) ->
     app = require('app')

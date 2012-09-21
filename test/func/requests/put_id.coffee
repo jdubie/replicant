@@ -1,16 +1,17 @@
-should = require('should')
-async = require('async')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
-{nanoAdmin} = require('config')
+config  = require('config')
 {TestUser, TestRequest} = require('lib/test_models')
 
 
 describe 'PUT /requests/:id', () ->
 
-  user = new TestUser('deleterequestuser')
+  user     = new TestUser('deleterequestuser')
   _request = new TestRequest('deleterequest', user)
-  mainDb = nanoAdmin.db.use('lifeswap')
+
+  mainDb = config.db.main()
 
   before (ready) ->
     app = require('app')
