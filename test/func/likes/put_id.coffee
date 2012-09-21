@@ -1,8 +1,8 @@
-should = require('should')
-async = require('async')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
-{nanoAdmin} = require('config')
+config  = require('config')
 {TestUser, TestLike} = require('lib/test_models')
 
 
@@ -10,7 +10,7 @@ describe 'PUT /likes/:id', () ->
 
   user = new TestUser('put_likes_id_user')
   like = new TestLike('putlikesid', user)
-  mainDb = nanoAdmin.db.use('lifeswap')
+  mainDb = config.db.main()
 
   before (ready) ->
     app = require('app')

@@ -1,5 +1,5 @@
-should = require('should')
-async = require('async')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
 config = require('config')
@@ -9,9 +9,10 @@ h = require('lib/helpers')
 
 describe 'DELETE /payments/:id', () ->
 
-  user = new TestUser('delete_payments_id_user')
+  user    = new TestUser('delete_payments_id_user')
   payment = new TestPayment('delete_payments_id', user)
-  userDb = config.nanoAdmin.db.use(h.getUserDbName(userId: user._id))
+
+  userDb = config.db.user(user._id)
 
   before (ready) ->
     app = require('app')

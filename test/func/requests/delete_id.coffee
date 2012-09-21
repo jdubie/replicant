@@ -1,9 +1,8 @@
-should = require('should')
-async = require('async')
-util = require('util')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
-{nanoAdmin} = require('config')
+config = require('config')
 {TestUser, TestRequest} = require('lib/test_models')
 
 
@@ -12,7 +11,7 @@ describe 'DELETE /requests/:id', () ->
   user = new TestUser('deleterequestuser')
   _request = new TestRequest('deleterequest', user)
 
-  mainDb = nanoAdmin.db.use('lifeswap')
+  mainDb = config.db.main()
 
   before (ready) ->
     ## start webserver

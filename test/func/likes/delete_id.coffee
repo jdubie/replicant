@@ -52,6 +52,7 @@ describe 'DELETE /likes/:id', () ->
       res.statusCode.should.equal(200)
       body.should.have.property('ok', true)
       body.should.have.property('id', like._id)
+      body.should.have.property('rev')
       done()
 
 

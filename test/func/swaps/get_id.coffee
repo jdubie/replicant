@@ -2,7 +2,6 @@ should  = require('should')
 async   = require('async')
 request = require('request')
 
-{nano} = require('config')
 {TestUser, TestSwap} = require('lib/test_models')
 
 

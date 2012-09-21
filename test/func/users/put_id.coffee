@@ -2,8 +2,8 @@ should  = require('should')
 async   = require('async')
 request = require('request')
 
-{nanoAdmin} = require('config')
-h = require('lib/helpers')
+config  = require('config')
+h       = require('lib/helpers')
 {TestUser} = require('lib/test_models')
 
 
@@ -11,7 +11,7 @@ describe 'PUT /users/:id', () ->
 
   user = new TestUser('put_users_id', foo: 'put bar')
 
-  mainDb = nanoAdmin.db.use('lifeswap')
+  mainDb = config.db.main()
 
   before (ready) ->
     ## start webserver

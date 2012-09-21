@@ -1,14 +1,14 @@
 express = require('express')
-path = require('path')
-async = require('async')
-_ = require('underscore')
-debug = require('debug')('replicant:app')
+path    = require('path')
+async   = require('async')
+_       = require('underscore')
 request = require('request')
-util = require('util')
+util    = require('util')
+debug   = require('debug')('replicant:app')
 
-config = require('config')
-rep = require('lib/replicant')
-h = require('lib/helpers')
+config  = require('config')
+rep     = require('lib/replicant')
+h       = require('lib/helpers')
 
 app = express()
 app.use(express.static(__dirname + '/public'))
@@ -18,36 +18,42 @@ shouldParseBody = (req) ->
     if req.url.match /^\/likes\/.*$/ then return true
   if req.url is '/user_ctx' then return true
   if req.method is 'POST'
-    # lifeswap db
-    if req.url is '/users' then return true
-    if req.url is '/swaps' then return true
-    if req.url is '/reviews' then return true
-    if req.url is '/likes' then return true
-    if req.url is '/requests' then return true
-    if req.url is '/entities' then return true
-    # user db
-    if req.url is '/events' then return true
-    if req.url is '/messages' then return true
-    if req.url is '/cards' then return true
-    if req.url is '/payments' then return true
-    if req.url is '/email_addresses' then return true
-    if req.url is '/phone_numbers' then return true
-    if req.url is '/refer_emails' then return true
+    return req.url[1...req.url.length] in [
+      # lifeswap db
+      'users'
+      'swaps'
+      'reviews'
+      'likes'
+      'requests'
+      'entities'
+      # user db
+      'events'
+      'messages'
+      'cards'
+      'payments'
+      'email_addresses'
+      'phone_numbers'
+      'refer_emails'
+    ]
   if req.method is 'PUT'
-    # lifeswap db
-    if /^\/users\/.*$/.test(req.url) then return true
-    if /^\/swaps\/.*$/.test(req.url) then return true
-    if /^\/reviews\/.*$/.test(req.url) then return true
-    if /^\/likes\/.*$/.test(req.url) then return true
-    if /^\/requests\/.*$/.test(req.url) then return true
-    if /^\/entities\/.*$/.test(req.url) then return true
-    # user db
-    if /^\/events\/.*$/.test(req.url) then return true
-    if /^\/messages\/.*$/.test(req.url) then return true
-    if /^\/cards\/.*$/.test(req.url) then return true
-    if /^\/payments\/.*$/.test(req.url) then return true
-    if /^\/email_addresses\/.*$/.test(req.url) then return true
-    if /^\/phone_numbers\/.*$/.test(req.url) then return true
+    type = req.url.match(/^\/([^\/]*)\/.*$/)?[1]
+    return type in [
+      # lifeswap db
+      'users'
+      'swaps'
+      'reviews'
+      'likes'
+      'requests'
+      'entities'
+      # user db
+      'events'
+      'messages'
+      'cards'
+      'payments'
+      'email_addresses'
+      'phone_numbers'
+      'refer_emails'
+    ]
   return false
 
 app.use (req, res, next) ->
@@ -425,7 +431,7 @@ app.delete '/users/:id', (req, res) ->
               debug 'delete user db'
               userDbName = h.getUserDbName({userId})
               debug 'userDbName', userDbName
-              config.nanoAdmin.db.destroy(userDbName, h.nanoCallback(cb))
+              config.couch().db.destroy(userDbName, h.nanoCallback(cb))
           ], _next
       ], next
   ], (err, _res) ->

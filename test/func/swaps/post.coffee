@@ -1,9 +1,9 @@
 should  = require('should')
 async   = require('async')
 request = require('request')
-kue = require('kue')
+kue     = require('kue')
 
-config = require('config')
+config  = require('config')
 {TestUser, TestSwap} = require('lib/test_models')
 
 describe 'POST /swaps', () ->
@@ -12,7 +12,7 @@ describe 'POST /swaps', () ->
   swap = new TestSwap('postswap', user)
 
 
-  mainDb = config.nanoAdmin.db.use('lifeswap')
+  mainDb = config.db.main()
 
   before (ready) ->
     ## start webserver

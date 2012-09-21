@@ -1,9 +1,8 @@
-should = require('should')
-async = require('async')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
-{nanoAdmin} = require('config')
-{getUserDbName} = require('lib/helpers')
+config  = require('config')
 {TestUser, TestEmailAddress} = require('lib/test_models')
 
 
@@ -12,7 +11,7 @@ describe 'PUT /email_addresses/:id', () ->
   user = new TestUser('put_email_user')
   emailAddress = new TestEmailAddress('put_email', user, foo: 'bar')
 
-  userDb = nanoAdmin.db.use(getUserDbName(userId: user._id))
+  userDb = config.db.user(user._id)
 
   before (ready) ->
     ## start webserver

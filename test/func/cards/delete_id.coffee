@@ -2,8 +2,8 @@ should  = require('should')
 async   = require('async')
 request = require('request')
 
-{TestUser, TestCard} = require('lib/test_models')
 config = require('config')
+{TestUser, TestCard} = require('lib/test_models')
 
 
 describe 'DELETE /cards/:id', () ->

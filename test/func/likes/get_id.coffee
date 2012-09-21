@@ -3,7 +3,6 @@ async   = require('async')
 request = require('request')
 
 {TestUser, TestLike} = require('lib/test_models')
-{nanoAdmin} = require('config')
 
 
 describe 'GET /likes/:id', () ->

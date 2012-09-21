@@ -1,10 +1,8 @@
-should = require('should')
-util = require('util')
-async = require('async')
+should  = require('should')
+async   = require('async')
 request = require('request')
 
 {TestUser, TestLike} = require('lib/test_models')
-{nanoAdmin} = require('config')
 
 
 describe 'GET /likes', () ->

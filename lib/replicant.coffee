@@ -57,24 +57,26 @@ replicant.createUserDb = ({userId, name}, callback) ->
       errorOpts =
         error: "Error creating db file"
         reason: "Error creating #{userDbName} db"
-      db = config.nanoAdmin
-      db.db.create(userDbName, h.nanoCallback(next, errorOpts))
+      config.couch().db.create(
+        userDbName, h.nanoCallback(next, errorOpts)
+      )
     ## insert _security document
     (next) ->
-      db = config.nanoAdmin.db.use(userDbName)
+      db = config.db.user(userId)
       errorOpts =
         error : "Error modifying db"
         reason: "Error modifying #{userDbName} db"
       db.insert(security, '_security', h.nanoCallback(next, errorOpts))
     ## replicate user design doc
     (next) ->
-      db = config.nanoAdmin
       errorOpts =
         error : "Error replicating user ddoc"
         reason: "Error replicating userddoc to #{userDbName}"
       opts =
         doc_ids: [ "_design/#{userDdocName}" ]
-      db.db.replicate(userDdocDbName, userDbName, opts, h.nanoCallback(next, errorOpts))
+      config.couch().db.replicate(
+        userDdocDbName, userDbName, opts, h.nanoCallback(next, errorOpts)
+      )
   ], callback
 
 
@@ -107,94 +109,11 @@ replicant.changePassword = ({name, oldPass, newPass, cookie}, callback) ->
 
 
 ###
-  createEvent - creates event -> [users] mapping and writes initial events docs to users db
-  @param swapId {string}
-  @param userId {string}
-  @param callback {function}
-###
-replicant.createEvent = ({event, userId}, callback) ->
-
-  _rev = null
-  ctime = Date.now()
-  mtime = ctime
-  event.ctime = ctime
-  event.mtime = mtime
-  swap = null
-  hosts = null
-  guests = [userId]
-
-  createEventDoc = (_userId, cb) ->
-    # @todo replace with getting this from cookies
-    debug '#createEvent user id:', _userId
-    userDb = config.db.user(_userId)
-    errorOpts =
-      error : "Error creating event"
-      reason: "Error inserting event doc #{event._id} for #{_userId}"
-    userDb.insert(event, event._id, h.nanoCallback(cb, errorOpts))
-
-  createInitialEventDoc = (next) ->
-    createEventDoc userId, (err, res) ->
-      _rev = res?.rev
-      next(err)
-
-  getMembers = (next) ->
-    debug 'getMembers'
-    db = config.db.main()
-    db.get event.swap_id, (err, _swap) ->
-      # @todo swap.user_id will be array in future
-      if err?
-        error =
-          error : "Error creating event"
-          reason: "Error finding swap (#{event.swap_id}) host #{event._id}"
-      else
-        swap = _swap
-        hosts = [swap?.user_id]
-      next(error)
-
-  ## OR could just replicate from original user to these users
-  createDocs = (next) ->
-    ## create doc in mapping DB
-    createMapping = (cb) ->
-      mapper = config.db.mapper()
-      debug 'createMapping', event._id, userId, hosts
-      mapperDoc =
-        _id: event._id
-        guests: [userId]
-        hosts: hosts
-      errorOpts =
-        error : "Error creating event"
-        reason: "Error creating mapping document"
-      mapper.insert(mapperDoc, event._id, h.nanoCallback(cb, errorOpts))
-    ## create docs in other user DBs
-    createEventDocs = (cb) ->
-      otherUsers = (admin for admin in config.ADMINS)
-      otherUsers.push(user) for user in hosts
-      debug 'createEventDocs', otherUsers
-      errorOpts =
-        error : "Error creating event"
-        reason: "Error creating event docs: #{otherUsers}"
-      async.map(otherUsers, createEventDoc, h.nanoCallback(cb, errorOpts))
-    ## in parallel
-    async.parallel([createMapping, createEventDocs], next)
-
-  queueNotifications = (next) ->
-    h.createNotification('event.create', {title: "event #{event._id}: event created", guests, hosts, event, swap}, next)
-
-  async.series [
-    createInitialEventDoc
-    getMembers
-    createDocs
-    queueNotifications
-  ], (err, res) ->
-    callback(err, {_rev, mtime, ctime, guests, hosts})
-
-
-###
   getEventUsers
   @param eventId {string}
 ###
 replicant.getEventUsers = ({eventId}, callback) ->
-  mapper = config.nanoAdmin.db.use('mapper')
+  mapper = config.db.mapper()
   mapper.get eventId, (err, mapperDoc) ->
     if err?
       error =
@@ -212,7 +131,7 @@ replicant.getEventUsers = ({eventId}, callback) ->
   @param event {Object - event}
 ###
 replicant.addEventHostsAndGuests = (event, callback) ->
-  mapper = config.nanoAdmin.db.use('mapper')
+  mapper = config.db.mapper()
   mapper.get event._id, (err, mapperDoc) ->
     if err?
       error =
@@ -242,7 +161,7 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
   params = ({src, dst, opts} for dst in dsts)
   debug 'replicating', src, dsts
   replicateEach = ({src,dst,opts}, cb) ->
-    config.nanoAdmin.db.replicate(src, dst, opts, cb)
+    config.couch().db.replicate(src, dst, opts, cb)
   async.map params, replicateEach, (err, res) ->
     if err?
       error =
@@ -272,7 +191,7 @@ replicant.auth = ({username, password}, callback) ->
 
 ## gets all of a type (e.g. type = 'user' or 'swap')
 replicant.getType = (type, callback) ->
-  db = config.nanoAdmin.db.use('lifeswap')
+  db = config.db.main()
   opts =
     key: type
     include_docs: true
