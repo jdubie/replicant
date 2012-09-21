@@ -676,5 +676,19 @@ m.TestNotification = class TestNotification extends TestTypePrivate
       event_id  : @event._id
       message_id: @_id
 
+  create: (callback) =>
+    # don't want to send up with the 'read' field
+    _attributes = @attributes
+    @attributes = () =>
+      attrs = _attributes()
+      delete attrs.read
+      attrs
+    super (err, res) =>
+      @attributes = _attributes
+      # insert 'read' doc if read is 'true'
+      return callback(err, res) if not @read
+      readDoc = @getReadDoc()
+      @userDb.insert(readDoc, readDoc._id, callback)
+
 
 module.exports = m

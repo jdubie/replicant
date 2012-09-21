@@ -62,7 +62,7 @@ app.use (req, res, next) ->
     express.bodyParser()(req, res, next)
   else next()
 
-userCtxRegExp = /^\/(events|messages|cards|payments|email_addresses|phone_numbers|refer_emails)(\/.*)?$/
+userCtxRegExp = /^\/(events|messages|cards|payments|email_addresses|phone_numbers|refer_emails|notifications)(\/.*)?$/
 app.all userCtxRegExp, (req, res, next) ->
   debug '#before getting userCtx'
   h.getUserCtxFromSession req, (err, userCtx, headers) ->
@@ -826,14 +826,20 @@ app.put '/messages/:id', (req, res) ->
     res.send(201)
 
 
-app.get '/messages', (req, res) ->
-  debug "GET /messages"
-  userCtx =  req.userCtx
-  cookie = req.headers.cookie
-  rep.getMessages {userId: userCtx.user_id, cookie, roles: userCtx.roles}, (err, messages, headers) ->
-    return h.sendError(res, err) if err
-    h.setCookie(res, headers)
-    res.json(200, messages)
+_.each ['messages', 'notifications'], (model) ->
+  app.get "/#{model}", (req, res) ->
+    debug "GET /#{model}"
+    userCtx =  req.userCtx
+    cookie = req.headers.cookie
+    rep.getMessages {
+      userId: userCtx.user_id
+      cookie
+      roles: userCtx.roles
+      type: h.singularizeModel(model)
+    }, (err, messages, headers) ->
+      return h.sendError(res, err) if err
+      h.setCookie(res, headers)
+      res.json(200, messages)
 
 app.get '/messages/:id', (req, res) ->
   id = req.params?.id

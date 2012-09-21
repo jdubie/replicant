@@ -99,6 +99,7 @@ h.singularizeModel = (model) ->
     email_addresses: 'email_address'
     phone_numbers  : 'phone_number'
     refer_emails   : 'refer_email'
+    notifications  : 'notification'
   return mapping[model]
 
 h.pluralizeType = (type) ->
@@ -117,6 +118,7 @@ h.pluralizeType = (type) ->
     payment      : 'payments'
     email_address: 'email_addresses'
     phone_number : 'phone_numbers'
+    notifications: 'notification'
   return mapping[type]
 
 ###
