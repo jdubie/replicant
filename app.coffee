@@ -841,15 +841,17 @@ _.each ['messages', 'notifications'], (model) ->
       h.setCookie(res, headers)
       res.json(200, messages)
 
-app.get '/messages/:id', (req, res) ->
-  id = req.params?.id
-  debug "GET /messages/#{id}"
-  userCtx =  req.userCtx
-  cookie = req.headers.cookie
-  rep.getMessage {id, userId: userCtx.user_id, cookie, roles: userCtx.roles}, (err, message, headers) ->
-    return h.sendError(res, err) if err
-    h.setCookie(res, headers)
-    res.json(200, message)
+  app.get "/#{model}/:id", (req, res) ->
+    id = req.params?.id
+    debug "GET /#{model}/#{id}"
+    userCtx =  req.userCtx
+    cookie = req.headers.cookie
+    rep.getMessage {
+      id, userId: userCtx.user_id, cookie, roles: userCtx.roles
+    }, (err, message, headers) ->
+      return h.sendError(res, err) if err
+      h.setCookie(res, headers)
+      res.json(200, message)
 
 # fire up HTTP server
 app.listen(config.port)

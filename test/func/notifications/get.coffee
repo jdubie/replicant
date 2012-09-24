@@ -7,7 +7,7 @@ debug   = require('debug')('replicant/test/func/phone_numbers/delete')
 {TestUser, TestSwap, TestEvent, TestNotification} = require('lib/test_models')
 
 
-describe 'zzz GET /notifications', () ->
+describe 'GET /notifications', () ->
 
   guest     = new TestUser('get_noties_guest')
   host      = new TestUser('get_noties_host')
