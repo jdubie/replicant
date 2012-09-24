@@ -291,8 +291,8 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
     readDoc =
       type: 'read'
       message_id: message._id
-      event_id: message.event_id
       ctime: Date.now()
+    readDoc.event_id = message.event_id if message.event_id?
     errorOpts =
       error : "Error marking message read"
       reason: "Error marking message #{message._id} read for #{userId}"
@@ -336,7 +336,7 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
       opts = key: message._id
       errorOpts =
         error : "Error getting message status"
-        reason: "For message #{message._id}, user #{userId}, event #{message.event_id}"
+        reason: "For message #{message._id}, user #{userId}, event #{message.event_id ? 'none'}"
       db.view('userddoc', 'read', opts, h.nanoCallback(next, errorOpts)) # (err, res, headers)
     (res, _headers, next) ->
       db = resetDbWithHeaders(_headers)

@@ -34,6 +34,7 @@ shouldParseBody = (req) ->
       'email_addresses'
       'phone_numbers'
       'refer_emails'
+      'notifications'
     ]
   if req.method is 'PUT'
     type = req.url.match(/^\/([^\/]*)\/.*$/)?[1]
@@ -53,6 +54,7 @@ shouldParseBody = (req) ->
       'email_addresses'
       'phone_numbers'
       'refer_emails'
+      'notifications'
     ]
   return false
 
@@ -809,24 +811,23 @@ app.post '/messages', (req, res) ->
     res.json(201, {_rev, ctime, mtime})
 
 
-app.put '/messages/:id', (req, res) ->
-  ## TODO: _allow_ change only when read => true (write 'read' doc)
-  id = req.params?.id
-  debug "PUT /messages/#{id}"
-  return if h.verifyRequiredFields req, res, [
-    '_id', 'read', 'event_id'
-  ]
-
-  userCtx = req.userCtx
-  cookie = req.headers.cookie
-  message = req.body
-  rep.markReadStatus message, userCtx.user_id, cookie, (err, _res, headers) ->
-    return h.sendError(res, err) if err
-    h.setCookie(res, headers)
-    res.send(201)
-
-
 _.each ['messages', 'notifications'], (model) ->
+
+  app.put "/#{model}/:id", (req, res) ->
+    ## TODO: _allow_ change only when read => true (write 'read' doc)
+    id = req.params?.id
+    debug "PUT /#{model}/#{id}"
+    return if h.verifyRequiredFields(req, res, ['_id', 'read'])
+
+    userCtx = req.userCtx
+    cookie  = req.headers.cookie
+    message = req.body
+    rep.markReadStatus message, userCtx.user_id, cookie, (err, _res, headers) ->
+      return h.sendError(res, err) if err
+      h.setCookie(res, headers)
+      res.send(201)
+
+
   app.get "/#{model}", (req, res) ->
     debug "GET /#{model}"
     userCtx =  req.userCtx
