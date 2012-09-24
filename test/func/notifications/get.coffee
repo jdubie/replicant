@@ -7,15 +7,19 @@ debug   = require('debug')('replicant/test/func/phone_numbers/delete')
 {TestUser, TestSwap, TestEvent, TestNotification} = require('lib/test_models')
 
 
-describe 'GET /notifications', () ->
+describe 'zzz GET /notifications', () ->
 
   guest     = new TestUser('get_noties_guest')
   host      = new TestUser('get_noties_host')
   constable = new TestUser('get_noties_constable', roles: ['constable'])
   swap      = new TestSwap('get_noties_swap', host)
   event     = new TestEvent('get_noties_event', [guest], [host], swap)
-  noti1     = new TestNotification('get_noties_1', guest, event)
-  noti2     = new TestNotification('get_noties_2', guest, event)
+  noti1 = new TestNotification(
+    'get_noties_1', guest, host, event, action: 'approved'
+  )
+  noti2 = new TestNotification(
+    'get_noties_2', guest, host, event, action: 'declined'
+  )
 
   before (ready) ->
     app = require('app')

@@ -74,7 +74,7 @@ class TestTypePrivate extends TestType
       replicate: (next) =>
         h.replicateOut([@user_id], [@_id], next)
     , (err, res) =>
-      debug 'CREATE ERROR: TestTypePrivate: id', @_id
+      console.error 'CREATE ERROR: TestTypePrivate: id', @_id if err
       @_rev = res?.rev
       callback(err, res)
 
@@ -230,7 +230,7 @@ m.TestUser = class TestUser
       destroyUserDb
       flushRedis
     ], (err, res) ->
-      debug "DESTROY USER ERROR", err if err
+      console.error "DESTROY USER ERROR", err if err
       callback(err, res)
 
   getAllMessages: (callback) =>
@@ -640,7 +640,7 @@ m.TestMessage = class TestMessage extends TestType
         allUsers = _.union(@event.guests, @event.hosts)
         async.map(allUsers, removeUserMessage, cb)
     ], (err, res) ->
-      debug "MESSAGE DESTROY ERROR", err if err
+      console.error "MESSAGE DESTROY ERROR", err if err
       callback(err, res)
 
 
@@ -648,21 +648,25 @@ m.TestNotification = class TestNotification extends TestTypePrivate
   @attributes: =>
     attrs = super
     [].concat attrs, [
-      'event_id'
-      'message'
+      'subject_id'
+      'action'
+      'object_type'
+      'object_id'
       'read'
     ]
 
   defaults: =>
     def = super
     _.extend def, {
-      type    : 'notification'
-      event_id: @event._id
-      message : 'test notification'
-      read    : false
+      type        : 'notification'
+      subject_id  : @subject._id
+      action      : 'approved'
+      object_type : @object.type
+      object_id   : @object._id
+      read        : false
     }
 
-  constructor: (id, @user, @event, opts) ->
+  constructor: (id, @user, @subject, @object, opts) ->
     super(id, @user, opts)
 
   getReadDoc: =>
@@ -672,8 +676,6 @@ m.TestNotification = class TestNotification extends TestTypePrivate
       name      : @user.name
       user_id   : @user._id
       ctime     : 12345
-      mtime     : 12345
-      event_id  : @event._id
       message_id: @_id
 
   create: (callback) =>
