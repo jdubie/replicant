@@ -34,6 +34,7 @@ shouldParseBody = (req) ->
       'email_addresses'
       'phone_numbers'
       'refer_emails'
+      'notifications'
     ]
   if req.method is 'PUT'
     type = req.url.match(/^\/([^\/]*)\/.*$/)?[1]
@@ -53,6 +54,7 @@ shouldParseBody = (req) ->
       'email_addresses'
       'phone_numbers'
       'refer_emails'
+      'notifications'
     ]
   return false
 
@@ -62,7 +64,7 @@ app.use (req, res, next) ->
     express.bodyParser()(req, res, next)
   else next()
 
-userCtxRegExp = /^\/(events|messages|cards|payments|email_addresses|phone_numbers|refer_emails)(\/.*)?$/
+userCtxRegExp = /^\/(events|messages|cards|payments|email_addresses|phone_numbers|refer_emails|notifications)(\/.*)?$/
 app.all userCtxRegExp, (req, res, next) ->
   debug '#before getting userCtx'
   h.getUserCtxFromSession req, (err, userCtx, headers) ->
@@ -809,41 +811,48 @@ app.post '/messages', (req, res) ->
     res.json(201, {_rev, ctime, mtime})
 
 
-app.put '/messages/:id', (req, res) ->
-  ## TODO: _allow_ change only when read => true (write 'read' doc)
-  id = req.params?.id
-  debug "PUT /messages/#{id}"
-  return if h.verifyRequiredFields req, res, [
-    '_id', 'read', 'event_id'
-  ]
+_.each ['messages', 'notifications'], (model) ->
 
-  userCtx = req.userCtx
-  cookie = req.headers.cookie
-  message = req.body
-  rep.markReadStatus message, userCtx.user_id, cookie, (err, _res, headers) ->
-    return h.sendError(res, err) if err
-    h.setCookie(res, headers)
-    res.send(201)
+  app.put "/#{model}/:id", (req, res) ->
+    ## TODO: _allow_ change only when read => true (write 'read' doc)
+    id = req.params?.id
+    debug "PUT /#{model}/#{id}"
+    return if h.verifyRequiredFields(req, res, ['_id', 'read'])
+
+    userCtx = req.userCtx
+    cookie  = req.headers.cookie
+    message = req.body
+    rep.markReadStatus message, userCtx.user_id, cookie, (err, _res, headers) ->
+      return h.sendError(res, err) if err
+      h.setCookie(res, headers)
+      res.send(201)
 
 
-app.get '/messages', (req, res) ->
-  debug "GET /messages"
-  userCtx =  req.userCtx
-  cookie = req.headers.cookie
-  rep.getMessages {userId: userCtx.user_id, cookie, roles: userCtx.roles}, (err, messages, headers) ->
-    return h.sendError(res, err) if err
-    h.setCookie(res, headers)
-    res.json(200, messages)
+  app.get "/#{model}", (req, res) ->
+    debug "GET /#{model}"
+    userCtx =  req.userCtx
+    cookie = req.headers.cookie
+    rep.getMessages {
+      userId: userCtx.user_id
+      cookie
+      roles: userCtx.roles
+      type: h.singularizeModel(model)
+    }, (err, messages, headers) ->
+      return h.sendError(res, err) if err
+      h.setCookie(res, headers)
+      res.json(200, messages)
 
-app.get '/messages/:id', (req, res) ->
-  id = req.params?.id
-  debug "GET /messages/#{id}"
-  userCtx =  req.userCtx
-  cookie = req.headers.cookie
-  rep.getMessage {id, userId: userCtx.user_id, cookie, roles: userCtx.roles}, (err, message, headers) ->
-    return h.sendError(res, err) if err
-    h.setCookie(res, headers)
-    res.json(200, message)
+  app.get "/#{model}/:id", (req, res) ->
+    id = req.params?.id
+    debug "GET /#{model}/#{id}"
+    userCtx =  req.userCtx
+    cookie = req.headers.cookie
+    rep.getMessage {
+      id, userId: userCtx.user_id, cookie, roles: userCtx.roles
+    }, (err, message, headers) ->
+      return h.sendError(res, err) if err
+      h.setCookie(res, headers)
+      res.json(200, message)
 
 # fire up HTTP server
 app.listen(config.port)

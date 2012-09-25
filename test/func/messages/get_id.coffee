@@ -21,22 +21,36 @@ describe 'GET /messages/:id', () ->
   before (ready) ->
     app = require('app')
     async.series [
-      (cb) -> async.parallel([constable.create, guest.create, host.create, swap.create], cb)
+      (cb) -> async.parallel [
+        constable.create
+        guest.create
+        host.create
+        swap.create
+      ], cb
       event.create
-      message.create
-      message2.create
-      message3.create
-      message4.create
+      (cb) -> async.parallel [
+        message.create
+        message2.create
+        message3.create
+        message4.create
+      ], cb
     ], ready
 
   after (finished) ->
     async.series [
-      message4.destroy
-      message3.destroy
-      message2.destroy
-      message.destroy
+      (cb) -> async.parallel [
+        message4.destroy
+        message3.destroy
+        message2.destroy
+        message.destroy
+      ], cb
       event.destroy
-      (cb) -> async.parallel([constable.destroy, guest.destroy, host.destroy, swap.destroy], cb)
+      (cb) -> async.parallel [
+        constable.destroy
+        guest.destroy
+        host.destroy
+        swap.destroy
+      ], cb
     ], finished
 
   it 'should GET _read_ message correctly', (done) ->

@@ -2,18 +2,20 @@ should  = require('should')
 async   = require('async')
 request = require('request')
 
-config = require('config')
-{TestUser, TestSwap, TestEvent, TestMessage} = require('lib/test_models')
+config  = require('config')
+{TestUser, TestSwap, TestEvent, TestNotification} = require('lib/test_models')
 
 
-describe 'PUT /messages/:id', () ->
+describe 'PUT /notifications/:id', () ->
 
-  guest     = new TestUser('put_messages_id_guest')
-  host      = new TestUser('put_messages_id_host')
-  constable = new TestUser('put_messages_id_constable', roles: ['constable'])
-  swap      = new TestSwap('put_messages_id_swap', host)
-  event     = new TestEvent('put_messages_id_event', [guest], [host], swap)
-  message   = new TestMessage('put_messages_id', guest, event, read: false)
+  guest     = new TestUser('put_notis_id_guest')
+  host      = new TestUser('put_notis_id_host')
+  constable = new TestUser('put_notis_id_constable', roles: ['constable'])
+  swap      = new TestSwap('put_notis_id_swap', host)
+  event     = new TestEvent('put_notis_id_event', [guest], [host], swap)
+  noti      = new TestNotification(
+    'put_notis_id', guest, host, event, action: 'approved', read: false
+  )
 
   before (ready) ->
     app = require('app')
@@ -25,12 +27,12 @@ describe 'PUT /messages/:id', () ->
         swap.create
       ], cb
       event.create
-      message.create
+      noti.create
     ], ready
 
   after (finished) ->
     async.series [
-      message.destroy
+      noti.destroy
       event.destroy
       (cb) -> async.parallel [
         guest.destroy
@@ -44,13 +46,13 @@ describe 'PUT /messages/:id', () ->
   describe 'regular user', () ->
 
     it 'should 400 on bad input', (done) ->
-      json = message.attributes()
+      json = noti.attributes()
       verifyField = (field, callback) ->
         value = json[field]
         delete json[field]
         opts =
           method: 'PUT'
-          url: "http://localhost:3001/messages/#{message._id}"
+          url: "http://localhost:3001/notifications/#{noti._id}"
           json: json
           headers: cookie: guest.cookie
         request opts, (err, res, body) ->
@@ -64,68 +66,56 @@ describe 'PUT /messages/:id', () ->
       async.map(['_id', 'read'], verifyField, done)
 
     it 'should return 201 when marking read', (done) ->
-      message.read = true
+      noti.read = true
       opts =
         method: 'PUT'
-        url: "http://localhost:3001/messages/#{message._id}"
-        json: message.attributes()
+        url: "http://localhost:3001/notifications/#{noti._id}"
+        json: noti.attributes()
         headers: cookie: guest.cookie
       request opts, (err, res, body) ->
         should.not.exist(err)
         res.should.have.property('statusCode', 201)
         done()
 
-    it 'should mark the message as \'read\'', (done) ->
+    it 'should mark the notification as \'read\'', (done) ->
       userDb = config.db.user(guest._id)
-      opts = key: message._id
+      opts = key: noti._id
       userDb.view 'userddoc', 'read', opts, (err, res) ->
         should.not.exist(err)
         res.should.have.property('rows').with.lengthOf(1)
         done()
 
     it 'should return 201 when marking unread', (done) ->
-      message.read = false
+      noti.read = false
       opts =
         method: 'PUT'
-        url: "http://localhost:3001/messages/#{message._id}"
-        json: message.attributes()
+        url: "http://localhost:3001/notifications/#{noti._id}"
+        json: noti.attributes()
         headers: cookie: guest.cookie
       request opts, (err, res, body) ->
         should.not.exist(err)
         res.should.have.property('statusCode', 201)
         done()
 
-    it 'should mark the message as \'unread\'', (done) ->
+    it 'should mark the notification as \'unread\'', (done) ->
       userDb = config.db.user(guest._id)
-      opts = key: message._id
+      opts = key: noti._id
       userDb.view 'userddoc', 'read', opts, (err, res) ->
         should.not.exist(err)
         res.should.have.property('rows').with.lengthOf(0)
         done()
 
-    it 'should not change message for any involved users', (done) ->
-      checkMessageDoc = (user, callback) ->
-        userDb = config.db.user(user._id)
-        userDb.get message._id, (err, messageDoc) ->
-          should.not.exist(err)
-          _message = message.attributes()
-          delete _message.read
-          messageDoc.should.eql(_message)
-          callback()
-      async.map [guest, host], checkMessageDoc, (err, res) ->
-        should.not.exist(err)
-        done()
 
   describe 'constable', () ->
 
     it 'should 400 on bad input', (done) ->
-      json = message.attributes()
+      json = noti.attributes()
       verifyField = (field, callback) ->
         value = json[field]
         delete json[field]
         opts =
           method: 'PUT'
-          url: "http://localhost:3001/messages/#{message._id}"
+          url: "http://localhost:3001/notifications/#{noti._id}"
           json: json
           headers: cookie: constable.cookie
         request opts, (err, res, body) ->
@@ -139,54 +129,41 @@ describe 'PUT /messages/:id', () ->
       async.map(['_id', 'read'], verifyField, done)
 
     it 'should return 201 when marking read', (done) ->
-      message.read = true
+      noti.read = true
       opts =
         method: 'PUT'
-        url: "http://localhost:3001/messages/#{message._id}"
-        json: message.attributes()
+        url: "http://localhost:3001/notifications/#{noti._id}"
+        json: noti.attributes()
         headers: cookie: constable.cookie
       request opts, (err, res, body) ->
         should.not.exist(err)
         res.should.have.property('statusCode', 201)
         done()
 
-    it 'should mark the message as \'read\'', (done) ->
+    it 'should mark the notification as \'read\'', (done) ->
       userDb = config.db.user(constable._id)
-      opts = key: message._id
+      opts = key: noti._id
       userDb.view 'userddoc', 'read', opts, (err, res) ->
         should.not.exist(err)
         res.should.have.property('rows').with.lengthOf(1)
         done()
 
     it 'should return 201 when marking unread', (done) ->
-      message.read = false
+      noti.read = false
       opts =
         method: 'PUT'
-        url: "http://localhost:3001/messages/#{message._id}"
-        json: message.attributes()
+        url: "http://localhost:3001/notifications/#{noti._id}"
+        json: noti.attributes()
         headers: cookie: constable.cookie
       request opts, (err, res, body) ->
         should.not.exist(err)
         res.should.have.property('statusCode', 201)
         done()
 
-    it 'should mark the message as \'unread\'', (done) ->
+    it 'should mark the notification as \'unread\'', (done) ->
       userDb = config.db.user(constable._id)
-      opts = key: message._id
+      opts = key: noti._id
       userDb.view 'userddoc', 'read', opts, (err, res) ->
         should.not.exist(err)
         res.should.have.property('rows').with.lengthOf(0)
-        done()
-
-    it 'should not change message for any involved users', (done) ->
-      checkMessageDoc = (user, callback) ->
-        userDb = config.db.user(user._id)
-        userDb.get message._id, (err, messageDoc) ->
-          should.not.exist(err)
-          _message = message.attributes()
-          delete _message.read
-          messageDoc.should.eql(_message)
-          callback()
-      async.map [guest, host], checkMessageDoc, (err, res) ->
-        should.not.exist(err)
         done()

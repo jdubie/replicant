@@ -9,13 +9,13 @@ debug   = require('debug')('replicant/test/func/phone_numbers/delete')
 
 describe 'GET /messages', () ->
 
-  guest       = new TestUser('get_messages_guest')
-  host        = new TestUser('get_messages_host')
-  constable   = new TestUser('get_messages_constable', roles: ['constable'])
-  swap        = new TestSwap('get_messages_swap', host)
-  event       = new TestEvent('get_messages_event', [guest], [host], swap)
-  message1    = new TestMessage('get_messages_1', guest, event)
-  message2    = new TestMessage('get_messages_2', guest, event)
+  guest     = new TestUser('get_messages_guest')
+  host      = new TestUser('get_messages_host')
+  constable = new TestUser('get_messages_constable', roles: ['constable'])
+  swap      = new TestSwap('get_messages_swap', host)
+  event     = new TestEvent('get_messages_event', [guest], [host], swap)
+  message1  = new TestMessage('get_messages_1', guest, event)
+  message2  = new TestMessage('get_messages_2', guest, event)
 
   before (ready) ->
     app = require('app')

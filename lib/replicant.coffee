@@ -171,13 +171,6 @@ replicant.replicate = ({src, dsts, eventId}, callback) ->
     callback(error)
 
 
-  # send emails
-  #replicant.sendNotifications({dsts, eventId})
-
-  #replicant.sendNotifications = ({dsts, eventId}) ->
-  #_.each dsts, (dst) ->
-  #  getDbName
-
 replicant.auth = ({username, password}, callback) ->
   config.nano.auth username, password, (err, body, headers) ->
     if err or not headers
@@ -298,8 +291,8 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
     readDoc =
       type: 'read'
       message_id: message._id
-      event_id: message.event_id
       ctime: Date.now()
+    readDoc.event_id = message.event_id if message.event_id?
     errorOpts =
       error : "Error marking message read"
       reason: "Error marking message #{message._id} read for #{userId}"
@@ -343,7 +336,7 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
       opts = key: message._id
       errorOpts =
         error : "Error getting message status"
-        reason: "For message #{message._id}, user #{userId}, event #{message.event_id}"
+        reason: "For message #{message._id}, user #{userId}, event #{message.event_id ? 'none'}"
       db.view('userddoc', 'read', opts, h.nanoCallback(next, errorOpts)) # (err, res, headers)
     (res, _headers, next) ->
       db = resetDbWithHeaders(_headers)
@@ -359,14 +352,15 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
 
 
 ## gets all messages and tacks on 'read' status (true/false)
-replicant.getMessages = ({userId, cookie, roles}, callback) ->
+replicant.getMessages = ({userId, cookie, roles, type}, callback) ->
+  type ?= 'message'
   headers = null
   updateCookie = (_headers) ->
     headers = _headers if _headers?['set-cookie']?
 
   async.parallel
     messages: (callback) ->
-      replicant.getTypeUserDb {type: 'message', userId, cookie, roles}, (err, messages, _headers) ->
+      replicant.getTypeUserDb {type, userId, cookie, roles}, (err, messages, _headers) ->
         updateCookie(_headers)
         callback(err, messages)
     reads: (callback) ->
