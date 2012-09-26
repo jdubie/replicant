@@ -691,7 +691,7 @@ app.put '/events/:id', (req, res) ->
   event.mtime = mtime
 
   _rev = _users = null
-  isConstable = false
+  isConstable = stateChange = false
   
   async.waterfall [
     (next) ->
@@ -708,10 +708,20 @@ app.put '/events/:id', (req, res) ->
             statusCode: 403
             reason: "Not authorized to modify this event"
           return next(error)
-
-      debug 'put event'
       _users = users
       userDbName = 'drunk_tank' if isConstable
+
+      debug 'get old event'
+      userId = if isConstable then 'drunk_tank' else userCtx.user_id
+      db = config.db.user(userId)
+      db.get(id, h.nanoCallback(next))
+
+    (oldEvent, headers, next) ->
+      if oldEvent.state isnt event.state
+        unless oldEvent.state is 'overdue' and event.state is 'confirmed'
+          stateChange = true
+          event["#{event.state}_time"] = mtime
+      debug 'put event', event
       opts =
         method: 'PUT'
         url: "#{config.dbUrl}/#{userDbName}/#{id}"
@@ -740,7 +750,9 @@ app.put '/events/:id', (req, res) ->
 
   ], (err, resp) ->
     return h.sendError(res, err) if err
-    res.json(201, {_rev, mtime})
+    result = {_rev, mtime}
+    result["#{event.state}_time"] = mtime if stateChange
+    res.json(201, result)
 
 
 app.post '/messages', (req, res) ->

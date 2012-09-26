@@ -14,7 +14,6 @@ describe 'PUT /events/:id', () ->
   host      = new TestUser('put_events_id_host')
   constable = new TestUser('put_events_id_const', roles: ['constable'])
   swap      = new TestSwap('put_events_id_swap', host)
-  event     = new TestEvent('put_events_id', [guest], [host], swap)
 
   before (ready) ->
     app = require('app')
@@ -25,12 +24,11 @@ describe 'PUT /events/:id', () ->
         constable.create
       ], cb
       swap.create
-      event.create
     ], ready
 
   after (finished) ->
     async.series [
-      (cb) -> async.parallel([event.destroy, swap.destroy], cb)
+      swap.destroy
       (cb) -> async.parallel [
         guest.destroy
         host.destroy
@@ -41,6 +39,10 @@ describe 'PUT /events/:id', () ->
 
 
   describe 'normal user', () ->
+
+    event = new TestEvent('put_events_id', [guest], [host], swap)
+    before (ready) -> event.create(ready)
+    after (finished) -> event.destroy(finished)
 
     it 'should 400 on bad input', (done) ->
       json = event.attributes()
@@ -72,7 +74,7 @@ describe 'PUT /events/:id', () ->
       request opts, (err, res, body) ->
         should.not.exist(err)
         res.should.have.property('statusCode', 201)
-        body.should.have.keys(['_rev', 'mtime'])
+        body.should.have.keys(['_rev', 'mtime', 'confirmed_time'])
         for key, val of body
           event[key] = val
         done()
@@ -106,8 +108,12 @@ describe 'PUT /events/:id', () ->
 
   describe 'constable', () ->
 
+    event = new TestEvent('put_events_id', [guest], [host], swap)
+    before (ready) -> event.create(ready)
+    after (finished) -> event.destroy(finished)
+
     it 'should PUT the event', (done) ->
-      event.state = EVENT_STATE.completed
+      event.state = EVENT_STATE.confirmed
       opts =
         method: 'PUT'
         url: "http://localhost:3001/events/#{event._id}"
@@ -116,7 +122,7 @@ describe 'PUT /events/:id', () ->
       request opts, (err, res, body) ->
         should.not.exist(err)
         res.should.have.property('statusCode', 201)
-        body.should.have.keys(['_rev', 'mtime'])
+        body.should.have.keys(['_rev', 'mtime', 'confirmed_time'])
         for key, val of body
           event[key] = val
         done()
