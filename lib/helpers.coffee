@@ -121,6 +121,9 @@ h.pluralizeType = (type) ->
     notifications: 'notification'
   return mapping[type]
 
+h.getModelFromUrl = (url) -> url.split('/')[1]
+h.getTypeFromUrl  = (url) -> h.singularizeModel(h.getModelFromUrl(url))
+
 ###
   @param error {string}
   @return {number}
@@ -305,5 +308,14 @@ h.replicateEvent = (userIds, eventId, callback) ->
     userDbName = h.getUserDbName({userId})
     config.couch().db.replicate('drunk_tank', userDbName, opts, h.nanoCallback(cb))
   async.map(userIds, replicateOne, callback)
+
+
+h.getUserCtx = (req, res, next) ->
+  h.getUserCtxFromSession req, (err, userCtx, headers) ->
+    return res.json(err.statusCode ? err.status_code ? 500, err) if err
+    debug '#getUserCtxFromSession before: userCtx', userCtx
+    req.userCtx = userCtx
+    h.setCookie(res, headers)   # set-cooki if necessary
+    next()
 
 module.exports = h
