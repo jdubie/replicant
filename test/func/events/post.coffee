@@ -13,7 +13,7 @@ describe 'POST /events', () ->
   guest = new TestUser('post_events_guest')
   host  = new TestUser('post_events_host')
   swap  = new TestSwap('post_events_swap', host)
-  opts = hosts : [host], guests: [guest]
+  opts  = hosts: [host], guests: [guest]
   event = new TestEvent('post_events_id', [guest], [host], swap, opts)
 
   before (ready) ->
@@ -41,9 +41,9 @@ describe 'POST /events', () ->
     request opts, (err, res, body) ->
       should.not.exist(err)
       res.should.have.property('statusCode', 201)
-      returnedFields = ['_rev', 'mtime', 'ctime', 'guests', 'hosts']
+      returnedFields = ['_rev', 'mtime', 'ctime', 'guests', 'hosts', 'requested_time']
       body.should.have.keys(returnedFields)
-      for key, val of body when not (key in ['guests', 'hosts'])
+      for key, val of body when key not in ['guests', 'hosts']
         event[key] = val
       done()
 
@@ -90,8 +90,8 @@ describe 'POST /events', () ->
 
 
   it 'should 400 on bad input', (done) ->
-    json = event.attributes()
     verifyField = (field, callback) ->
+      json = event.attributes()
       value = json[field]
       delete json[field]
       opts =
@@ -107,4 +107,4 @@ describe 'POST /events', () ->
 
         json[field] = value
         callback()
-    async.map(['_id', 'swap_id'], verifyField, done)
+    async.map(['_id', 'swap_id', 'state'], verifyField, done)

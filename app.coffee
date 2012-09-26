@@ -459,14 +459,14 @@ app.post '/events', (req, res) ->
 
   debug "POST /events"
   debug "   event" , event
-  return if h.verifyRequiredFields(req, res, ['swap_id', '_id'])
+  return if h.verifyRequiredFields(req, res, ['swap_id', '_id', 'state'])
 
   delete event.hosts
   delete event.guests
-  ctime = Date.now()
-  mtime = ctime
+  mtime = ctime = Date.now()
   event.ctime = ctime
   event.mtime = mtime
+  event["#{event.state}_time"] = ctime
 
   # global boy
   swap = null
@@ -475,9 +475,7 @@ app.post '/events', (req, res) ->
 
     # insert event document into constable db
     _rev: (done) ->
-      extractRev = (err, body) ->
-        return done(err) if err
-        done(null, body.rev)
+      extractRev = (err, body) -> done(err, body?.rev)
       config.db.constable().insert(event, h.nanoCallback(extractRev))
 
     # put all users assosciated with swap and return them
@@ -503,7 +501,9 @@ app.post '/events', (req, res) ->
       return h.sendError(res, err) if err
       h.createNotification 'event.create', {title: "event #{event._id}: event created", guests, hosts, event, swap}, (err) ->
         return h.sendError(err, body) if err
-        res.json(201, {_rev, hosts, guests, ctime, mtime})
+        result = {_rev, hosts, guests, ctime, mtime}
+        result["#{event.state}_time"] = event["#{event.state}_time"]
+        res.json(201, result)
 
 
 ###
