@@ -477,23 +477,37 @@ m.TestReferEmail = class TestReferEmail extends TestTypePrivate
 
 
 m.TestEvent = class TestEvent
-  @attributes: [
-    '_id'
-    '_rev'
-    'type'
-    'ctime'
-    'mtime'
-    'state'
-    'swap_id'
-    'date'
-    #'hosts'  # client-side
-    #'guests' # client-side
-    'card_id'
-  ]
+  @attributes: =>
+    attrs = [
+      '_id'
+      '_rev'
+      'type'
+      'ctime'
+      'mtime'
+      'state'
+      'swap_id'
+      'date'
+      #'hosts'  # client-side
+      #'guests' # client-side
+      'card_id'
+    ]
+    # use crossing-guard!
+    attrs.push("#{state}_time") for state in [
+      'preevent'
+      'requested'
+      'declined'
+      'pending'
+      'confirmed'
+      'scheduled'
+      'overdue'
+      'completed'
+      'cancelled'
+    ]
+    attrs
 
   attributes: =>
     result = {}
-    for key in @constructor.attributes when key of this
+    for key in @constructor.attributes() when key of this
       result[key] = @[key]
     result
 
