@@ -726,7 +726,7 @@ exports.shortlink = (req, res, next) ->
 
   db = config.db.main()
   db.get path, (err, doc) ->
-    url  = doc?.url
+    url  = doc?.target_url
     type = doc?.type
     replacement = if err or type isnt 'shortlink' then '' else "#!#{url}"
     newUrl = req.originalUrl.replace(path, replacement)
