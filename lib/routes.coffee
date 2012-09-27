@@ -183,8 +183,8 @@ exports.createUser = (req, res) ->
 
 
 exports.postPublic = (req, res) ->
-  model = h.getModelFromUrl(req.url)
   debug "POST #{req.url}"
+  model = h.getModelFromUrl(req.url)
   doc = req.body
   ctime = mtime = Date.now()
   doc.ctime = ctime
@@ -312,8 +312,8 @@ exports.deleteUser = (req, res) ->
 
 
 exports.deletePublic = (req, res) ->
-  id = req.params?.id
   debug "DELETE #{req.url}"
+  id = req.params?.id
   doc = req.body
   debug "   req.body", doc
   return if h.verifyRequiredFields(req, res, ['_rev'])

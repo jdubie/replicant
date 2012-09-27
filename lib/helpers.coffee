@@ -85,12 +85,13 @@ h.hash = (message) ->
 h.singularizeModel = (model) ->
   mapping =
     # lifeswap db
-    swaps   : 'swap'
-    users   : 'user'
-    reviews : 'review'
-    likes   : 'like'
-    requests: 'request'
-    entities: 'entity'
+    swaps     : 'swap'
+    users     : 'user'
+    reviews   : 'review'
+    likes     : 'like'
+    requests  : 'request'
+    entities  : 'entity'
+    shortlinks: 'shortlink'
     # user db
     events         : 'event'
     messages       : 'message'
@@ -105,12 +106,13 @@ h.singularizeModel = (model) ->
 h.pluralizeType = (type) ->
   mapping =
     # lifeswap db
-    swap   : 'swaps'
-    user   : 'users'
-    review : 'reviews'
-    like   : 'likes'
-    request: 'requests'
-    entity: 'entities'
+    swap     : 'swaps'
+    user     : 'users'
+    review   : 'reviews'
+    like     : 'likes'
+    request  : 'requests'
+    entity   : 'entities'
+    shortlink: 'shortlinks'
     # user db
     event        : 'events'
     message      : 'messages'

@@ -2,36 +2,33 @@ should  = require('should')
 async   = require('async')
 request = require('request')
 
-config  = require('config')
+{TestUser, TestShortlink} = require('lib/test_models')
 
 describe 'GET /shortlinks/:id', () ->
 
-  couch = config.couch()
-  db    = couch.use('shortlinks')
-  shortlink =
-    _id: 'yadda'
-    url: '/swaps/swap1'
+  user      = new TestUser('get_shortlinks_id_user')
+  shortlink = new TestShortlink('get_shortlinks_id', user)
 
   before (ready) ->
     ## start webserver
     app = require('app')
     async.series [
-      (cb) -> couch.db.create('shortlinks', cb)
-      (cb) ->
-        db.insert shortlink, shortlink._id, (err, res) ->
-          shortlink._rev = res.rev
-          cb()
+      user.create
+      shortlink.create
     ], ready
 
   after (finished) ->
-    couch.db.destroy('shortlinks', finished)
+    async.series [
+      shortlink.destroy
+      user.destroy
+    ], finished
 
   it 'should get the correct url', (done) ->
     opts =
       method: 'GET'
       url: "http://localhost:3001/shortlinks/#{shortlink._id}"
       json: true
-    request opts, (err, res, body) ->
+    request opts, (err, res, _shortlink) ->
       should.not.exist(err)
-      body.should.have.property('url', shortlink.url)
+      _shortlink.should.eql(shortlink.attributes())
       done()

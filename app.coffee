@@ -111,13 +111,17 @@ app.get('/notifications', h.getUserCtx, routes.getMessages)
 app.get('/notifications/:id', h.getUserCtx, routes.getMessage)
 app.put('/notifications/:id', express.bodyParser(), h.getUserCtx, routes.changeReadStatus)
 
+## shortlinks
+app.get('/shortlinks', routes.allPublic)
+app.get('/shortlinks/:id', routes.onePublic)
+app.post('/shortlinks', express.bodyParser(), routes.postPublic)
+app.put('/shortlinks/:id', express.bodyParser(), routes.putPublic)
+app.delete('/shortlinks/:id', express.bodyParser(), routes.deletePublic)
+
 ## other endpoints
 
 ## zipcodes
 app.get('/zipcodes/:id', routes.zipcode)
-
-## shortlinks
-app.get('/shortlinks/:id', routes.shortlink)
 
 ## recruiting
 app.get '/they-took-our-jobs', (req, res) ->

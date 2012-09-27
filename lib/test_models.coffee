@@ -320,6 +320,20 @@ m.TestLike = class TestLike extends TestTypePublic
     }
 
 
+m.TestShortlink = class TestShortlink extends TestTypePublic
+  @attributes: =>
+    [].concat super, [
+      'url'     # the shortlink url
+    ]
+
+  defaults: =>
+    def = super
+    _.extend def, {
+      type: 'shortlink'
+      url : '/swaps/swap1'
+    }
+
+
 m.TestRequest = class TestRequest extends TestTypePublic
   @attributes: =>
     attrs = super
