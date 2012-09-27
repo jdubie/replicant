@@ -17,10 +17,6 @@ app.get('/user_ctx'   , express.bodyParser(), routes.session)
 # Change password
 app.put('/user_ctx'   , express.bodyParser(), routes.password)
 
-## zipcodes
-# Get zipcode mapping
-app.get('/zipcodes/:id', routes.zipcode)
-
 ## users
 # create a user (and sign up)
 app.get('/users', routes.allPublic)
@@ -114,6 +110,14 @@ app.put('/refer_emails/:id', express.bodyParser(), h.getUserCtx, routes.putPriva
 app.get('/notifications', h.getUserCtx, routes.getMessages)
 app.get('/notifications/:id', h.getUserCtx, routes.getMessage)
 app.put('/notifications/:id', express.bodyParser(), h.getUserCtx, routes.changeReadStatus)
+
+## other endpoints
+
+## zipcodes
+app.get('/zipcodes/:id', routes.zipcode)
+
+## shortlinks
+app.get('/shortlinks/:id', routes.shortlink)
 
 ## recruiting
 app.get '/they-took-our-jobs', (req, res) ->

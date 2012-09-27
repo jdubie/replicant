@@ -711,3 +711,22 @@ exports.sendMessage = (req, res) ->
     debug 'DONE! No error'
     {_rev} = resp
     res.json(201, {_rev, ctime, mtime})
+
+
+# @name shortlink
+#
+# @description get the shortlink mapping
+exports.shortlink = (req, res) ->
+  debug req.url
+  db = config.nano.use('shortlinks')
+  id = req.params.id
+
+  db.get id, (err, doc) ->
+    url = doc?.url
+    debug "url: #{id} => #{url}"
+    return res.json({url}) if not err?
+    error =
+      statusCode: err.status_code ? 500
+      error     : err.error
+      reason    : err.reason
+    h.sendError(res, error)
