@@ -21,7 +21,7 @@ describe 'PUT /shortlinks/:id', () ->
     async.parallel([user.destroy, shortlink.destroy], finished)
 
   it 'should return _rev and mtime', (done) ->
-    shortlink.url = '/swaps/swap2'
+    shortlink.target_url = '/swaps/swap2'
     opts =
       method: 'PUT'
       url: "http://localhost:3001/shortlinks/#{shortlink._id}"
