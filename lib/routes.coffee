@@ -730,3 +730,22 @@ exports.shortlink = (req, res) ->
       error     : err.error
       reason    : err.reason
     h.sendError(res, error)
+
+# @name shortlinkRedirect
+#
+# @description redirect to the shortlink (if it exists)
+exports.shortlinkRedirect = (req, res, next) ->
+  if req.headers?['x-requested-with'] is 'XMLHttpRequest'
+    debug "#{req.url}: XMLHttpRequest"
+    return next()
+  debug 'shortlinkRedirect originalUrl:', req.originalUrl
+  return next() if req.url is '/'
+  path = req.path[1...req.path.length]
+
+  db = config.couch().use('shortlinks')
+  db.get path, (err, doc) ->
+    url = doc?.url
+    replacement = if err then '' else "#!#{url}"
+    newUrl = req.originalUrl.replace(path, replacement)
+    debug "Redirect: #{req.originalUrl} => #{newUrl}"
+    res.redirect(newUrl)
