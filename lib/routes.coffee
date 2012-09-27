@@ -715,26 +715,8 @@ exports.sendMessage = (req, res) ->
 
 # @name shortlink
 #
-# @description get the shortlink mapping
-exports.shortlink = (req, res) ->
-  debug req.url
-  db = config.nano.use('shortlinks')
-  id = req.params.id
-
-  db.get id, (err, doc) ->
-    url = doc?.url
-    debug "url: #{id} => #{url}"
-    return res.json({url}) if not err?
-    error =
-      statusCode: err.status_code ? 500
-      error     : err.error
-      reason    : err.reason
-    h.sendError(res, error)
-
-# @name shortlinkRedirect
-#
 # @description redirect to the shortlink (if it exists)
-exports.shortlinkRedirect = (req, res, next) ->
+exports.shortlink = (req, res, next) ->
   if req.headers?['x-requested-with'] is 'XMLHttpRequest'
     debug "#{req.url}: XMLHttpRequest"
     return next()
@@ -742,10 +724,11 @@ exports.shortlinkRedirect = (req, res, next) ->
   return next() if req.url is '/'
   path = req.path[1...req.path.length]
 
-  db = config.couch().use('shortlinks')
+  db = config.db.main()
   db.get path, (err, doc) ->
-    url = doc?.url
-    replacement = if err then '' else "#!#{url}"
+    url  = doc?.url
+    type = doc?.type
+    replacement = if err or type isnt 'shortlink' then '' else "#!#{url}"
     newUrl = req.originalUrl.replace(path, replacement)
     debug "Redirect: #{req.originalUrl} => #{newUrl}"
     res.redirect(newUrl)

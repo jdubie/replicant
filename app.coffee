@@ -128,7 +128,7 @@ app.get '/they-took-our-jobs', (req, res) ->
   res.end('am9icyticm9ncmFtbWVyQHRoZWxpZmVzd2FwLmNvbQ')
 
 ## catch-all for shortlinks
-app.get('*', routes.shortlinkRedirect)
+app.get('*', routes.shortlink)
 
 # fire up HTTP server
 app.listen(config.port)
