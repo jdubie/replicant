@@ -183,8 +183,8 @@ exports.createUser = (req, res) ->
 
 
 exports.postPublic = (req, res) ->
-  model = h.getModelFromUrl(req.url)
   debug "POST #{req.url}"
+  model = h.getModelFromUrl(req.url)
   doc = req.body
   ctime = mtime = Date.now()
   doc.ctime = ctime
@@ -312,8 +312,8 @@ exports.deleteUser = (req, res) ->
 
 
 exports.deletePublic = (req, res) ->
-  id = req.params?.id
   debug "DELETE #{req.url}"
+  id = req.params?.id
   doc = req.body
   debug "   req.body", doc
   return if h.verifyRequiredFields(req, res, ['_rev'])
@@ -711,3 +711,24 @@ exports.sendMessage = (req, res) ->
     debug 'DONE! No error'
     {_rev} = resp
     res.json(201, {_rev, ctime, mtime})
+
+
+# @name shortlink
+#
+# @description redirect to the shortlink (if it exists)
+exports.shortlink = (req, res, next) ->
+  if req.headers?['x-requested-with'] is 'XMLHttpRequest'
+    debug "#{req.url}: XMLHttpRequest"
+    return next()
+  debug 'shortlinkRedirect originalUrl:', req.originalUrl
+  return next() if req.url is '/'
+  path = req.path[1...req.path.length]
+
+  db = config.db.main()
+  db.get path, (err, doc) ->
+    url  = doc?.target_url
+    type = doc?.type
+    replacement = if err or type isnt 'shortlink' then '' else "#!#{url}"
+    newUrl = req.originalUrl.replace(path, replacement)
+    debug "Redirect: #{req.originalUrl} => #{newUrl}"
+    res.redirect(newUrl)

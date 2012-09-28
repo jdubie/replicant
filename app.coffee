@@ -17,10 +17,6 @@ app.get('/user_ctx'   , express.bodyParser(), routes.session)
 # Change password
 app.put('/user_ctx'   , express.bodyParser(), routes.password)
 
-## zipcodes
-# Get zipcode mapping
-app.get('/zipcodes/:id', routes.zipcode)
-
 ## users
 # create a user (and sign up)
 app.get('/users', routes.allPublic)
@@ -115,9 +111,24 @@ app.get('/notifications', h.getUserCtx, routes.getMessages)
 app.get('/notifications/:id', h.getUserCtx, routes.getMessage)
 app.put('/notifications/:id', express.bodyParser(), h.getUserCtx, routes.changeReadStatus)
 
+## shortlinks
+app.get('/shortlinks', routes.allPublic)
+app.get('/shortlinks/:id', routes.onePublic)
+app.post('/shortlinks', express.bodyParser(), routes.postPublic)
+app.put('/shortlinks/:id', express.bodyParser(), routes.putPublic)
+app.delete('/shortlinks/:id', express.bodyParser(), routes.deletePublic)
+
+## other endpoints
+
+## zipcodes
+app.get('/zipcodes/:id', routes.zipcode)
+
 ## recruiting
 app.get '/they-took-our-jobs', (req, res) ->
   res.end('am9icyticm9ncmFtbWVyQHRoZWxpZmVzd2FwLmNvbQ')
+
+## catch-all for shortlinks
+app.get('*', routes.shortlink)
 
 # fire up HTTP server
 app.listen(config.port)
