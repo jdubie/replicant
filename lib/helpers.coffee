@@ -320,4 +320,12 @@ h.getUserCtx = (req, res, next) ->
     h.setCookie(res, headers)   # set-cooki if necessary
     next()
 
+# @name getDotComSubdomain
+# @description extracts the subdomain from a .com-ending url
+#              (for use with req.host)
+# @param url {String} the ".com"-ending url
+h.getDotComSubdomain = (url) ->
+  regex = /(.*)\.[^\.]*\.com/
+  url.match(regex)?[1]
+
 module.exports = h
