@@ -12,14 +12,15 @@ describe 'POST /users', () ->
   user = new TestUser('post_users', hobo: 'foo')
 
   _userDoc =
-    email_address: user.email_address
-    password: user.password
-    _id: user._id
-    type: 'user'
-    name: user.name
-    ctime: user.ctime
-    mtime: user.mtime
-    hobo: user.hobo   # make sure 'user' doc is just this
+    email_address : user.email_address
+    password      : user.password
+    _id           : user._id
+    user_id       : user._id
+    type          : 'user'
+    name          : user.name
+    ctime         : user.ctime
+    mtime         : user.mtime
+    hobo          : user.hobo   # make sure 'user' doc is just this
 
   usersDb = config.db._users()
   mainDb  = config.db.main()

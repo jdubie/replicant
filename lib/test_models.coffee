@@ -136,8 +136,10 @@ m.TestUser = class TestUser
 
   constructor: (id, opts) ->
 
+    _id = "#{id}_#{Math.round(Math.random()*100000)}"
     def =
-      _id: "#{id}_#{Math.round(Math.random()*100000)}"
+      _id: _id
+      user_id: _id
       type: 'user'
       ctime: 12345
       mtime: 12345
