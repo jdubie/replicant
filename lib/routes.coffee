@@ -541,7 +541,8 @@ exports.deletePrivate = (req, res) ->
 exports.postPrivate = (req, res) ->
   debug "POST #{req.url}"
   debug "   req.userCtx", req.userCtx
-  model = h.getModelFromUrl(req.url)
+  model   = h.getModelFromUrl(req.url)
+  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx   # from the app.all route
   return if h.verifyRequiredFields(req, res, ['_id', 'user_id'])
 
@@ -552,6 +553,11 @@ exports.postPrivate = (req, res) ->
   doc.mtime = mtime
 
   async.series
+    validate: (next) ->
+      return next() if type isnt 'email_address'
+      Validator = require("validation/#{type}")
+      validator = new Validator(userCtx)
+      validator.validateDoc(doc, next)
     _rev: (next) ->
       userDbName = h.getUserDbName(userId: userCtx.user_id)
       opts =
