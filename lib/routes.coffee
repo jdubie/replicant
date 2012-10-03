@@ -526,14 +526,48 @@ exports.onePrivate = (req, res) ->
 
 
 exports.deletePrivate = (req, res) ->
-  id = req.params?.id
+  id      = req.params?.id
+  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx   # from the app.all route
-  cookie = req.headers.cookie
+  cookie  = req.headers.cookie
   debug "DELETE #{req.url}: userCtx, cookie", userCtx, cookie
 
-  rep.deleteDocUserDb {
-    docId: id, cookie, roles: userCtx.roles
-  }, (err, resp) ->
+  isConstable = 'constable' in userCtx.roles
+  constableDb = config.db.constable()
+  docRev = null
+
+  async.waterfall [
+    (next) ->
+      return next() if type isnt 'email_address'
+      Validator = require("validation/#{type}")
+      validator = new Validator(userCtx)
+      # return constable db if this is a constable
+      validator.validateDoc(_id: id, _deleted: true, next)
+
+    ## get the document to get the userId
+    (next) ->
+      debug '#deletePrivate get doc'
+      constableDb.get(id, h.nanoCallback(next))
+
+    ## get the userId and delete from user db then constable db
+    (doc, _headers, next) ->
+      debug '#deletePrivate delete doc from user DB'
+      userId = doc.user_id
+      docRev = doc._rev
+
+      if isConstable
+        userDb = config.db.user(userId)
+      else
+        userDbName = h.getUserDbName({userId})
+        userDb = h.getDbWithCookie({dbName: userDbName, cookie})
+
+      userDb.destroy(doc._id, doc._rev, h.nanoCallback(next))
+
+    ## delete from the constable db if it passed the last part
+    (res, _headers, next) ->
+      debug '#deletePrivate delete doc from drunk_tank'
+      constableDb.destroy(id, docRev, h.nanoCallback(next))
+  ], (err, resp) ->
     return h.sendError(res, err) if err
     res.send(200)
 

@@ -223,43 +223,6 @@ replicant.getTypeUserDb = ({type, userId, cookie, roles}, callback) ->
     callback(err, docs, headers)
 
 
-# @name deleteTypeUserDb
-#
-# @description deletes document from the user's DB and from drunk_tank
-replicant.deleteDocUserDb = ({docId, cookie, roles}, callback) ->
-  debug '#deleteTypeUserDb docId, cookie, roles', docId, cookie, roles
-  roles ?= []
-
-  isConstable = 'constable' in roles
-  constableDb = config.db.constable()
-  docRev = null
-
-  async.waterfall [
-    ## get the document to get the userId
-    (next) ->
-      debug '#deleteTypeUserDb get doc'
-      constableDb.get(docId, h.nanoCallback(next))
-
-    ## get the userId and delete from user db then constable db
-    (doc, _headers, next) ->
-      debug '#deleteTypeUserDb delete doc from user DB'
-      userId = doc.user_id
-      docRev = doc._rev
-
-      if isConstable
-        userDb = config.db.user(userId)
-      else
-        userDbName = h.getUserDbName({userId})
-        userDb = h.getDbWithCookie({dbName: userDbName, cookie})
-
-      userDb.destroy(doc._id, doc._rev, h.nanoCallback(next))
-
-    ## delete from the constable db if it passed the last part
-    (res, _headers, next) ->
-      debug '#deleteTypeUserDb delete doc from drunk_tank'
-      constableDb.destroy(docId, docRev, h.nanoCallback(next))
-  ], callback
-
 ## marks a message read/unread if specified
 # TODO: don't get read status with view anymore!!
 #       (differences when using constable)

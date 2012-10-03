@@ -8,7 +8,7 @@ EmailAddressValidatorSync = require('crossing-guard').email_address
 class EmailAddressValidator extends EmailAddressValidatorSync
   @extend BaseValidator
 
-  db: => config.db.user(@userCtx.user_id)
+  db: => config.db.constable()
 
   validateAsync: (newDoc, oldDoc, options, callback) =>
     if not callback?
