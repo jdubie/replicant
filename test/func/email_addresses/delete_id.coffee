@@ -6,7 +6,7 @@ request = require('request')
 config = require('config')
 
 
-describe '/email_addresses/:id', () ->
+describe 'DELETE /email_addresses/:id', () ->
 
   owner     = new TestUser('delete_email_id_owner')
   badguy    = new TestUser('delete_email_id_badguy')

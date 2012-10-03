@@ -614,14 +614,21 @@ exports.postPrivate = (req, res) ->
 
 
 exports.putPrivate = (req, res) ->
-  id = req.params?.id
   debug "PUT #{req.url}"
+  id      = req.params?.id
+  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx   # from the app.all route
-  doc = req.body
-  mtime = Date.now()
+  doc     = req.body
+
+  mtime     = Date.now()
   doc.mtime = mtime
 
   async.series
+    validate: (next) ->
+      return next() if type isnt 'email_address'
+      Validator = require("validation/#{type}")
+      validator = new Validator(userCtx)
+      validator.validateDoc(doc, next)
     _rev: (next) ->
       userDbName = h.getUserDbName(userId: userCtx.user_id)
       opts =
