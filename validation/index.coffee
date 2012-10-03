@@ -4,6 +4,8 @@ module.exports =
   review        : require './review'
   like          : require './like'
   request       : require './request'
+  entity        : require './entity'
+  shortlink     : require './shortlink'
   # private
   email_address : require './email_address'
   phone_number  : require './phone_number'

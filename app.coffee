@@ -56,8 +56,8 @@ app.delete('/requests/:id', routes.forbidden)
 ## entities
 app.get('/entities' , routes.allPublic)
 app.get('/entities/:id', routes.onePublic)
-app.post('/entities', express.bodyParser(), routes.postPublic)
-app.put('/entities/:id', express.bodyParser(), routes.putPublic)
+app.post('/entities', express.bodyParser(), h.getUserCtx, routes.postPublic)
+app.put('/entities/:id', express.bodyParser(), h.getUserCtx, routes.putPublic)
 app.delete('/entities/:id', routes.forbidden)
 
 ## events
@@ -114,9 +114,9 @@ app.put('/notifications/:id', express.bodyParser(), h.getUserCtx, routes.changeR
 ## shortlinks
 app.get('/shortlinks', routes.allPublic)
 app.get('/shortlinks/:id', routes.onePublic)
-app.post('/shortlinks', express.bodyParser(), routes.postPublic)
-app.put('/shortlinks/:id', express.bodyParser(), routes.putPublic)
-app.delete('/shortlinks/:id', express.bodyParser(), routes.deletePublic)
+app.post('/shortlinks', express.bodyParser(), h.getUserCtx, routes.postPublic)
+app.put('/shortlinks/:id', express.bodyParser(), h.getUserCtx, routes.putPublic)
+app.delete('/shortlinks/:id', express.bodyParser(), h.getUserCtx, routes.deletePublic)
 
 ## other endpoints
 
