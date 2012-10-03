@@ -12,3 +12,7 @@ module.exports =
   card          : require './card'
   payment       : require './payment'
   refer_email   : require './refer_email'
+
+  #user
+  #message
+  #event

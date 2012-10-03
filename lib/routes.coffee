@@ -344,17 +344,34 @@ exports.deleteUser = (req, res) ->
 
 exports.deletePublic = (req, res) ->
   debug "DELETE #{req.url}"
-  id = req.params?.id
-  doc = req.body
+  id      = req.params?.id
+  type    = h.getTypeFromUrl(req.url)
+  userCtx = req.userCtx
+  doc     = req.body
   debug "   req.body", doc
   return if h.verifyRequiredFields(req, res, ['_rev'])
-  opts =
-    method: 'DELETE'
-    url: "#{config.dbUrl}/lifeswap/#{id}"
-    headers: req.headers
-    qs: rev: req.body._rev
-    json: req.body
-  request(opts).pipe(res)
+
+  async.series
+    validate: (next) ->
+      Validator = validators[type]
+      return next() if not Validator?
+      validator = new Validator(userCtx)
+      validator.validateDoc(_id: id, _deleted: true, next)
+    _rev: (next) ->
+      opts =
+        method: 'DELETE'
+        url: "#{config.dbUrl}/lifeswap/#{id}"
+        headers: req.headers
+        qs: rev: req.body._rev
+        json: req.body
+      h.request opts, (err, body, headers) ->
+        h.setCookie(res, headers)
+        return next(err) if err
+        next(null, body.rev)
+  , (err, resp) ->
+    return h.sendError(res, err) if err
+    _rev = resp._rev
+    res.json(200, {_rev})
 
 
 # @name createEvent

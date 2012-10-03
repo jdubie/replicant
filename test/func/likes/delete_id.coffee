@@ -50,9 +50,7 @@ describe 'DELETE /likes/:id', () ->
     request opts, (err, res, body) ->
       should.not.exist(err)
       res.statusCode.should.equal(200)
-      body.should.have.property('ok', true)
-      body.should.have.property('id', like._id)
-      body.should.have.property('rev')
+      body.should.have.property('_rev')
       done()
 
 
