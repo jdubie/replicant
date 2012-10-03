@@ -35,22 +35,22 @@ app.delete('/swaps/:id' , routes.forbidden)
 ## reviews
 app.get('/reviews', routes.allPublic)
 app.get('/reviews/:id', routes.onePublic)
-app.post('/reviews', express.bodyParser(), routes.postPublic)
-app.put('/reviews/:id', express.bodyParser(), routes.putPublic)
+app.post('/reviews', express.bodyParser(), h.getUserCtx, routes.postPublic)
+app.put('/reviews/:id', express.bodyParser(), h.getUserCtx, routes.putPublic)
 app.delete('/reviews/:id', routes.forbidden)
 
 ## likes
 app.get('/likes', routes.allPublic)
 app.get('/likes/:id', routes.onePublic)
-app.post('/likes', express.bodyParser(), routes.postPublic)
-app.put('/likes/:id', express.bodyParser(), routes.putPublic)
-app.delete('/likes/:id', express.bodyParser(), routes.deletePublic)
+app.post('/likes', express.bodyParser(), h.getUserCtx, routes.postPublic)
+app.put('/likes/:id', express.bodyParser(), h.getUserCtx, routes.putPublic)
+app.delete('/likes/:id', express.bodyParser(), h.getUserCtx, routes.deletePublic)
 
 ## requests
 app.get('/requests', routes.allPublic)
 app.get('/requests/:id', routes.onePublic)
-app.post('/requests', express.bodyParser(), routes.postPublic)
-app.put('/requests/:id', express.bodyParser(), routes.putPublic)
+app.post('/requests', express.bodyParser(), h.getUserCtx, routes.postPublic)
+app.put('/requests/:id', express.bodyParser(), h.getUserCtx, routes.putPublic)
 app.delete('/requests/:id', routes.forbidden)
 
 ## entities
