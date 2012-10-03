@@ -185,23 +185,38 @@ exports.createUser = (req, res) ->
 
 exports.postPublic = (req, res) ->
   debug "POST #{req.url}"
-  model = h.getModelFromUrl(req.url)
-  doc = req.body
+  model   = h.getModelFromUrl(req.url)
+  type    = h.getTypeFromUrl(req.url)
+  userCtx = req.userCtx   # from the app.all route
+  doc     = req.body
+
   ctime = mtime = Date.now()
   doc.ctime = ctime
   doc.mtime = mtime
-  opts =
-    method: 'POST'
-    url: "#{config.dbUrl}/lifeswap"
-    headers: req.headers
-    json: doc
-  h.request opts, (err, body, headers) ->
-    h.setCookie(res, headers)
+
+  async.series
+    validate: (next) ->
+      Validator = validators[type]
+      return next() if not Validator?
+      validator = new Validator(userCtx)
+      validator.validateDoc(doc, next)
+    _rev: (next) ->
+      opts =
+        method: 'POST'
+        url: "#{config.dbUrl}/lifeswap"
+        headers: req.headers
+        json: doc
+      h.request opts, (err, body, headers) ->
+        h.setCookie(res, headers)
+        return next(err) if err
+        next(null, body.rev)
+    notify: (next) ->
+      h.createSimpleCreateNotification(model, doc, next)
+
+  , (err, resp) ->
     return h.sendError(res, err) if err
-    h.createSimpleCreateNotification model, doc, (err) ->
-      return h.sendError(res, err) if err
-      _rev = body.rev
-      res.json(201, {_rev, ctime, mtime})
+    _rev = resp._rev
+    res.json(201, {_rev, ctime, mtime})
 
 
 exports.allPublic = (req, res) ->
@@ -219,20 +234,35 @@ exports.onePublic = (req, res) ->
 
 exports.putPublic = (req, res) ->
   debug "#putPublic #{req.url}"
-  id = req.params.id
-  doc = req.body
-  mtime = Date.now()
+  id      = req.params.id
+  type    = h.getTypeFromUrl(req.url)
+  userCtx = req.userCtx
+  doc     = req.body
+
+  mtime     = Date.now()
   doc.mtime = mtime
-  opts =
-    method: 'PUT'
-    url: "#{config.dbUrl}/lifeswap/#{id}"
-    headers: req.headers
-    json: doc
-  h.request opts, (err, body, headers) ->
-    h.setCookie(res, headers)
+
+  async.series
+    validate: (next) ->
+      Validator = validators[type]
+      return next() if not Validator?
+      validator = new Validator(userCtx)
+      validator.validateDoc(doc, next)
+    _rev: (next) ->
+      opts =
+        method: 'PUT'
+        url: "#{config.dbUrl}/lifeswap/#{id}"
+        headers: req.headers
+        json: doc
+      h.request opts, (err, body, headers) ->
+        h.setCookie(res, headers)
+        return next(err) if err
+        next(null, body.rev)
+  , (err, resp) ->
     return h.sendError(res, err) if err
-    _rev = body.rev
+    _rev = resp._rev
     res.json(200, {_rev, mtime})
+
 
 exports.forbidden = (req, res) ->
   debug "#forbidden: #{req.url}"

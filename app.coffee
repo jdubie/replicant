@@ -28,8 +28,8 @@ app.delete('/users/:id', routes.deleteUser)
 ## swaps
 app.get('/swaps', routes.allPublic)
 app.get('/swaps/:id', routes.onePublic)
-app.post('/swaps', express.bodyParser(), routes.postPublic)
-app.put('/swaps/:id', express.bodyParser(), routes.putPublic)
+app.post('/swaps', express.bodyParser(), h.getUserCtx, routes.postPublic)
+app.put('/swaps/:id', express.bodyParser(), h.getUserCtx, routes.putPublic)
 app.delete('/swaps/:id' , routes.forbidden)
 
 ## reviews

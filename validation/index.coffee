@@ -1,4 +1,5 @@
 module.exports =
+  swap          : require './swap'
   email_address : require './email_address'
   phone_number  : require './phone_number'
   card          : require './card'
