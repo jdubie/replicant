@@ -6,6 +6,7 @@ debug   = require('debug')('replicant:routes')
 config  = require('config')
 rep     = require('lib/replicant')
 h       = require('lib/helpers')
+validators = require('validation')
 
 
 exports.login = (req, res) ->
@@ -538,8 +539,8 @@ exports.deletePrivate = (req, res) ->
 
   async.waterfall [
     (next) ->
-      return next() if type isnt 'email_address'
-      Validator = require("validation/#{type}")
+      Validator = validators[type]
+      return next() if not Validator?
       validator = new Validator(userCtx)
       # return constable db if this is a constable
       validator.validateDoc(_id: id, _deleted: true, next)
@@ -588,8 +589,8 @@ exports.postPrivate = (req, res) ->
 
   async.series
     validate: (next) ->
-      return next() if type isnt 'email_address'
-      Validator = require("validation/#{type}")
+      Validator = validators[type]
+      return next() if not Validator?
       validator = new Validator(userCtx)
       validator.validateDoc(doc, next)
     _rev: (next) ->
@@ -625,8 +626,8 @@ exports.putPrivate = (req, res) ->
 
   async.series
     validate: (next) ->
-      return next() if type isnt 'email_address'
-      Validator = require("validation/#{type}")
+      Validator = validators[type]
+      return next() if not Validator?
       validator = new Validator(userCtx)
       validator.validateDoc(doc, next)
     _rev: (next) ->
