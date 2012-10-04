@@ -151,6 +151,18 @@ exports.createUser = (req, res) ->
       rep.createUserDb({userId: user_id, name: name}, next)
 
     (_res, next) ->
+      ## get userCtx
+      h.getUserCtxFromSession({headers: {cookie}}, next)
+
+    (userCtx, headers, next) ->
+      updateCookie(headers)
+      ## validate user doc
+      Validator = validators.user
+      return next() if not Validator?
+      validator = new Validator(userCtx)
+      validator.validateDoc(user, next)
+
+    (next) ->
       ## create 'user' type document
       debug "   create 'user' type document"
       userNano = h.getDbWithCookie({dbName: 'lifeswap', cookie})
