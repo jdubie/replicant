@@ -165,7 +165,7 @@ exports.createUser = (req, res) ->
     (next) ->
       ## create 'user' type document
       debug "   create 'user' type document"
-      userNano = h.getDbWithCookie({dbName: 'lifeswap', cookie})
+      userNano = config.db.main(cookie)
       userNano.insert(user, user_id, next)
 
     (_res, headers, next) ->
@@ -173,8 +173,7 @@ exports.createUser = (req, res) ->
       response._rev = _res?.rev    # add _rev to response
       ## create 'email_address' type private document
       debug "   create 'email_address' type private document"
-      userDbName = h.getUserDbName(userId: user_id)
-      userPrivateNano = h.getDbWithCookie({dbName: userDbName, cookie})
+      userPrivateNano = config.db.user(user_id, cookie)
       emailDoc =
         type: 'email_address'
         name: name
@@ -309,7 +308,7 @@ exports.deleteUser = (req, res) ->
       async.waterfall [
         (_next) ->
           debug 'get user document'
-          db = h.getDbWithCookie({dbName: 'lifeswap', cookie})
+          db = config.db.main(cookie)
           db.get(userId, h.nanoCallback(_next))
         (userDoc, _headers, _next) ->
           userRev = userDoc._rev
@@ -333,7 +332,7 @@ exports.deleteUser = (req, res) ->
             ## delete user type document
             (cb) ->
               debug 'delete user'
-              db = h.getDbWithCookie({dbName: 'lifeswap', cookie})
+              db = config.db.main(cookie)
               updateCookieCallback = (err, _res, _headers) ->
                 updateCookie(_headers)
                 cb(err, _res, _headers)
@@ -479,8 +478,7 @@ exports.getEvent = (req, res) ->
   debug "GET /events/#{id}"
   userCtx = req.userCtx   # from the app.all route
   cookie = req.headers.cookie
-  userDbName = h.getUserDbName(userId: userCtx.user_id)
-  userPrivateNano = h.getDbWithCookie({dbName: userDbName, cookie})
+  userPrivateNano = config.db.user(userCtx.user_id, cookie)
   headers = null
   async.waterfall [
     (next) -> userPrivateNano.get(id, h.nanoCallback(next))
@@ -628,8 +626,7 @@ exports.deletePrivate = (req, res) ->
       if isConstable
         userDb = config.db.user(userId)
       else
-        userDbName = h.getUserDbName({userId})
-        userDb = h.getDbWithCookie({dbName: userDbName, cookie})
+        userDb = config.db.user(userId, cookie)
 
       userDb.destroy(doc._id, doc._rev, h.nanoCallback(next))
 

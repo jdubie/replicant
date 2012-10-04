@@ -40,10 +40,11 @@ module.exports.couch = couch        # admin access to couch
 module.exports.nano  = nano(dbUrl)  # unprivileged access to couch
 module.exports.dbUrl = dbUrl        # couch url
 
+# path = db name
+# cookie = cookie [optional]
 getDb = (name, cookie) ->
   if cookie?
-    url = url.format({protocol, hostname, port, path: name})
-    nano({url, cookie})
+    nano({url: "#{dbUrl}/#{name}", cookie})
   else
     couch().use(name)
 

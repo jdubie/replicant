@@ -81,7 +81,7 @@ replicant.createUserDb = ({userId, name}, callback) ->
 
 
 replicant.changePassword = ({name, oldPass, newPass, cookie}, callback) ->
-  db = h.getDbWithCookie({cookie, dbName: '_users'})
+  db = config.db._users(cookie)
   ## no need to watch for set-cookie header b/c will re-auth after
   ##    changing password
   async.waterfall [
@@ -205,9 +205,8 @@ replicant.getTypeUserDb = ({type, userId, cookie, roles}, callback) ->
   roles ?= []
 
   # constables should fetch from drunk tank
-  userDbName = h.getUserDbName({userId})
-  dbName = if 'constable' in roles then 'drunk_tank' else userDbName
-  db = h.getDbWithCookie({dbName, cookie})
+  dbUserId = if 'constable' in roles then 'drunk_tank' else userId
+  db = config.db.user(dbUserId, cookie)
 
   opts =
     key: type
@@ -217,7 +216,7 @@ replicant.getTypeUserDb = ({type, userId, cookie, roles}, callback) ->
       error =
         statusCode: err.status_code ? 500
         error     : err.error ? "GET error"
-        reason    : err.reason ? "Error getting '#{type}' docs from #{userDbName} DB"
+        reason    : err.reason ? "Error getting '#{type}' docs from #{dbUserId}'s DB"
       return callback(error)
     docs = (row.doc for row in res.rows)
     callback(err, docs, headers)
@@ -237,8 +236,7 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
     }
 
   delete message.read
-  userDbName = h.getUserDbName({userId})
-  db = h.getDbWithCookie({cookie, dbName: userDbName})
+  db = config.db.user(userId, cookie)
   headers = null    # in case a set-cookie header is sent in response
 
   ## ensure that we have the right cookie set on the database
@@ -246,7 +244,7 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
     if _headers?['set-cookie']?
       headers = _headers                # update headers
       cookie = _headers['set-cookie']   # update cookie
-      db = h.getDbWithCookie({dbName: userDbName, cookie})  # reset db
+      db = config.db.user(userId, cookie)
     db
 
   ## mark a message read
@@ -341,12 +339,10 @@ replicant.getMessages = ({userId, cookie, roles, type}, callback) ->
 ## gets a message and tacks on its 'read' status (true/false)
 replicant.getMessage = ({id, userId, cookie, roles}, callback) ->
 
-  userDbName = h.getUserDbName({userId})
-  dbRead  = h.getDbWithCookie({dbName: userDbName, cookie})
-
-  dbName  = if 'constable' in roles then 'drunk_tank' else userDbName
-  db      = h.getDbWithCookie({dbName, cookie})
-  headers = null
+  dbUserId = if 'constable' in roles then 'drunk_tank' else userId
+  dbRead   = config.db.user(userId, cookie)
+  db       = config.db.user(dbUserId, cookie)
+  headers  = null
 
   ## ensure that we have the right cookie set on the databases
   resetDbs = (_headers) ->
@@ -354,8 +350,8 @@ replicant.getMessage = ({id, userId, cookie, roles}, callback) ->
       headers = _headers                        # update headers
       cookie = _headers['set-cookie']           # update cookie
       # reset DBs
-      db     = h.getDbWithCookie({dbName, cookie})
-      dbRead = h.getDbWithCookie({dbName: userDbName, cookie})
+      db     = config.db.user(dbUserId, cookie)
+      dbRead = config.db.user(userId, cookie)
 
   message = null
   async.waterfall [
