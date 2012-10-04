@@ -13,7 +13,6 @@ module.exports =
   payment       : require './payment'
   refer_email   : require './refer_email'
   event         : require './event'
+  message       : require './message'
 
   #user
-  #message
-  #event

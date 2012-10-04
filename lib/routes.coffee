@@ -756,9 +756,10 @@ exports.sendMessage = (req, res) ->
     'name', 'user_id', 'event_id'
   ]
 
-  userCtx = req.userCtx   # from the app.all route
+  userCtx = req.userCtx
   message = req.body
 
+  # should be fixed by Validator call
   if (message.name isnt userCtx.name or message.user_id isnt userCtx.user_id) and 'constable' not in userCtx.roles
     return res.send(403)
 
@@ -770,6 +771,12 @@ exports.sendMessage = (req, res) ->
   userDbName = h.getUserDbName(userId: message.user_id)
 
   async.series
+    validate: (next) ->
+      Validator = validators.message
+      return next() if not Validator?
+      validator = new Validator(userCtx)
+      validator.validateDoc(message, next)
+
     _rev: (done) ->
       debug 'insert into constable db (drunk_tank)'
       extractRev = (err, body) ->
