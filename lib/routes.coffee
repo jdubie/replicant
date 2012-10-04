@@ -486,10 +486,10 @@ exports.putEvent = (req, res) ->
   debug "PUT /events/#{id}"
   return if h.verifyRequiredFields(req, res, ['_rev'])
 
-  userCtx = req.userCtx   # from the app.all route
-  userDbName = h.getUserDbName(userId: userCtx.user_id)
-  event = req.body
-  mtime = Date.now()
+  userCtx     = req.userCtx   # from the app.all route
+  userDbName  = h.getUserDbName(userId: userCtx.user_id)
+  event       = req.body
+  mtime       = Date.now()
   event.mtime = mtime
 
   _rev = _users = null
@@ -497,15 +497,19 @@ exports.putEvent = (req, res) ->
   
   async.waterfall [
     (next) ->
+      Validator = validators.event
+      validator = new Validator(userCtx)
+      validator.validateDoc(event, next)
+
+    (next) ->
       debug 'get users'
       rep.getEventUsers({eventId: id}, next)    # (err, users)
 
     (users, next) ->
       debug 'got users'
       if userCtx.user_id not in users
-        if 'constable' in userCtx.roles
-          isConstable = true
-        else
+        isConstable = 'constable' in userCtx.roles
+        if not isConstable
           error =
             statusCode: 403
             reason: "Not authorized to modify this event"
