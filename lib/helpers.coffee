@@ -13,17 +13,6 @@ h = {}
 h.getUserDbName = ({userId}) ->
   if userId is 'drunk_tank' then 'drunk_tank' else "users_#{userId}"
 
-# getUserDbWithCookie
-#
-# @param userId {string} the user's id
-# @param cookie {string} the user's cookie
-h.getDbWithCookie = ({dbName, cookie}) ->
-  nanoOpts =
-    url: "#{config.dbUrl}/#{dbName}"
-    cookie: cookie
-  db = require('nano')(nanoOpts)
-  db
-
 
 ###
   @description returns _user id given name
@@ -42,7 +31,7 @@ h.getUserId = ({cookie, userCtx}, callback) ->
     userCtx.user_id = _userDoc?.user_id
     callback(err, userCtx, headers)
 
-  userPrivateNano = h.getDbWithCookie({dbName: '_users', cookie})
+  userPrivateNano = config.db._users(cookie)
   userPrivateNano.get("org.couchdb.user:#{userCtx.name}", h.nanoCallback(res))
 
 ###
@@ -208,7 +197,7 @@ h.createSimpleCreateNotification = (model, doc, callback) ->
 ###
 h.sendError = (res, err) ->
   debug '## ERROR ##', err
-  statusCode = err.statusCode ? 500
+  statusCode = err.statusCode ? err.status_code ? 500
   error =
     reason: err.reason
     error : err.error

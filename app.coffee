@@ -22,42 +22,42 @@ app.put('/user_ctx'   , express.bodyParser(), routes.password)
 app.get('/users', routes.allPublic)
 app.get('/users/:id', routes.onePublic)
 app.post('/users', express.bodyParser(), routes.createUser)
-app.put('/users/:id', express.bodyParser(), routes.putPublic)
+app.put('/users/:id', express.bodyParser(), h.getUserCtx, routes.putPublic)
 app.delete('/users/:id', routes.deleteUser)
 
 ## swaps
 app.get('/swaps', routes.allPublic)
 app.get('/swaps/:id', routes.onePublic)
-app.post('/swaps', express.bodyParser(), routes.postPublic)
-app.put('/swaps/:id', express.bodyParser(), routes.putPublic)
+app.post('/swaps', express.bodyParser(), h.getUserCtx, routes.postPublic)
+app.put('/swaps/:id', express.bodyParser(), h.getUserCtx, routes.putPublic)
 app.delete('/swaps/:id' , routes.forbidden)
 
 ## reviews
 app.get('/reviews', routes.allPublic)
 app.get('/reviews/:id', routes.onePublic)
-app.post('/reviews', express.bodyParser(), routes.postPublic)
-app.put('/reviews/:id', express.bodyParser(), routes.putPublic)
+app.post('/reviews', express.bodyParser(), h.getUserCtx, routes.postPublic)
+app.put('/reviews/:id', express.bodyParser(), h.getUserCtx, routes.putPublic)
 app.delete('/reviews/:id', routes.forbidden)
 
 ## likes
 app.get('/likes', routes.allPublic)
 app.get('/likes/:id', routes.onePublic)
-app.post('/likes', express.bodyParser(), routes.postPublic)
-app.put('/likes/:id', express.bodyParser(), routes.putPublic)
-app.delete('/likes/:id', express.bodyParser(), routes.deletePublic)
+app.post('/likes', express.bodyParser(), h.getUserCtx, routes.postPublic)
+app.put('/likes/:id', express.bodyParser(), h.getUserCtx, routes.putPublic)
+app.delete('/likes/:id', express.bodyParser(), h.getUserCtx, routes.deletePublic)
 
 ## requests
 app.get('/requests', routes.allPublic)
 app.get('/requests/:id', routes.onePublic)
-app.post('/requests', express.bodyParser(), routes.postPublic)
-app.put('/requests/:id', express.bodyParser(), routes.putPublic)
+app.post('/requests', express.bodyParser(), h.getUserCtx, routes.postPublic)
+app.put('/requests/:id', express.bodyParser(), h.getUserCtx, routes.putPublic)
 app.delete('/requests/:id', routes.forbidden)
 
 ## entities
 app.get('/entities' , routes.allPublic)
 app.get('/entities/:id', routes.onePublic)
-app.post('/entities', express.bodyParser(), routes.postPublic)
-app.put('/entities/:id', express.bodyParser(), routes.putPublic)
+app.post('/entities', express.bodyParser(), h.getUserCtx, routes.postPublic)
+app.put('/entities/:id', express.bodyParser(), h.getUserCtx, routes.putPublic)
 app.delete('/entities/:id', routes.forbidden)
 
 ## events
@@ -114,9 +114,9 @@ app.put('/notifications/:id', express.bodyParser(), h.getUserCtx, routes.changeR
 ## shortlinks
 app.get('/shortlinks', routes.allPublic)
 app.get('/shortlinks/:id', routes.onePublic)
-app.post('/shortlinks', express.bodyParser(), routes.postPublic)
-app.put('/shortlinks/:id', express.bodyParser(), routes.putPublic)
-app.delete('/shortlinks/:id', express.bodyParser(), routes.deletePublic)
+app.post('/shortlinks', express.bodyParser(), h.getUserCtx, routes.postPublic)
+app.put('/shortlinks/:id', express.bodyParser(), h.getUserCtx, routes.putPublic)
+app.delete('/shortlinks/:id', express.bodyParser(), h.getUserCtx, routes.deletePublic)
 
 ## other endpoints
 

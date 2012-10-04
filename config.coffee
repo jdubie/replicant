@@ -30,19 +30,32 @@ switch process.env.ENV
     process.exit()
 
 nano = require('nano')
-## export admin db convenience functions
+
+# server admin
 couch = () -> nano(url.format({protocol, auth, hostname, port}))
-module.exports.db =
-  user      : (userId) -> couch().use(getUserDbName({userId}))
-  main      : () -> couch().use('lifeswap')
-  _users    : () -> couch().use('_users')
-  mapper    : () -> couch().use('mapper')
-  constable : () -> couch().use('drunk_tank')
-module.exports.couch = couch
-## export couch url and non-admin nano
+# couch url
 dbUrl = url.format({protocol, hostname, port})
-module.exports.nano  = nano(dbUrl)
-module.exports.dbUrl = dbUrl
+## export!
+module.exports.couch = couch        # admin access to couch
+module.exports.nano  = nano(dbUrl)  # unprivileged access to couch
+module.exports.dbUrl = dbUrl        # couch url
+
+# path = db name
+# cookie = cookie [optional]
+getDb = (name, cookie) ->
+  if cookie?
+    nano({url: "#{dbUrl}/#{name}", cookie})
+  else
+    couch().use(name)
+
+# export db functions with admin or cookie auth
+#   `cookie` _always_ optional
+module.exports.db =
+  user      : (userId, cookie) -> getDb(getUserDbName({userId}), cookie)
+  main      : (cookie) -> getDb('lifeswap', cookie)
+  _users    : (cookie) -> getDb('_users', cookie)
+  mapper    : (cookie) -> getDb('mapper', cookie)
+  constable : (cookie) -> getDb('drunk_tank', cookie)
 
 
 # Work Queue

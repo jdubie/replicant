@@ -6,6 +6,7 @@ debug   = require('debug')('replicant:routes')
 config  = require('config')
 rep     = require('lib/replicant')
 h       = require('lib/helpers')
+validators = require('validation')
 
 
 exports.login = (req, res) ->
@@ -150,18 +151,29 @@ exports.createUser = (req, res) ->
       rep.createUserDb({userId: user_id, name: name}, next)
 
     (_res, next) ->
+      ## get userCtx
+      h.getUserCtxFromSession({headers: {cookie}}, next)
+
+    (userCtx, headers, next) ->
+      updateCookie(headers)
+      ## validate user doc
+      Validator = validators.user
+      return next() if not Validator?
+      validator = new Validator(userCtx)
+      validator.validateDoc(user, next)
+
+    (next) ->
       ## create 'user' type document
       debug "   create 'user' type document"
-      userNano = h.getDbWithCookie({dbName: 'lifeswap', cookie})
-      userNano.insert(user, user_id, h.nanoCallback(next))
+      userNano = config.db.main(cookie)
+      userNano.insert(user, user_id, next)
 
     (_res, headers, next) ->
       updateCookie(headers)
       response._rev = _res?.rev    # add _rev to response
       ## create 'email_address' type private document
       debug "   create 'email_address' type private document"
-      userDbName = h.getUserDbName(userId: user_id)
-      userPrivateNano = h.getDbWithCookie({dbName: userDbName, cookie})
+      userPrivateNano = config.db.user(user_id, cookie)
       emailDoc =
         type: 'email_address'
         name: name
@@ -169,7 +181,7 @@ exports.createUser = (req, res) ->
         email_address: email
         ctime: ctime
         mtime: mtime
-      userPrivateNano.insert(emailDoc, h.nanoCallback(next))
+      userPrivateNano.insert(emailDoc, next)
 
     (_res, headers, next) ->
       updateCookie(headers)
@@ -184,23 +196,38 @@ exports.createUser = (req, res) ->
 
 exports.postPublic = (req, res) ->
   debug "POST #{req.url}"
-  model = h.getModelFromUrl(req.url)
-  doc = req.body
+  model   = h.getModelFromUrl(req.url)
+  type    = h.getTypeFromUrl(req.url)
+  userCtx = req.userCtx   # from the app.all route
+  doc     = req.body
+
   ctime = mtime = Date.now()
   doc.ctime = ctime
   doc.mtime = mtime
-  opts =
-    method: 'POST'
-    url: "#{config.dbUrl}/lifeswap"
-    headers: req.headers
-    json: doc
-  h.request opts, (err, body, headers) ->
-    h.setCookie(res, headers)
+
+  async.series
+    validate: (next) ->
+      Validator = validators[type]
+      return next() if not Validator?
+      validator = new Validator(userCtx)
+      validator.validateDoc(doc, next)
+    _rev: (next) ->
+      opts =
+        method: 'POST'
+        url: "#{config.dbUrl}/lifeswap"
+        headers: req.headers
+        json: doc
+      h.request opts, (err, body, headers) ->
+        h.setCookie(res, headers)
+        return next(err) if err
+        next(null, body.rev)
+    notify: (next) ->
+      h.createSimpleCreateNotification(model, doc, next)
+
+  , (err, resp) ->
     return h.sendError(res, err) if err
-    h.createSimpleCreateNotification model, doc, (err) ->
-      return h.sendError(res, err) if err
-      _rev = body.rev
-      res.json(201, {_rev, ctime, mtime})
+    _rev = resp._rev
+    res.json(201, {_rev, ctime, mtime})
 
 
 exports.allPublic = (req, res) ->
@@ -218,20 +245,35 @@ exports.onePublic = (req, res) ->
 
 exports.putPublic = (req, res) ->
   debug "#putPublic #{req.url}"
-  id = req.params.id
-  doc = req.body
-  mtime = Date.now()
+  id      = req.params.id
+  type    = h.getTypeFromUrl(req.url)
+  userCtx = req.userCtx
+  doc     = req.body
+
+  mtime     = Date.now()
   doc.mtime = mtime
-  opts =
-    method: 'PUT'
-    url: "#{config.dbUrl}/lifeswap/#{id}"
-    headers: req.headers
-    json: doc
-  h.request opts, (err, body, headers) ->
-    h.setCookie(res, headers)
+
+  async.series
+    validate: (next) ->
+      Validator = validators[type]
+      return next() if not Validator?
+      validator = new Validator(userCtx)
+      validator.validateDoc(doc, next)
+    _rev: (next) ->
+      opts =
+        method: 'PUT'
+        url: "#{config.dbUrl}/lifeswap/#{id}"
+        headers: req.headers
+        json: doc
+      h.request opts, (err, body, headers) ->
+        h.setCookie(res, headers)
+        return next(err) if err
+        next(null, body.rev)
+  , (err, resp) ->
     return h.sendError(res, err) if err
-    _rev = body.rev
+    _rev = resp._rev
     res.json(200, {_rev, mtime})
+
 
 exports.forbidden = (req, res) ->
   debug "#forbidden: #{req.url}"
@@ -266,7 +308,7 @@ exports.deleteUser = (req, res) ->
       async.waterfall [
         (_next) ->
           debug 'get user document'
-          db = h.getDbWithCookie({dbName: 'lifeswap', cookie})
+          db = config.db.main(cookie)
           db.get(userId, h.nanoCallback(_next))
         (userDoc, _headers, _next) ->
           userRev = userDoc._rev
@@ -290,7 +332,7 @@ exports.deleteUser = (req, res) ->
             ## delete user type document
             (cb) ->
               debug 'delete user'
-              db = h.getDbWithCookie({dbName: 'lifeswap', cookie})
+              db = config.db.main(cookie)
               updateCookieCallback = (err, _res, _headers) ->
                 updateCookie(_headers)
                 cb(err, _res, _headers)
@@ -313,17 +355,34 @@ exports.deleteUser = (req, res) ->
 
 exports.deletePublic = (req, res) ->
   debug "DELETE #{req.url}"
-  id = req.params?.id
-  doc = req.body
+  id      = req.params?.id
+  type    = h.getTypeFromUrl(req.url)
+  userCtx = req.userCtx
+  doc     = req.body
   debug "   req.body", doc
   return if h.verifyRequiredFields(req, res, ['_rev'])
-  opts =
-    method: 'DELETE'
-    url: "#{config.dbUrl}/lifeswap/#{id}"
-    headers: req.headers
-    qs: rev: req.body._rev
-    json: req.body
-  request(opts).pipe(res)
+
+  async.series
+    validate: (next) ->
+      Validator = validators[type]
+      return next() if not Validator?
+      validator = new Validator(userCtx)
+      validator.validateDoc(_id: id, _deleted: true, next)
+    _rev: (next) ->
+      opts =
+        method: 'DELETE'
+        url: "#{config.dbUrl}/lifeswap/#{id}"
+        headers: req.headers
+        qs: rev: req.body._rev
+        json: req.body
+      h.request opts, (err, body, headers) ->
+        h.setCookie(res, headers)
+        return next(err) if err
+        next(null, body.rev)
+  , (err, resp) ->
+    return h.sendError(res, err) if err
+    _rev = resp._rev
+    res.json(200, {_rev})
 
 
 # @name createEvent
@@ -334,7 +393,7 @@ exports.deletePublic = (req, res) ->
 # 
 # @return {_rev, ctime, mtime, hosts, guests}
 exports.createEvent = (req, res) ->
-  event = req.body    # {_id, type, state, swap_id}
+  event   = req.body    # {_id, type, state, swap_id}
   userCtx = req.userCtx
 
   debug "POST /events"
@@ -349,41 +408,47 @@ exports.createEvent = (req, res) ->
   event["#{event.state}_time"] = ctime
 
   # global boy
-  swap = null
+  swap = _rev = hosts = guests = null
 
-  async.parallel
+  async.series [
+    (next) ->
+      Validator = validators.event
+      validator = new Validator(userCtx)
+      validator.validateDoc(event, next)
 
-    # insert event document into constable db
-    _rev: (done) ->
-      extractRev = (err, body) -> done(err, body?.rev)
-      config.db.constable().insert(event, h.nanoCallback(extractRev))
+    (next) ->
+      async.parallel [
 
-    # put all users assosciated with swap and return them
-    mapping: (done) ->
-      async.waterfall [
-        (next) ->
-          config.db.main().get(event.swap_id, h.nanoCallback2(next))
-        (_swap, next) ->
-          swap = _swap
-          mapping = _id: event._id, guests: [userCtx.user_id], hosts: [_swap.user_id]
-          returnUsers = (err) ->
-            return next(err) if err
-            next(null, mapping) # return users
-          config.db.mapper().insert(mapping, h.nanoCallback(returnUsers))
-      ], done
+        # insert event document into constable db
+        (done) ->
+          config.db.constable().insert event, (err, body) ->
+            _rev = body?.rev
+            done(err)
 
-  , (err, body) ->
+        # put all users associated with swap and return them
+        (done) ->
+          async.waterfall [
+            (next) ->
+              config.db.main().get(event.swap_id, next)
+            (_swap, headers, next) ->
+              swap    = _swap
+              guests  = [userCtx.user_id]
+              hosts   = [_swap.user_id]
+              mapping = {_id: event._id, guests, hosts}
+              config.db.mapper().insert(mapping, next)
+          ], done
+
+      ], next
+    (next) ->
+      h.replicateOut(_.union(guests, hosts), [event._id], next)
+    (next) ->
+      notifyData = {title: "event #{event._id}: event created", guests, hosts, event, swap}
+      h.createNotification('event.create', notifyData, next)
+  ], (err) ->
     return h.sendError(res, err) if err
-    {_rev, mapping} = body
-    {guests, hosts} = mapping
-
-    h.replicateOut _.union(guests, hosts), [event._id], (err) ->
-      return h.sendError(res, err) if err
-      h.createNotification 'event.create', {title: "event #{event._id}: event created", guests, hosts, event, swap}, (err) ->
-        return h.sendError(err, body) if err
-        result = {_rev, hosts, guests, ctime, mtime}
-        result["#{event.state}_time"] = event["#{event.state}_time"]
-        res.json(201, result)
+    result = {_rev, hosts, guests, ctime, mtime}
+    result["#{event.state}_time"] = event["#{event.state}_time"]
+    res.json(201, result)
 
 
 exports.getEvents = (req, res) ->
@@ -413,8 +478,7 @@ exports.getEvent = (req, res) ->
   debug "GET /events/#{id}"
   userCtx = req.userCtx   # from the app.all route
   cookie = req.headers.cookie
-  userDbName = h.getUserDbName(userId: userCtx.user_id)
-  userPrivateNano = h.getDbWithCookie({dbName: userDbName, cookie})
+  userPrivateNano = config.db.user(userCtx.user_id, cookie)
   headers = null
   async.waterfall [
     (next) -> userPrivateNano.get(id, h.nanoCallback(next))
@@ -432,10 +496,10 @@ exports.putEvent = (req, res) ->
   debug "PUT /events/#{id}"
   return if h.verifyRequiredFields(req, res, ['_rev'])
 
-  userCtx = req.userCtx   # from the app.all route
-  userDbName = h.getUserDbName(userId: userCtx.user_id)
-  event = req.body
-  mtime = Date.now()
+  userCtx     = req.userCtx   # from the app.all route
+  userDbName  = h.getUserDbName(userId: userCtx.user_id)
+  event       = req.body
+  mtime       = Date.now()
   event.mtime = mtime
 
   _rev = _users = null
@@ -443,15 +507,19 @@ exports.putEvent = (req, res) ->
   
   async.waterfall [
     (next) ->
+      Validator = validators.event
+      validator = new Validator(userCtx)
+      validator.validateDoc(event, next)
+
+    (next) ->
       debug 'get users'
       rep.getEventUsers({eventId: id}, next)    # (err, users)
 
     (users, next) ->
       debug 'got users'
       if userCtx.user_id not in users
-        if 'constable' in userCtx.roles
-          isConstable = true
-        else
+        isConstable = 'constable' in userCtx.roles
+        if not isConstable
           error =
             statusCode: 403
             reason: "Not authorized to modify this event"
@@ -526,14 +594,47 @@ exports.onePrivate = (req, res) ->
 
 
 exports.deletePrivate = (req, res) ->
-  id = req.params?.id
+  id      = req.params?.id
+  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx   # from the app.all route
-  cookie = req.headers.cookie
+  cookie  = req.headers.cookie
   debug "DELETE #{req.url}: userCtx, cookie", userCtx, cookie
 
-  rep.deleteDocUserDb {
-    docId: id, cookie, roles: userCtx.roles
-  }, (err, resp) ->
+  isConstable = 'constable' in userCtx.roles
+  constableDb = config.db.constable()
+  docRev = null
+
+  async.waterfall [
+    (next) ->
+      Validator = validators[type]
+      return next() if not Validator?
+      validator = new Validator(userCtx)
+      # return constable db if this is a constable
+      validator.validateDoc(_id: id, _deleted: true, next)
+
+    ## get the document to get the userId
+    (next) ->
+      debug '#deletePrivate get doc'
+      constableDb.get(id, h.nanoCallback(next))
+
+    ## get the userId and delete from user db then constable db
+    (doc, _headers, next) ->
+      debug '#deletePrivate delete doc from user DB'
+      userId = doc.user_id
+      docRev = doc._rev
+
+      if isConstable
+        userDb = config.db.user(userId)
+      else
+        userDb = config.db.user(userId, cookie)
+
+      userDb.destroy(doc._id, doc._rev, h.nanoCallback(next))
+
+    ## delete from the constable db if it passed the last part
+    (res, _headers, next) ->
+      debug '#deletePrivate delete doc from drunk_tank'
+      constableDb.destroy(id, docRev, h.nanoCallback(next))
+  ], (err, resp) ->
     return h.sendError(res, err) if err
     res.send(200)
 
@@ -541,7 +642,8 @@ exports.deletePrivate = (req, res) ->
 exports.postPrivate = (req, res) ->
   debug "POST #{req.url}"
   debug "   req.userCtx", req.userCtx
-  model = h.getModelFromUrl(req.url)
+  model   = h.getModelFromUrl(req.url)
+  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx   # from the app.all route
   return if h.verifyRequiredFields(req, res, ['_id', 'user_id'])
 
@@ -552,6 +654,11 @@ exports.postPrivate = (req, res) ->
   doc.mtime = mtime
 
   async.series
+    validate: (next) ->
+      Validator = validators[type]
+      return next() if not Validator?
+      validator = new Validator(userCtx)
+      validator.validateDoc(doc, next)
     _rev: (next) ->
       userDbName = h.getUserDbName(userId: userCtx.user_id)
       opts =
@@ -574,14 +681,21 @@ exports.postPrivate = (req, res) ->
 
 
 exports.putPrivate = (req, res) ->
-  id = req.params?.id
   debug "PUT #{req.url}"
+  id      = req.params?.id
+  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx   # from the app.all route
-  doc = req.body
-  mtime = Date.now()
+  doc     = req.body
+
+  mtime     = Date.now()
   doc.mtime = mtime
 
   async.series
+    validate: (next) ->
+      Validator = validators[type]
+      return next() if not Validator?
+      validator = new Validator(userCtx)
+      validator.validateDoc(doc, next)
     _rev: (next) ->
       userDbName = h.getUserDbName(userId: userCtx.user_id)
       opts =
@@ -651,9 +765,10 @@ exports.sendMessage = (req, res) ->
     'name', 'user_id', 'event_id'
   ]
 
-  userCtx = req.userCtx   # from the app.all route
+  userCtx = req.userCtx
   message = req.body
 
+  # should be fixed by Validator call
   if (message.name isnt userCtx.name or message.user_id isnt userCtx.user_id) and 'constable' not in userCtx.roles
     return res.send(403)
 
@@ -665,6 +780,12 @@ exports.sendMessage = (req, res) ->
   userDbName = h.getUserDbName(userId: message.user_id)
 
   async.series
+    validate: (next) ->
+      Validator = validators.message
+      return next() if not Validator?
+      validator = new Validator(userCtx)
+      validator.validateDoc(message, next)
+
     _rev: (done) ->
       debug 'insert into constable db (drunk_tank)'
       extractRev = (err, body) ->

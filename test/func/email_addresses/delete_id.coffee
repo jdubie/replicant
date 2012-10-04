@@ -42,7 +42,7 @@ describe 'DELETE /email_addresses/:id', () ->
 
   describe 'bad user', () ->
 
-    it 'should return a 401 (forbidden)', (done) ->
+    it 'should return a 403 (forbidden)', (done) ->
       opts =
         method: 'DELETE'
         url: "http://localhost:3001/email_addresses/#{emailOne._id}"
@@ -52,7 +52,8 @@ describe 'DELETE /email_addresses/:id', () ->
         should.not.exist(err)
         # 401 error from the '_security' doc of user DB
         # (cannot access the DB)
-        res.should.have.property('statusCode', 401)
+        # BUT with middle-tier validation statusCode: 403
+        res.should.have.property('statusCode', 403)
         done()
 
     it 'should not delete \'email_address\' type entry in user db', (done) ->
