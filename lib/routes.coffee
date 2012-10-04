@@ -382,7 +382,7 @@ exports.deletePublic = (req, res) ->
 # 
 # @return {_rev, ctime, mtime, hosts, guests}
 exports.createEvent = (req, res) ->
-  event = req.body    # {_id, type, state, swap_id}
+  event   = req.body    # {_id, type, state, swap_id}
   userCtx = req.userCtx
 
   debug "POST /events"
@@ -397,41 +397,47 @@ exports.createEvent = (req, res) ->
   event["#{event.state}_time"] = ctime
 
   # global boy
-  swap = null
+  swap = _rev = hosts = guests = null
 
-  async.parallel
+  async.series [
+    (next) ->
+      Validator = validators.event
+      validator = new Validator(userCtx)
+      validator.validateDoc(event, next)
 
-    # insert event document into constable db
-    _rev: (done) ->
-      extractRev = (err, body) -> done(err, body?.rev)
-      config.db.constable().insert(event, h.nanoCallback(extractRev))
+    (next) ->
+      async.parallel [
 
-    # put all users assosciated with swap and return them
-    mapping: (done) ->
-      async.waterfall [
-        (next) ->
-          config.db.main().get(event.swap_id, h.nanoCallback2(next))
-        (_swap, next) ->
-          swap = _swap
-          mapping = _id: event._id, guests: [userCtx.user_id], hosts: [_swap.user_id]
-          returnUsers = (err) ->
-            return next(err) if err
-            next(null, mapping) # return users
-          config.db.mapper().insert(mapping, h.nanoCallback(returnUsers))
-      ], done
+        # insert event document into constable db
+        (done) ->
+          config.db.constable().insert event, (err, body) ->
+            _rev = body?.rev
+            done(err)
 
-  , (err, body) ->
+        # put all users associated with swap and return them
+        (done) ->
+          async.waterfall [
+            (next) ->
+              config.db.main().get(event.swap_id, next)
+            (_swap, headers, next) ->
+              swap    = _swap
+              guests  = [userCtx.user_id]
+              hosts   = [_swap.user_id]
+              mapping = {_id: event._id, guests, hosts}
+              config.db.mapper().insert(mapping, next)
+          ], done
+
+      ], next
+    (next) ->
+      h.replicateOut(_.union(guests, hosts), [event._id], next)
+    (next) ->
+      notifyData = {title: "event #{event._id}: event created", guests, hosts, event, swap}
+      h.createNotification('event.create', notifyData, next)
+  ], (err) ->
     return h.sendError(res, err) if err
-    {_rev, mapping} = body
-    {guests, hosts} = mapping
-
-    h.replicateOut _.union(guests, hosts), [event._id], (err) ->
-      return h.sendError(res, err) if err
-      h.createNotification 'event.create', {title: "event #{event._id}: event created", guests, hosts, event, swap}, (err) ->
-        return h.sendError(err, body) if err
-        result = {_rev, hosts, guests, ctime, mtime}
-        result["#{event.state}_time"] = event["#{event.state}_time"]
-        res.json(201, result)
+    result = {_rev, hosts, guests, ctime, mtime}
+    result["#{event.state}_time"] = event["#{event.state}_time"]
+    res.json(201, result)
 
 
 exports.getEvents = (req, res) ->

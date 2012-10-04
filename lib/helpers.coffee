@@ -208,7 +208,7 @@ h.createSimpleCreateNotification = (model, doc, callback) ->
 ###
 h.sendError = (res, err) ->
   debug '## ERROR ##', err
-  statusCode = err.statusCode ? 500
+  statusCode = err.statusCode ? err.status_code ? 500
   error =
     reason: err.reason
     error : err.error
