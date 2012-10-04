@@ -18,7 +18,7 @@ Include =
     callback(statusCode: 403, error: 'forbidden', reason: @errors)
 
   getOldDoc: (doc, callback) ->
-    return callback() if not doc._id
+    return callback() if not (doc._id or doc._rev) # POST
     @db().get doc._id, (err, doc) ->
       callback(null, doc ? null)    # ignore the error (not found)
 
