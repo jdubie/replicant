@@ -31,7 +31,7 @@ describe 'PUT /users/:id', () ->
       headers: cookie: user.cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
-      res.statusCode.should.eql(200)
+      res.should.have.property('statusCode', 200)
       body.should.have.keys(['_rev', 'mtime'])
       for key, val of body
         user[key] = val

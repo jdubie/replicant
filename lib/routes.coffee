@@ -154,7 +154,7 @@ exports.createUser = (req, res) ->
       ## create 'user' type document
       debug "   create 'user' type document"
       userNano = h.getDbWithCookie({dbName: 'lifeswap', cookie})
-      userNano.insert(user, user_id, h.nanoCallback(next))
+      userNano.insert(user, user_id, next)
 
     (_res, headers, next) ->
       updateCookie(headers)
@@ -170,7 +170,7 @@ exports.createUser = (req, res) ->
         email_address: email
         ctime: ctime
         mtime: mtime
-      userPrivateNano.insert(emailDoc, h.nanoCallback(next))
+      userPrivateNano.insert(emailDoc, next)
 
     (_res, headers, next) ->
       updateCookie(headers)

@@ -1,5 +1,6 @@
 module.exports =
   # public
+  user          : require './user'
   swap          : require './swap'
   review        : require './review'
   like          : require './like'
@@ -14,5 +15,3 @@ module.exports =
   refer_email   : require './refer_email'
   event         : require './event'
   message       : require './message'
-
-  #user
