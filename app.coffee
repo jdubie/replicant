@@ -64,7 +64,7 @@ app.delete('/entities/:id', routes.forbidden)
 app.get('/events', h.getUserCtx, routes.getEvents)
 app.get('/events/:id', h.getUserCtx, routes.getEvent)
 app.post('/events', express.bodyParser(), h.getUserCtx, h.validate, routes.createEvent)
-app.put('/events/:id', express.bodyParser(), h.getUserCtx, routes.putEvent)
+app.put('/events/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.putEvent)
 app.delete('/events/:id', routes.forbidden)
 
 ## cards

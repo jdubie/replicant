@@ -45,10 +45,10 @@ describe 'PUT /events/:id', () ->
     after (finished) -> event.destroy(finished)
 
     it 'should 400 on bad input', (done) ->
-      json = event.attributes()
       verifyField = (field, callback) ->
-        value = json[field]
+        json = event.attributes()
         delete json[field]
+        json.state = EVENT_STATE.confirmed
         opts =
           method: 'PUT'
           url: "http://localhost:3001/events/#{event._id}"
@@ -59,8 +59,6 @@ describe 'PUT /events/:id', () ->
           res.should.have.property('statusCode', 400)
           body.should.have.keys(['error', 'reason'])
           body.reason.should.have.property(field)
-
-          json[field] = value
           callback()
       async.map(['_rev'], verifyField, done)
 

@@ -483,10 +483,6 @@ exports.putEvent = (req, res) ->
   isConstable = stateChange = false
   
   async.waterfall [
-    (next) ->
-      Validator = validators.event
-      validator = new Validator(userCtx)
-      validator.validateDoc(event, next)
 
     (next) ->
       debug 'get users'
