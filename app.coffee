@@ -98,7 +98,7 @@ app.delete('/phone_numbers/:id', h.getUserCtx, h.validate, routes.deletePrivate)
 ## messages
 app.get('/messages', h.getUserCtx, routes.getMessages)
 app.get('/messages/:id', h.getUserCtx, routes.getMessage)
-app.post('/messages', express.bodyParser(), h.getUserCtx, routes.sendMessage)
+app.post('/messages', express.bodyParser(), h.getUserCtx, h.validate, routes.sendMessage)
 app.put('/messages/:id', express.bodyParser(), h.getUserCtx, routes.changeReadStatus)
 app.delete('/messages/:id', routes.forbidden)
 

@@ -713,9 +713,6 @@ exports.getMessage = (req, res) ->
 
 exports.sendMessage = (req, res) ->
   debug "POST /message"
-  return if h.verifyRequiredFields req, res, [
-    'name', 'user_id', 'event_id'
-  ]
 
   userCtx = req.userCtx
   message = req.body
@@ -732,11 +729,6 @@ exports.sendMessage = (req, res) ->
   userDbName = h.getUserDbName(userId: message.user_id)
 
   async.series
-    validate: (next) ->
-      Validator = validators.message
-      return next() if not Validator?
-      validator = new Validator(userCtx)
-      validator.validateDoc(message, next)
 
     _rev: (done) ->
       debug 'insert into constable db (drunk_tank)'

@@ -34,10 +34,9 @@ describe 'POST /messages', () ->
 
   describe 'normal user', () ->
 
-    it 'should 400 on bad input', (done) ->
-      json = message.attributes()
+    it 'should 403 on bad input', (done) ->
       verifyField = (field, callback) ->
-        value = json[field]
+        json = message.attributes()
         delete json[field]
         opts =
           method: 'POST'
@@ -46,11 +45,9 @@ describe 'POST /messages', () ->
           headers: cookie: guest.cookie
         request opts, (err, res, body) ->
           should.not.exist(err)
-          res.should.have.property('statusCode', 400)
+          res.should.have.property('statusCode', 403)
           body.should.have.keys(['error', 'reason'])
           body.reason.should.have.property(field)
-
-          json[field] = value
           callback()
       async.map(['name', 'user_id', 'event_id'], verifyField, done)
 
@@ -109,10 +106,9 @@ describe 'POST /messages', () ->
 
   describe 'constable user', () ->
 
-    it 'should 400 on bad input', (done) ->
-      json = messageC.attributes()
+    it 'should 403 on bad input', (done) ->
       verifyField = (field, callback) ->
-        value = json[field]
+        json = messageC.attributes()
         delete json[field]
         opts =
           method: 'POST'
@@ -121,11 +117,9 @@ describe 'POST /messages', () ->
           headers: cookie: constable.cookie
         request opts, (err, res, body) ->
           should.not.exist(err)
-          res.should.have.property('statusCode', 400)
+          res.should.have.property('statusCode', 403)
           body.should.have.keys(['error', 'reason'])
           body.reason.should.have.property(field)
-
-          json[field] = value
           callback()
       async.map(['name', 'user_id', 'event_id'], verifyField, done)
 
