@@ -63,7 +63,7 @@ app.delete('/entities/:id', routes.forbidden)
 ## events
 app.get('/events', h.getUserCtx, routes.getEvents)
 app.get('/events/:id', h.getUserCtx, routes.getEvent)
-app.post('/events', express.bodyParser(), h.getUserCtx, routes.createEvent)
+app.post('/events', express.bodyParser(), h.getUserCtx, h.validate, routes.createEvent)
 app.put('/events/:id', express.bodyParser(), h.getUserCtx, routes.putEvent)
 app.delete('/events/:id', routes.forbidden)
 

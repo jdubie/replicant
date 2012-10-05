@@ -380,7 +380,6 @@ exports.createEvent = (req, res) ->
 
   debug "POST /events"
   debug "   event" , event
-  return if h.verifyRequiredFields(req, res, ['swap_id', '_id', 'state'])
 
   delete event.hosts
   delete event.guests
@@ -393,10 +392,6 @@ exports.createEvent = (req, res) ->
   swap = _rev = hosts = guests = null
 
   async.series [
-    (next) ->
-      Validator = validators.event
-      validator = new Validator(userCtx)
-      validator.validateDoc(event, next)
 
     (next) ->
       async.parallel [

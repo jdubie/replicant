@@ -89,10 +89,9 @@ describe 'POST /events', () ->
       done()
 
 
-  it 'should 400 on bad input', (done) ->
+  it 'should 403 on bad input', (done) ->
     verifyField = (field, callback) ->
       json = event.attributes()
-      value = json[field]
       delete json[field]
       opts =
         url: "http://localhost:3001/events"
@@ -101,10 +100,8 @@ describe 'POST /events', () ->
         headers: cookie: guest.cookie
       request opts, (err, res, body) ->
         should.not.exist(err)
-        res.should.have.property('statusCode', 400)
+        res.should.have.property('statusCode', 403)
         body.should.have.keys(['error', 'reason'])
         body.reason.should.have.property(field)
-
-        json[field] = value
         callback()
     async.map(['_id', 'swap_id', 'state'], verifyField, done)
