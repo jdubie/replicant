@@ -197,7 +197,6 @@ exports.createUser = (req, res) ->
 exports.postPublic = (req, res) ->
   debug "POST #{req.url}"
   model   = h.getModelFromUrl(req.url)
-  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx   # from the app.all route
   doc     = req.body
 
@@ -206,11 +205,6 @@ exports.postPublic = (req, res) ->
   doc.mtime = mtime
 
   async.series
-    validate: (next) ->
-      Validator = validators[type]
-      return next() if not Validator?
-      validator = new Validator(userCtx)
-      validator.validateDoc(doc, next)
     _rev: (next) ->
       opts =
         method: 'POST'
@@ -246,7 +240,6 @@ exports.onePublic = (req, res) ->
 exports.putPublic = (req, res) ->
   debug "#putPublic #{req.url}"
   id      = req.params.id
-  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx
   doc     = req.body
 
@@ -254,11 +247,6 @@ exports.putPublic = (req, res) ->
   doc.mtime = mtime
 
   async.series
-    validate: (next) ->
-      Validator = validators[type]
-      return next() if not Validator?
-      validator = new Validator(userCtx)
-      validator.validateDoc(doc, next)
     _rev: (next) ->
       opts =
         method: 'PUT'
@@ -356,18 +344,12 @@ exports.deleteUser = (req, res) ->
 exports.deletePublic = (req, res) ->
   debug "DELETE #{req.url}"
   id      = req.params?.id
-  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx
   doc     = req.body
   debug "   req.body", doc
   return if h.verifyRequiredFields(req, res, ['_rev'])
 
   async.series
-    validate: (next) ->
-      Validator = validators[type]
-      return next() if not Validator?
-      validator = new Validator(userCtx)
-      validator.validateDoc(_id: id, _deleted: true, next)
     _rev: (next) ->
       opts =
         method: 'DELETE'
@@ -398,7 +380,6 @@ exports.createEvent = (req, res) ->
 
   debug "POST /events"
   debug "   event" , event
-  return if h.verifyRequiredFields(req, res, ['swap_id', '_id', 'state'])
 
   delete event.hosts
   delete event.guests
@@ -411,10 +392,6 @@ exports.createEvent = (req, res) ->
   swap = _rev = hosts = guests = null
 
   async.series [
-    (next) ->
-      Validator = validators.event
-      validator = new Validator(userCtx)
-      validator.validateDoc(event, next)
 
     (next) ->
       async.parallel [
@@ -506,10 +483,6 @@ exports.putEvent = (req, res) ->
   isConstable = stateChange = false
   
   async.waterfall [
-    (next) ->
-      Validator = validators.event
-      validator = new Validator(userCtx)
-      validator.validateDoc(event, next)
 
     (next) ->
       debug 'get users'
@@ -595,7 +568,6 @@ exports.onePrivate = (req, res) ->
 
 exports.deletePrivate = (req, res) ->
   id      = req.params?.id
-  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx   # from the app.all route
   cookie  = req.headers.cookie
   debug "DELETE #{req.url}: userCtx, cookie", userCtx, cookie
@@ -605,13 +577,6 @@ exports.deletePrivate = (req, res) ->
   docRev = null
 
   async.waterfall [
-    (next) ->
-      Validator = validators[type]
-      return next() if not Validator?
-      validator = new Validator(userCtx)
-      # return constable db if this is a constable
-      validator.validateDoc(_id: id, _deleted: true, next)
-
     ## get the document to get the userId
     (next) ->
       debug '#deletePrivate get doc'
@@ -643,22 +608,15 @@ exports.postPrivate = (req, res) ->
   debug "POST #{req.url}"
   debug "   req.userCtx", req.userCtx
   model   = h.getModelFromUrl(req.url)
-  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx   # from the app.all route
-  return if h.verifyRequiredFields(req, res, ['_id', 'user_id'])
+  doc     = req.body
 
-  doc = req.body
-  _id = doc._id
+  _id   = doc._id
   ctime = mtime = Date.now()
   doc.ctime = ctime
   doc.mtime = mtime
 
   async.series
-    validate: (next) ->
-      Validator = validators[type]
-      return next() if not Validator?
-      validator = new Validator(userCtx)
-      validator.validateDoc(doc, next)
     _rev: (next) ->
       userDbName = h.getUserDbName(userId: userCtx.user_id)
       opts =
@@ -683,7 +641,6 @@ exports.postPrivate = (req, res) ->
 exports.putPrivate = (req, res) ->
   debug "PUT #{req.url}"
   id      = req.params?.id
-  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx   # from the app.all route
   doc     = req.body
 
@@ -691,11 +648,6 @@ exports.putPrivate = (req, res) ->
   doc.mtime = mtime
 
   async.series
-    validate: (next) ->
-      Validator = validators[type]
-      return next() if not Validator?
-      validator = new Validator(userCtx)
-      validator.validateDoc(doc, next)
     _rev: (next) ->
       userDbName = h.getUserDbName(userId: userCtx.user_id)
       opts =
@@ -716,18 +668,18 @@ exports.putPrivate = (req, res) ->
 
 
 exports.changeReadStatus = (req, res) ->
-    ## TODO: _allow_ change only when read => true (write 'read' doc)
-    id = req.params?.id
-    debug "PUT #{req.url}"
-    return if h.verifyRequiredFields(req, res, ['_id', 'read'])
+  ## TODO: _allow_ change only when read => true (write 'read' doc)
+  id = req.params?.id
+  debug "PUT #{req.url}"
+  return if h.verifyRequiredFields(req, res, ['_id', 'read'])
 
-    userCtx = req.userCtx
-    cookie  = req.headers.cookie
-    message = req.body
-    rep.markReadStatus message, userCtx.user_id, cookie, (err, _res, headers) ->
-      return h.sendError(res, err) if err
-      h.setCookie(res, headers)
-      res.send(201)
+  userCtx = req.userCtx
+  cookie  = req.headers.cookie
+  message = req.body
+  rep.markReadStatus message, userCtx.user_id, cookie, (err, _res, headers) ->
+    return h.sendError(res, err) if err
+    h.setCookie(res, headers)
+    res.send(201)
 
 
 exports.getMessages = (req, res) ->
@@ -761,9 +713,6 @@ exports.getMessage = (req, res) ->
 
 exports.sendMessage = (req, res) ->
   debug "POST /message"
-  return if h.verifyRequiredFields req, res, [
-    'name', 'user_id', 'event_id'
-  ]
 
   userCtx = req.userCtx
   message = req.body
@@ -780,11 +729,6 @@ exports.sendMessage = (req, res) ->
   userDbName = h.getUserDbName(userId: message.user_id)
 
   async.series
-    validate: (next) ->
-      Validator = validators.message
-      return next() if not Validator?
-      validator = new Validator(userCtx)
-      validator.validateDoc(message, next)
 
     _rev: (done) ->
       debug 'insert into constable db (drunk_tank)'
