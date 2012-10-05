@@ -206,11 +206,6 @@ exports.postPublic = (req, res) ->
   doc.mtime = mtime
 
   async.series
-    validate: (next) ->
-      Validator = validators[type]
-      return next() if not Validator?
-      validator = new Validator(userCtx)
-      validator.validateDoc(doc, next)
     _rev: (next) ->
       opts =
         method: 'POST'
@@ -254,11 +249,6 @@ exports.putPublic = (req, res) ->
   doc.mtime = mtime
 
   async.series
-    validate: (next) ->
-      Validator = validators[type]
-      return next() if not Validator?
-      validator = new Validator(userCtx)
-      validator.validateDoc(doc, next)
     _rev: (next) ->
       opts =
         method: 'PUT'

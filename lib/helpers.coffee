@@ -1,8 +1,10 @@
-async = require('async')
+async   = require('async')
 request = require('request')
-debug = require('debug')('replicant:helpers')
-crypto = require('crypto')
-config = require('config')
+debug   = require('debug')('replicant:helpers')
+crypto  = require('crypto')
+
+config     = require('config')
+validators = require('validation')
 
 h = {}
 
@@ -307,6 +309,20 @@ h.getUserCtx = (req, res, next) ->
     debug '#getUserCtxFromSession before: userCtx', userCtx
     req.userCtx = userCtx
     h.setCookie(res, headers)   # set-cooki if necessary
+    next()
+
+h.validate = (req, res, next) ->
+  type    = h.getTypeFromUrl(req.url)
+  userCtx = req.userCtx
+  doc     = req.body
+  ## validate user doc
+  Validator = validators[type]
+  return next() if not Validator?
+  validator = new Validator(userCtx)
+  if req.route.method is 'delete'
+    doc = _id: req.params.id, _deleted: true
+  validator.validateDoc doc, (err) ->
+    return h.sendError(res, err) if err
     next()
 
 # @name getDotComSubdomain
