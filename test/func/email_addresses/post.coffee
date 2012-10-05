@@ -24,10 +24,9 @@ describe 'POST /email_addresses', () ->
     async.series([emailAddress.destroy, user.destroy], finished)
 
 
-  it 'should 400 on bad input', (done) ->
-    json = emailAddress.attributes()
+  it 'should 403 on bad input', (done) ->
     verifyField = (field, callback) ->
-      value = json[field]
+      json = emailAddress.attributes()
       delete json[field]
       opts =
         method: 'POST'
@@ -36,11 +35,9 @@ describe 'POST /email_addresses', () ->
         headers: cookie: user.cookie
       request opts, (err, res, body) ->
         should.not.exist(err)
-        res.should.have.property('statusCode', 400)
+        res.should.have.property('statusCode', 403)
         body.should.have.keys(['error', 'reason'])
         body.reason.should.have.property(field)
-
-        json[field] = value
         callback()
     async.map(['_id', 'user_id'], verifyField, done)
 

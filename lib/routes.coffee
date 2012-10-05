@@ -577,7 +577,6 @@ exports.onePrivate = (req, res) ->
 
 exports.deletePrivate = (req, res) ->
   id      = req.params?.id
-  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx   # from the app.all route
   cookie  = req.headers.cookie
   debug "DELETE #{req.url}: userCtx, cookie", userCtx, cookie
@@ -618,22 +617,15 @@ exports.postPrivate = (req, res) ->
   debug "POST #{req.url}"
   debug "   req.userCtx", req.userCtx
   model   = h.getModelFromUrl(req.url)
-  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx   # from the app.all route
-  return if h.verifyRequiredFields(req, res, ['_id', 'user_id'])
+  doc     = req.body
 
-  doc = req.body
-  _id = doc._id
+  _id   = doc._id
   ctime = mtime = Date.now()
   doc.ctime = ctime
   doc.mtime = mtime
 
   async.series
-    validate: (next) ->
-      Validator = validators[type]
-      return next() if not Validator?
-      validator = new Validator(userCtx)
-      validator.validateDoc(doc, next)
     _rev: (next) ->
       userDbName = h.getUserDbName(userId: userCtx.user_id)
       opts =
