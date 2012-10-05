@@ -44,7 +44,7 @@ app.get('/likes', routes.allPublic)
 app.get('/likes/:id', routes.onePublic)
 app.post('/likes', express.bodyParser(), h.getUserCtx, h.validate, routes.postPublic)
 app.put('/likes/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.putPublic)
-app.delete('/likes/:id', express.bodyParser(), h.getUserCtx, routes.deletePublic)
+app.delete('/likes/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.deletePublic)
 
 ## requests
 app.get('/requests', routes.allPublic)
@@ -72,7 +72,7 @@ app.get('/cards', h.getUserCtx, routes.allPrivate)
 app.get('/cards/:id', h.getUserCtx, routes.onePrivate)
 app.post('/cards', express.bodyParser(), h.getUserCtx, routes.postPrivate)
 app.put('/cards/:id', express.bodyParser(), h.getUserCtx, routes.putPrivate)
-app.delete('/cards/:id', h.getUserCtx, routes.deletePrivate)
+app.delete('/cards/:id', h.getUserCtx, h.validate, routes.deletePrivate)
 
 ## payments
 app.get('/payments', h.getUserCtx, routes.allPrivate)
@@ -86,14 +86,14 @@ app.get('/email_addresses', h.getUserCtx, routes.allPrivate)
 app.get('/email_addresses/:id', h.getUserCtx, routes.onePrivate)
 app.post('/email_addresses', express.bodyParser(), h.getUserCtx, routes.postPrivate)
 app.put('/email_addresses/:id', express.bodyParser(), h.getUserCtx, routes.putPrivate)
-app.delete('/email_addresses/:id', h.getUserCtx, routes.deletePrivate)
+app.delete('/email_addresses/:id', h.getUserCtx, h.validate, routes.deletePrivate)
 
 ## phone_numbers
 app.get('/phone_numbers', h.getUserCtx, routes.allPrivate)
 app.get('/phone_numbers/:id', h.getUserCtx, routes.onePrivate)
 app.post('/phone_numbers', express.bodyParser(), h.getUserCtx, routes.postPrivate)
 app.put('/phone_numbers/:id', express.bodyParser(), h.getUserCtx, routes.putPrivate)
-app.delete('/phone_numbers/:id', h.getUserCtx, routes.deletePrivate)
+app.delete('/phone_numbers/:id', h.getUserCtx, h.validate, routes.deletePrivate)
 
 ## messages
 app.get('/messages', h.getUserCtx, routes.getMessages)
@@ -116,7 +116,7 @@ app.get('/shortlinks', routes.allPublic)
 app.get('/shortlinks/:id', routes.onePublic)
 app.post('/shortlinks', express.bodyParser(), h.getUserCtx, h.validate, routes.postPublic)
 app.put('/shortlinks/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.putPublic)
-app.delete('/shortlinks/:id', express.bodyParser(), h.getUserCtx, routes.deletePublic)
+app.delete('/shortlinks/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.deletePublic)
 
 ## other endpoints
 

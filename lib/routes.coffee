@@ -197,7 +197,6 @@ exports.createUser = (req, res) ->
 exports.postPublic = (req, res) ->
   debug "POST #{req.url}"
   model   = h.getModelFromUrl(req.url)
-  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx   # from the app.all route
   doc     = req.body
 
@@ -241,7 +240,6 @@ exports.onePublic = (req, res) ->
 exports.putPublic = (req, res) ->
   debug "#putPublic #{req.url}"
   id      = req.params.id
-  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx
   doc     = req.body
 
@@ -346,18 +344,12 @@ exports.deleteUser = (req, res) ->
 exports.deletePublic = (req, res) ->
   debug "DELETE #{req.url}"
   id      = req.params?.id
-  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx
   doc     = req.body
   debug "   req.body", doc
   return if h.verifyRequiredFields(req, res, ['_rev'])
 
   async.series
-    validate: (next) ->
-      Validator = validators[type]
-      return next() if not Validator?
-      validator = new Validator(userCtx)
-      validator.validateDoc(_id: id, _deleted: true, next)
     _rev: (next) ->
       opts =
         method: 'DELETE'
@@ -595,13 +587,6 @@ exports.deletePrivate = (req, res) ->
   docRev = null
 
   async.waterfall [
-    (next) ->
-      Validator = validators[type]
-      return next() if not Validator?
-      validator = new Validator(userCtx)
-      # return constable db if this is a constable
-      validator.validateDoc(_id: id, _deleted: true, next)
-
     ## get the document to get the userId
     (next) ->
       debug '#deletePrivate get doc'
