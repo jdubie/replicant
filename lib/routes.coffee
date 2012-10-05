@@ -650,7 +650,6 @@ exports.postPrivate = (req, res) ->
 exports.putPrivate = (req, res) ->
   debug "PUT #{req.url}"
   id      = req.params?.id
-  type    = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx   # from the app.all route
   doc     = req.body
 
@@ -658,11 +657,6 @@ exports.putPrivate = (req, res) ->
   doc.mtime = mtime
 
   async.series
-    validate: (next) ->
-      Validator = validators[type]
-      return next() if not Validator?
-      validator = new Validator(userCtx)
-      validator.validateDoc(doc, next)
     _rev: (next) ->
       userDbName = h.getUserDbName(userId: userCtx.user_id)
       opts =
@@ -683,18 +677,18 @@ exports.putPrivate = (req, res) ->
 
 
 exports.changeReadStatus = (req, res) ->
-    ## TODO: _allow_ change only when read => true (write 'read' doc)
-    id = req.params?.id
-    debug "PUT #{req.url}"
-    return if h.verifyRequiredFields(req, res, ['_id', 'read'])
+  ## TODO: _allow_ change only when read => true (write 'read' doc)
+  id = req.params?.id
+  debug "PUT #{req.url}"
+  return if h.verifyRequiredFields(req, res, ['_id', 'read'])
 
-    userCtx = req.userCtx
-    cookie  = req.headers.cookie
-    message = req.body
-    rep.markReadStatus message, userCtx.user_id, cookie, (err, _res, headers) ->
-      return h.sendError(res, err) if err
-      h.setCookie(res, headers)
-      res.send(201)
+  userCtx = req.userCtx
+  cookie  = req.headers.cookie
+  message = req.body
+  rep.markReadStatus message, userCtx.user_id, cookie, (err, _res, headers) ->
+    return h.sendError(res, err) if err
+    h.setCookie(res, headers)
+    res.send(201)
 
 
 exports.getMessages = (req, res) ->

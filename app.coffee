@@ -71,28 +71,28 @@ app.delete('/events/:id', routes.forbidden)
 app.get('/cards', h.getUserCtx, routes.allPrivate)
 app.get('/cards/:id', h.getUserCtx, routes.onePrivate)
 app.post('/cards', express.bodyParser(), h.getUserCtx, h.validate, routes.postPrivate)
-app.put('/cards/:id', express.bodyParser(), h.getUserCtx, routes.putPrivate)
+app.put('/cards/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.putPrivate)
 app.delete('/cards/:id', h.getUserCtx, h.validate, routes.deletePrivate)
 
 ## payments
 app.get('/payments', h.getUserCtx, routes.allPrivate)
 app.get('/payments/:id', h.getUserCtx, routes.onePrivate)
 app.post('/payments', express.bodyParser(), h.getUserCtx, h.validate, routes.postPrivate)
-app.put('/payments/:id', express.bodyParser(), h.getUserCtx, routes.putPrivate)
+app.put('/payments/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.putPrivate)
 app.delete('/payments/:id', routes.forbidden)
 
 ## email_addresses
 app.get('/email_addresses', h.getUserCtx, routes.allPrivate)
 app.get('/email_addresses/:id', h.getUserCtx, routes.onePrivate)
 app.post('/email_addresses', express.bodyParser(), h.getUserCtx, h.validate, routes.postPrivate)
-app.put('/email_addresses/:id', express.bodyParser(), h.getUserCtx, routes.putPrivate)
+app.put('/email_addresses/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.putPrivate)
 app.delete('/email_addresses/:id', h.getUserCtx, h.validate, routes.deletePrivate)
 
 ## phone_numbers
 app.get('/phone_numbers', h.getUserCtx, routes.allPrivate)
 app.get('/phone_numbers/:id', h.getUserCtx, routes.onePrivate)
 app.post('/phone_numbers', express.bodyParser(), h.getUserCtx, h.validate, routes.postPrivate)
-app.put('/phone_numbers/:id', express.bodyParser(), h.getUserCtx, routes.putPrivate)
+app.put('/phone_numbers/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.putPrivate)
 app.delete('/phone_numbers/:id', h.getUserCtx, h.validate, routes.deletePrivate)
 
 ## messages
@@ -104,7 +104,7 @@ app.delete('/messages/:id', routes.forbidden)
 
 ## refer_emails
 app.post('/refer_emails', express.bodyParser(), h.getUserCtx, h.validate, routes.postPrivate)
-app.put('/refer_emails/:id', express.bodyParser(), h.getUserCtx, routes.putPrivate)
+app.put('/refer_emails/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.putPrivate)
 
 ## notifications
 app.get('/notifications', h.getUserCtx, routes.getMessages)
