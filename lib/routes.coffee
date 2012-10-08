@@ -109,6 +109,7 @@ exports.createUser = (req, res) ->
   user = req.body
   {email_address, password, _id} = user   # extract email and password
   user_id = _id
+  user.user_id = _id
   # delete private data
   delete user.password
   delete user.email_address
