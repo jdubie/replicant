@@ -303,36 +303,24 @@ replicant.getMessages = ({userId, roles, type}, callback) ->
 
 
 ## gets a message and tacks on its 'read' status (true/false)
-replicant.getMessage = ({id, userId, cookie, roles}, callback) ->
+replicant.getMessage = ({id, userId, roles}, callback) ->
 
   dbUserId = if 'constable' in roles then 'drunk_tank' else userId
-  dbRead   = config.db.user(userId, cookie)
-  db       = config.db.user(dbUserId, cookie)
-  headers  = null
-
-  ## ensure that we have the right cookie set on the databases
-  resetDbs = (_headers) ->
-    if _headers?['set-cookie']?
-      headers = _headers                        # update headers
-      cookie = _headers['set-cookie']           # update cookie
-      # reset DBs
-      db     = config.db.user(dbUserId, cookie)
-      dbRead = config.db.user(userId, cookie)
+  dbRead   = config.db.user(userId)
+  db       = config.db.user(dbUserId)
 
   message = null
   async.waterfall [
     (next) -> db.get(id, next)
     (_message, _headers, next) ->
-      resetDbs(_headers)
       message = _message
       errorOpts =
         error : "Error getting message"
         reason: "Error getting message #{id}"
       dbRead.view('userddoc', 'read', {key: message._id}, h.nanoCallback(next, errorOpts))
     (res, _headers, next) ->
-      resetDbs(_headers)
       message.read = res.rows.length > 0
-      next(null, message, headers)
+      next(null, message)
   ], callback
 
 

@@ -677,12 +677,10 @@ exports.getMessage = (req, res) ->
   id = req.params?.id
   debug "GET #{req.url}"
   userCtx =  req.userCtx
-  cookie = req.headers.cookie
   rep.getMessage {
-    id, userId: userCtx.user_id, cookie, roles: userCtx.roles
-  }, (err, message, headers) ->
+    id, userId: userCtx.user_id, roles: userCtx.roles
+  }, (err, message) ->
     return h.sendError(res, err) if err
-    h.setCookie(res, headers)
     res.json(200, message)
 
 
