@@ -22,7 +22,6 @@ exports.login = (req, res) ->
       return h.sendError(res, err) if err
       res.json(userCtx)
 
-
 exports.logout = (req, res) ->
   opts =
     url: "#{config.dbUrl}/_session"
@@ -166,7 +165,7 @@ exports.createUser = (req, res) ->
     (next) ->
       ## create 'user' type document
       debug "   create 'user' type document"
-      userNano = config.db.main(cookie)
+      userNano = config.db.main()
       userNano.insert(user, user_id, next)
 
     (_res, headers, next) ->
@@ -174,7 +173,7 @@ exports.createUser = (req, res) ->
       response._rev = _res?.rev    # add _rev to response
       ## create 'email_address' type private document
       debug "   create 'email_address' type private document"
-      userPrivateNano = config.db.user(user_id, cookie)
+      userPrivateNano = config.db.user(user_id)
       emailDoc =
         type: 'email_address'
         name: name
@@ -297,7 +296,7 @@ exports.deleteUser = (req, res) ->
       async.waterfall [
         (_next) ->
           debug 'get user document'
-          db = config.db.main(cookie)
+          db = config.db.main()
           db.get(userId, h.nanoCallback(_next))
         (userDoc, _headers, _next) ->
           userRev = userDoc._rev
@@ -321,7 +320,7 @@ exports.deleteUser = (req, res) ->
             ## delete user type document
             (cb) ->
               debug 'delete user'
-              db = config.db.main(cookie)
+              db = config.db.main()
               updateCookieCallback = (err, _res, _headers) ->
                 updateCookie(_headers)
                 cb(err, _res, _headers)
@@ -456,7 +455,7 @@ exports.getEvent = (req, res) ->
   debug "GET /events/#{id}"
   userCtx = req.userCtx   # from the app.all route
   cookie = req.headers.cookie
-  userPrivateNano = config.db.user(userCtx.user_id, cookie)
+  userPrivateNano = config.db.user(userCtx.user_id)
   headers = null
   async.waterfall [
     (next) -> userPrivateNano.get(id, h.nanoCallback(next))
@@ -592,7 +591,7 @@ exports.deletePrivate = (req, res) ->
       if isConstable
         userDb = config.db.user(userId)
       else
-        userDb = config.db.user(userId, cookie)
+        userDb = config.db.user(userId)
 
       userDb.destroy(doc._id, doc._rev, h.nanoCallback(next))
 
