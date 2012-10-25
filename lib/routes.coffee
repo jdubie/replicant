@@ -666,12 +666,10 @@ exports.getMessages = (req, res) ->
   cookie = req.headers.cookie
   rep.getMessages {
     userId: userCtx.user_id
-    cookie
     roles: userCtx.roles
     type
-  }, (err, messages, headers) ->
+  }, (err, messages) ->
     return h.sendError(res, err) if err
-    h.setCookie(res, headers)
     res.json(200, messages)
 
 

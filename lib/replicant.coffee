@@ -284,27 +284,22 @@ replicant.markReadStatus = (message, userId, callback) ->
 
 
 ## gets all messages and tacks on 'read' status (true/false)
-replicant.getMessages = ({userId, cookie, roles, type}, callback) ->
+replicant.getMessages = ({userId, roles, type}, callback) ->
   type ?= 'message'
-  headers = null
-  updateCookie = (_headers) ->
-    headers = _headers if _headers?['set-cookie']?
 
   async.parallel
     messages: (callback) ->
-      replicant.getTypeUserDb {type, userId, cookie, roles}, (err, messages, _headers) ->
-        updateCookie(_headers)
+      replicant.getTypeUserDb {type, userId, roles}, (err, messages, _headers) ->
         callback(err, messages)
     reads: (callback) ->
-      replicant.getTypeUserDb {type: 'read', userId, cookie}, (err, reads, _headers) ->
-        updateCookie(_headers)
+      replicant.getTypeUserDb {type: 'read', userId}, (err, reads, _headers) ->
         callback(err, reads) # not constable
   , (err, body) ->
     return callback(err) if err
     {reads, messages} = body
     reads = (read.message_id for read in reads)
     message.read = message._id in reads for message in messages
-    callback(null, messages, headers)
+    callback(null, messages)
 
 
 ## gets a message and tacks on its 'read' status (true/false)
