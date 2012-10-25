@@ -495,12 +495,10 @@ exports.putEvent = (req, res) ->
           stateChange = true
           event["#{event.state}_time"] = mtime
       debug 'put event', event
-      opts =
-        method: 'PUT'
-        url: "#{config.dbUrl}/#{userDbName}/#{id}"
-        headers: req.headers
-        json: event
-      h.request(opts, next) # (err, resp, body)
+
+      userId = if isConstable then 'drunk_tank' else userCtx.user_id
+      db = config.db.user(userId)
+      db.insert(event, event._id, next)
 
     (body, headers, next) ->
       debug 'replicate'
