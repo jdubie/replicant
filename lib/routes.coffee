@@ -529,9 +529,8 @@ exports.putEvent = (req, res) ->
 exports.allPrivate = (req, res) ->
   type = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx
-  cookie  = req.headers.cookie
   debug 'userCtx', userCtx
-  rep.getTypeUserDb {type, userId: userCtx.user_id, cookie, roles: userCtx.roles}, (err, docs, headers) ->
+  rep.getTypeUserDb {type, userId: userCtx.user_id, roles: userCtx.roles}, (err, docs, headers) ->
     h.setCookie(res, headers)
     return h.sendError(res, err) if err
     res.json(200, docs)
@@ -542,10 +541,9 @@ exports.onePrivate = (req, res) ->
   debug "GET #{req.url}"
   userCtx = req.userCtx
   userDbName = h.getUserDbName(userId: userCtx.user_id)
-  endpoint =
-    url: "#{config.dbUrl}/#{userDbName}/#{id}"
-    headers: req.headers
-  request(endpoint).pipe(res)
+
+  db = config.db.user(userCtx.user_id)
+  db.get(id).pipe(res)
 
 
 exports.deletePrivate = (req, res) ->
