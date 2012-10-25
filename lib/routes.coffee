@@ -230,7 +230,6 @@ exports.allPublic = (req, res) ->
     return h.sendError(res, err) if err?
     res.json(200, docs)
 
-
 exports.onePublic = (req, res) ->
   debug "#onePublic #{req.url}"
   id = req.params.id
@@ -246,21 +245,10 @@ exports.putPublic = (req, res) ->
   mtime     = Date.now()
   doc.mtime = mtime
 
-  async.series
-    _rev: (next) ->
-      opts =
-        method: 'PUT'
-        url: "#{config.dbUrl}/lifeswap/#{id}"
-        headers: req.headers
-        json: doc
-      h.request opts, (err, body, headers) ->
-        h.setCookie(res, headers)
-        return next(err) if err
-        next(null, body.rev)
-  , (err, resp) ->
+  db = config.db.main()
+  db.insert doc, id, (err, resp) ->
     return h.sendError(res, err) if err
-    _rev = resp._rev
-    res.json(200, {_rev, mtime})
+    res.json(200, {_rev: resp.rev, mtime})
 
 
 exports.forbidden = (req, res) ->
