@@ -200,13 +200,13 @@ replicant.getType = (type, callback) ->
       callback(err, docs)
 
 ## gets all of a type from a user DB
-replicant.getTypeUserDb = ({type, userId, cookie, roles}, callback) ->
+replicant.getTypeUserDb = ({type, userId, roles}, callback) ->
   debug "#getTypeUserDb type: #{type}"
   roles ?= []
 
   # constables should fetch from drunk tank
   dbUserId = if 'constable' in roles then 'drunk_tank' else userId
-  db = config.db.user(dbUserId, cookie)
+  db = config.db.user(dbUserId)
 
   opts =
     key: type

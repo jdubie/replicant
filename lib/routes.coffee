@@ -359,7 +359,6 @@ exports.deletePublic = (req, res) ->
 #
 # @description creates a swap event and initializes involved users
 # @body event {object} event to create
-# @headers cookie {cookie} authenticates user
 # 
 # @return {_rev, ctime, mtime, hosts, guests}
 exports.createEvent = (req, res) ->
@@ -419,7 +418,6 @@ exports.createEvent = (req, res) ->
 exports.getEvents = (req, res) ->
   debug "GET /events"
   userCtx = req.userCtx   # from the app.all route
-  cookie = req.headers.cookie
   debug 'userCtx', userCtx
   headers = null
   async.waterfall [
@@ -427,7 +425,6 @@ exports.getEvents = (req, res) ->
       rep.getTypeUserDb {
         type: 'event'
         userId: userCtx.user_id
-        cookie
         roles: userCtx.roles
       }, next
     (events, _headers, next) ->
@@ -442,7 +439,6 @@ exports.getEvent = (req, res) ->
   id = req.params?.id
   debug "GET /events/#{id}"
   userCtx = req.userCtx   # from the app.all route
-  cookie = req.headers.cookie
   userPrivateNano = config.db.user(userCtx.user_id)
   headers = null
   async.waterfall [
