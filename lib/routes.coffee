@@ -549,8 +549,7 @@ exports.onePrivate = (req, res) ->
 exports.deletePrivate = (req, res) ->
   id      = req.params?.id
   userCtx = req.userCtx   # from the app.all route
-  cookie  = req.headers.cookie
-  debug "DELETE #{req.url}: userCtx, cookie", userCtx, cookie
+  debug "DELETE #{req.url}: userCtx", userCtx
 
   isConstable = 'constable' in userCtx.roles
   constableDb = config.db.constable()
@@ -654,11 +653,9 @@ exports.changeReadStatus = (req, res) ->
   return if h.verifyRequiredFields(req, res, ['_id', 'read'])
 
   userCtx = req.userCtx
-  cookie  = req.headers.cookie
   message = req.body
-  rep.markReadStatus message, userCtx.user_id, cookie, (err, _res, headers) ->
+  rep.markReadStatus message, userCtx.user_id, (err, _res) ->
     return h.sendError(res, err) if err
-    h.setCookie(res, headers)
     res.send(201)
 
 

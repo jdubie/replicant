@@ -225,7 +225,7 @@ replicant.getTypeUserDb = ({type, userId, roles}, callback) ->
 ## marks a message read/unread if specified
 # TODO: don't get read status with view anymore!!
 #       (differences when using constable)
-replicant.markReadStatus = (message, userId, cookie, callback) ->
+replicant.markReadStatus = (message, userId, callback) ->
   markRead = message.read   # true/false
   debug '#markReadStatus markRead', markRead
   if not markRead?
@@ -236,16 +236,7 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
     }
 
   delete message.read
-  db = config.db.user(userId, cookie)
-  headers = null    # in case a set-cookie header is sent in response
-
-  ## ensure that we have the right cookie set on the database
-  resetDbWithHeaders = (_headers) ->
-    if _headers?['set-cookie']?
-      headers = _headers                # update headers
-      cookie = _headers['set-cookie']   # update cookie
-      db = config.db.user(userId, cookie)
-    db
+  db = config.db.user(userId)
 
   ## mark a message read
   markMessageRead = (callback) ->
@@ -254,30 +245,13 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
       message_id: message._id
       ctime: Date.now()
     readDoc.event_id = message.event_id if message.event_id?
-    errorOpts =
-      error : "Error marking message read"
-      reason: "Error marking message #{message._id} read for #{userId}"
-
-    getHeaders = (err, _headers, res) ->
-      db = resetDbWithHeaders(_headers)
-      callback(err, _headers, res)
-
-    db.insert(readDoc, h.nanoCallback(getHeaders, errorOpts))
+    db.insert(readDoc, callback)
 
   ## destroy 'read' document
   destroyReadDoc = (row, callback) ->
     doc = row.doc
     return callback() if doc.type isnt 'read'
-
-    errorOpts =
-      error : "Error marking message unread"
-      reason: "Error removing 'read' doc read for #{userId} (#{message._id})"
-
-    getHeaders = (err, _headers, res) ->
-      db = resetDbWithHeaders(_headers)
-      callback(err, _headers, res)
-
-    db.destroy(doc._id, doc._rev, h.nanoCallback(getHeaders, errorOpts))
+    db.destroy(doc._id, doc._rev, callback)
 
   ## mark a message unread
   markMessageUnread = (callback) ->
@@ -289,7 +263,6 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
           error     : err.error ? "Error getting message status"
           reason    : err.reason ? "message #{message._id} for #{userId}"
         return callback(error)
-      db = resetDbWithHeaders(_headers)
       async.map(res.rows, destroyReadDoc, callback)
 
   async.waterfall [
@@ -300,7 +273,6 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
         reason: "For message #{message._id}, user #{userId}, event #{message.event_id ? 'none'}"
       db.view('userddoc', 'read', opts, h.nanoCallback(next, errorOpts)) # (err, res, headers)
     (res, _headers, next) ->
-      db = resetDbWithHeaders(_headers)
       isRead = res.rows.length > 0
       if markRead isnt isRead then next()
       else
@@ -308,8 +280,7 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
     (next) ->
       if markRead then markMessageRead(next)
       else markMessageUnread(next)
-  ], (err, res) ->
-    callback(err, res, headers)
+  ], callback
 
 
 ## gets all messages and tacks on 'read' status (true/false)
