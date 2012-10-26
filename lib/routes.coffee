@@ -80,6 +80,7 @@ exports.createUser = (req, res) ->
   return if h.verifyRequiredFields req, res, [
     'email_address', 'password', '_id'
   ]
+
   user = req.body
   {email_address, password, _id} = user   # extract email and password
   user_id = _id
@@ -102,11 +103,7 @@ exports.createUser = (req, res) ->
     user_id: user_id
     ctime: ctime
     mtime: mtime
-  cookie = null
-
-  updateCookie = (_headers) ->
-    if _headers?['set-cookie']?
-      cookie = _headers['set-cookie']
+  userCtx = {name, roles: [], user_id}
 
   async.waterfall [
     (next) ->
@@ -115,22 +112,11 @@ exports.createUser = (req, res) ->
       rep.createUnderscoreUser({email, password, user_id}, next)
 
     (_res, _headers, next) ->
-      ## auth to get cookie
-      debug '   auth to get cookie'
-      rep.auth({username: name, password: password}, next)
-
-    (_cookie, next) ->
-      cookie = _cookie
       ## create user database
       debug '   create user database'
       rep.createUserDb({userId: user_id, name: name}, next)
 
     (_res, next) ->
-      ## get userCtx
-      h.getUserCtxFromSession({headers: {cookie}}, next)
-
-    (userCtx, headers, next) ->
-      updateCookie(headers)
       ## validate user doc
       Validator = validators.user
       return next() if not Validator?
@@ -144,7 +130,6 @@ exports.createUser = (req, res) ->
       userNano.insert(user, user_id, next)
 
     (_res, headers, next) ->
-      updateCookie(headers)
       response._rev = _res?.rev    # add _rev to response
       ## create 'email_address' type private document
       debug "   create 'email_address' type private document"
@@ -159,13 +144,12 @@ exports.createUser = (req, res) ->
       userPrivateNano.insert(emailDoc, next)
 
     (_res, headers, next) ->
-      updateCookie(headers)
       data = {user, emailAddress: email}
       h.createNotification('user.create', data, next)
 
   ], (err, body, headers) ->    # w/ createNotification, will be (err?)
     return h.sendError(res, err) if err
-    res.set('Set-Cookie', cookie)
+    h.setCtx(req, userCtx)
     res.json(201, response)       # {name, roles, id}
 
 
