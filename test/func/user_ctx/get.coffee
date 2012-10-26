@@ -28,8 +28,7 @@ describe 'GET /user_ctx', () ->
       console.error body.name
       res.should.have.property('statusCode', 200)
       should.not.exist(err)
-      body.should.have.keys('name', 'roles', 'user_id')
-      body.should.eql(name: null, roles: [], user_id: null)
+      body.should.eql(name: user.name, roles: [], user_id: user._id)
       done()
 
   it 'should get back empty userCtx if not logged in', (done) ->

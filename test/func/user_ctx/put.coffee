@@ -35,20 +35,17 @@ describe 'PUT /user_ctx', () ->
       request opts, (err, res, body) ->
         should.not.exist(err)
         res.should.have.property('statusCode', 201)
-        res.headers.should.have.property('set-cookie')
-        user.cookie = res.headers['set-cookie']
         done()
 
-    it 'should get the correct userCtx from _session', (done) ->
+    it 'should get the correct userCtx from GET /user_ctx', (done) ->
       opts =
-        url: "#{config.dbUrl}/_session"
+        url: 'http://localhost:3001/user_ctx'
         method: 'GET'
         json: true
         headers: cookie: user.cookie
       request opts, (err, res, body) ->
         should.not.exist(err)
-        body.should.have.property('userCtx')
-        body.userCtx.should.eql(name: user.name, roles: user.roles)
+        body.should.eql(name: user.name, roles: user.roles, user_id: user._id)
         done()
 
     it 'should 400 on bad input', (done) ->

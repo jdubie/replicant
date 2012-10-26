@@ -1,6 +1,7 @@
 async   = require('async')
 _       = require('underscore')
 debug   = require('debug')('replicant:routes')
+request = require('request').defaults(jar: false)
 
 config  = require('config')
 rep     = require('lib/replicant')
@@ -47,18 +48,10 @@ exports.password = (req, res) ->
 
   return if h.verifyRequiredFields(req, res, ['name', 'oldPass', 'newPass'])
   {name, oldPass, newPass} = req.body
-  cookie = req.headers.cookie
   debug "PUT /user_ctx"
   debug "   username: #{name}"
-  newCookie = null
-  async.waterfall [
-    (next) ->
-      rep.changePassword({name, oldPass, newPass, cookie}, next)
-    (next) ->
-      rep.auth({username: name, password: newPass}, next)
-  ], (err, newCookie) ->
+  rep.changePassword {name, oldPass, newPass}, (err) ->
     return h.sendError(res, err) if err
-    res.set('Set-Cookie', newCookie)
     res.send(201)
 
 
@@ -188,13 +181,8 @@ exports.postPublic = (req, res) ->
 
   async.series
     _rev: (next) ->
-      opts =
-        method: 'POST'
-        url: "#{config.dbUrl}/lifeswap"
-        headers: req.headers
-        json: doc
-      h.request opts, (err, body, headers) ->
-        h.setCookie(res, headers)
+      db = config.db.main()
+      db.insert doc, doc._id, (err, body) ->
         return next(err) if err
         next(null, body.rev)
     notify: (next) ->

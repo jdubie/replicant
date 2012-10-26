@@ -80,14 +80,15 @@ replicant.createUserDb = ({userId, name}, callback) ->
   ], callback
 
 
-replicant.changePassword = ({name, oldPass, newPass, cookie}, callback) ->
-  db = config.db._users(cookie)
+replicant.changePassword = ({name, oldPass, newPass}, callback) ->
+  db = config.db._users()
   ## no need to watch for set-cookie header b/c will re-auth after
   ##    changing password
   async.waterfall [
     ## get _user document
     (next) ->
-      db.get("org.couchdb.user:#{name}", next)
+      db.get(h.getCouchUserName(name), next)
+
     ## check that old password was correct
     (_user, hdrs, next) ->
       if _user.password_sha isnt h.hash(oldPass + _user.salt)

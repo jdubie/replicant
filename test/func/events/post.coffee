@@ -31,8 +31,7 @@ describe 'POST /events', () ->
       (cb) -> config.jobs.client.flushall(cb)
     ], finished
 
-
-  it 'zzz should POST without failure', (done) ->
+  it 'should POST without failure', (done) ->
     opts =
       method: 'POST'
       url: "http://localhost:3001/events"

@@ -31,7 +31,7 @@ describe 'GET /email_addresses', () ->
       user.destroy
     ], finished
 
-  it 'should GET all emails', (done) ->
+  it 'zzz should GET all emails', (done) ->
     opts =
       method: 'GET'
       url: "http://localhost:3001/email_addresses"
