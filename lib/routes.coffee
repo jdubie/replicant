@@ -712,17 +712,13 @@ exports.sendMessage = (req, res) ->
 
     markRead: (done) ->
       debug 'mark message read'
-      opts =
-        method: 'POST'
-        url: "#{config.dbUrl}/#{userDbName}"
-        headers: req.headers
-        json:
-          type: 'read'
-          message_id: message._id
-          event_id: message.event_id
-          ctime: ctime
-      h.request opts, (err, _res, headers) ->
-        h.setCookie(res, headers)
+      db = config.db.user(message.user_id)
+      doc =
+        type: 'read'
+        message_id: message._id
+        event_id: message.event_id
+        ctime: ctime
+      db.insert doc, (err) ->
         done(err)
 
     # replicate message
