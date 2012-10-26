@@ -1,6 +1,6 @@
 should  = require('should')
 async   = require('async')
-request = require('request')
+request = require('request').defaults(jar: false)
 config  = require('config')
 debug   = require('debug')('replicant/test/func/phone_numbers/delete')
 

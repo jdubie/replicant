@@ -1,7 +1,7 @@
 should = require('should')
 async = require('async')
 util = require('util')
-request = require('request')
+request = require('request').defaults(jar: false)
 
 {TestUser, TestEmailAddress} = require('lib/test_models')
 

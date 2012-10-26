@@ -1,11 +1,11 @@
 should  = require('should')
 async   = require('async')
-request = require('request')
+request = require('request').defaults(jar: false)
 
 config = require('config')
 {TestUser} = require('lib/test_models')
 
-describe 'yyy POST /user_ctx (login)', () ->
+describe 'POST /user_ctx (login)', () ->
 
   user = new TestUser('post_user_ctx')
 

@@ -1,5 +1,5 @@
 should  = require('should')
-request = require('request')
+request = require('request').defaults(jar: false)
 async   = require('async')
 kue     = require('kue')
 debug   = require('debug')('replicants/test/func/refer_email/post')

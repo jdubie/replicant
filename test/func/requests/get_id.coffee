@@ -1,6 +1,6 @@
 should = require('should')
 util = require('util')
-request = require('request')
+request = require('request').defaults(jar: false)
 
 {TestUser, TestRequest} = require('lib/test_models')
 

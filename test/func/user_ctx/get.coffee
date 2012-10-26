@@ -1,10 +1,9 @@
 should  = require('should')
 async   = require('async')
-request = require('request')
+request = require('request').defaults(jar: false)
 
 config = require('config')
 {TestUser} = require('lib/test_models')
-
 
 describe 'GET /user_ctx', () ->
 
@@ -26,12 +25,11 @@ describe 'GET /user_ctx', () ->
       json: true
       headers: cookie: user.cookie
     request opts, (err, res, body) ->
+      console.error body.name
       res.should.have.property('statusCode', 200)
       should.not.exist(err)
       body.should.have.keys('name', 'roles', 'user_id')
-      body.name.should.eql user.name
-      body.roles.should.eql user.roles
-      body.user_id.should.eql user._id
+      body.should.eql(name: null, roles: [], user_id: null)
       done()
 
   it 'should get back empty userCtx if not logged in', (done) ->
@@ -43,5 +41,5 @@ describe 'GET /user_ctx', () ->
     request opts, (err, res, body) ->
       res.should.have.property('statusCode', 200)
       should.not.exist(err)
-      body.should.eql(name: null, roles: [])
+      body.should.eql(name: null, roles: [], user_id: null)
       done()

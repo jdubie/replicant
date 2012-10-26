@@ -1,5 +1,5 @@
 async   = require('async')
-request = require('request')
+request = require('request').defaults(jar: false)
 debug   = require('debug')('replicant:helpers')
 crypto  = require('crypto')
 
@@ -15,6 +15,11 @@ h = {}
 h.getUserDbName = ({userId}) ->
   if userId is 'drunk_tank' then 'drunk_tank' else "users_#{userId}"
 
+h.getCtx = (req) ->
+  req.session.userCtx ? name: null, roles: [], user_id: null
+
+h.setCtx = (req, value) ->
+  req.session.userCtx = value
 
 ###
   @description returns _user id given name
@@ -304,12 +309,17 @@ h.replicateEvent = (userIds, eventId, callback) ->
 
 
 h.getUserCtx = (req, res, next) ->
-  h.getUserCtxFromSession req, (err, userCtx, headers) ->
-    return res.json(err.statusCode ? err.status_code ? 500, err) if err
-    debug '#getUserCtxFromSession before: userCtx', userCtx
-    req.userCtx = userCtx
-    h.setCookie(res, headers)   # set-cooki if necessary
-    next()
+  debug 'req.headers.cookie', req.headers.cookie
+  debug 'here', h.getCtx(req)
+  debug 'here', req.session
+  req.userCtx = h.getCtx(req)
+  next()
+# h.getUserCtxFromSession req, (err, userCtx, headers) ->
+#   return res.json(err.statusCode ? err.status_code ? 500, err) if err
+#   debug '#getUserCtxFromSession before: userCtx', userCtx
+#   req.userCtx = userCtx
+#   h.setCookie(res, headers)   # set-cookie if necessary
+#   next()
 
 h.validate = (req, res, next) ->
   type    = h.getTypeFromUrl(req.url)

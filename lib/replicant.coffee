@@ -1,4 +1,4 @@
-request = require('request')
+request = require('request').defaults(jar: false)
 async   = require('async')
 debug   = require('debug')('replicant:lib')
 

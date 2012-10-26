@@ -1,5 +1,4 @@
 async   = require('async')
-request = require('request')
 _       = require('underscore')
 debug   = require('debug')('replicant:routes')
 
@@ -27,43 +26,19 @@ exports.login = (req, res) ->
       return h.sendError(res, {statusCode: 401, error: '', reason: ''})
 
     # start their session
-    req.session.userCtx = userCtx
+    h.setCtx(req, userCtx)
     res.json(userCtx)
 
 
 exports.logout = (req, res) ->
-  req.session.userCtx = { name: null, roles: [], user_id: null }
+  delete req.session.userCtx
   res.send(200)
 
 # @name session
 #
 # @description gets the session information for the current user
 exports.session = (req, res) ->
-  opts =
-    headers: req.headers
-    url: "#{config.dbUrl}/_session"
-    json: true
-  headers = null
-  cookie = req.headers.cookie
-
-  updateCookie = (_headers) ->
-    if _headers?['set-cookie']
-      debug 'set-cookie', _headers
-      headers = _headers
-      cookie  = _headers['set-cookie']
-      res.set('Set-Cookie', cookie)
-
-  h.request opts, (err, body, _headers) ->
-    updateCookie(_headers)
-    return h.sendError(res, err) if err
-    debug "GET /user_ctx"
-    debug '   body', body
-    userCtx = body.userCtx
-    return res.json(200, userCtx) unless userCtx.name?
-    h.getUserId {cookie, userCtx}, (err, userCtx, _headers) ->
-      updateCookie(_headers)
-      return h.sendError(res, err) if err
-      res.json(200, userCtx)
+  res.json(200, h.getCtx(req))
 
 # @name password
 #
@@ -578,14 +553,8 @@ exports.postPrivate = (req, res) ->
 
   async.series
     _rev: (next) ->
-      userDbName = h.getUserDbName(userId: userCtx.user_id)
-      opts =
-        method: 'POST'
-        url: "#{config.dbUrl}/#{userDbName}"
-        headers: req.headers
-        json: doc
-      h.request opts, (err, body, headers) ->
-        h.setCookie(res, headers)
+      db = config.db.user(userCtx.user_id)
+      db.insert doc, doc._id, (err, body) ->
         return next(err) if err
         next(null, body.rev)
     replicate: (next) ->
@@ -609,14 +578,8 @@ exports.putPrivate = (req, res) ->
 
   async.series
     _rev: (next) ->
-      userDbName = h.getUserDbName(userId: userCtx.user_id)
-      opts =
-        method: 'PUT'
-        url: "#{config.dbUrl}/#{userDbName}/#{id}"
-        headers: req.headers
-        json: doc
-      h.request opts, (err, body, headers) ->
-        h.setCookie(res, headers)
+      db = config.db.user(userCtx.user_id)
+      db.insert doc, doc._id, (err, body) ->
         return next(err) if err
         next(null, body.rev)
     replicate: (next) ->
@@ -644,7 +607,6 @@ exports.getMessages = (req, res) ->
   debug "GET #{req.url}"
   type = h.getTypeFromUrl(req.url)
   userCtx =  req.userCtx
-  cookie = req.headers.cookie
   rep.getMessages {
     userId: userCtx.user_id
     roles: userCtx.roles
