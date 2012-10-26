@@ -7,7 +7,7 @@ h       = require('lib/helpers')
 {TestUser} = require('lib/test_models')
 
 
-describe 'DELETE /users/:id', () ->
+describe 'zzz DELETE /users/:id', () ->
 
   user = new TestUser('delete_user_id')
   constable = new TestUser('delete_user_id_constable', roles: [ 'constable' ])

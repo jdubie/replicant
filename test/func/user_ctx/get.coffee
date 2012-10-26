@@ -25,7 +25,6 @@ describe 'GET /user_ctx', () ->
       json: true
       headers: cookie: user.cookie
     request opts, (err, res, body) ->
-      console.error body.name
       res.should.have.property('statusCode', 200)
       should.not.exist(err)
       body.should.eql(name: user.name, roles: [], user_id: user._id)

@@ -230,56 +230,49 @@ exports.deleteUser = (req, res) ->
   userId = req.params?.id
   debug "DELETE /users/#{userId}"
 
+  userCtx = h.getCtx(req)
+  return h.sendError(res, statusCode: 403) if 'constable' not in userCtx.roles
+
+  userName = userRev = null
+  userRev = null
+
   async.waterfall [
-    ## get user ctx
-    (next) ->
-      h.getUserCtxFromSession(req, next)
-    (userCtx, _headers, next) ->
-      if not ('constable' in userCtx.roles) then next(statusCode: 403)
-      else next(null, userCtx)
-    ## if a constable!
-    (userCtx, next) ->
-      userName = userRev = null
-      userRev = null
+    (_next) ->
+      debug 'get user document'
+      db = config.db.main()
+      db.get(userId, _next)
+    (userDoc, _headers, _next) ->
+      userRev = userDoc._rev
+      userName = userDoc.name
 
-      async.waterfall [
-        (_next) ->
-          debug 'get user document'
+      async.series [
+        ## delete _user document
+        (cb) ->
+          debug 'delete _user'
+          db = config.db._users()
+          _username = h.getCouchUserName(userName)
+          async.waterfall [
+            (done) ->
+              debug 'getting _user', _username
+              db.get(_username, done)
+            (_userDoc, hdr, done) ->
+              debug 'destroying _user'
+              db.destroy(_username, _userDoc._rev, done)
+          ], cb
+
+        ## delete user type document
+        (cb) ->
+          debug 'delete user'
           db = config.db.main()
-          db.get(userId, _next)
-        (userDoc, _headers, _next) ->
-          userRev = userDoc._rev
-          userName = userDoc.name
+          db.destroy(userId, userRev, cb)
 
-          async.series [
-            ## delete _user document
-            (cb) ->
-              debug 'delete _user'
-              db = config.db._users()
-              _username = h.getCouchUserName(userName)
-              async.waterfall [
-                (done) ->
-                  debug 'getting _user', _username
-                  db.get(_username, done)
-                (_userDoc, hdr, done) ->
-                  debug 'destroying _user'
-                  db.destroy(_username, _userDoc._rev, done)
-              ], cb
-
-            ## delete user type document
-            (cb) ->
-              debug 'delete user'
-              db = config.db.main()
-              db.destroy(userId, userRev, cb)
-
-            ## delete user DB
-            (cb) ->
-              debug 'delete user db'
-              userDbName = h.getUserDbName({userId})
-              debug 'userDbName', userDbName
-              config.couch().db.destroy(userDbName, cb)
-          ], _next
-      ], next
+        ## delete user DB
+        (cb) ->
+          debug 'delete user db'
+          userDbName = h.getUserDbName({userId})
+          debug 'userDbName', userDbName
+          config.couch().db.destroy(userDbName, cb)
+      ], _next
   ], (err, _res) ->
     return h.sendError(res, err) if err?
     res.send(200)
