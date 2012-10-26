@@ -1,5 +1,4 @@
 express = require('express')
-#RedisStore = require('connect-redis')(express)
 
 config  = require('config')
 h       = require('lib/helpers')
@@ -8,8 +7,14 @@ routes  = require('lib/routes')
 app = express()
 app.use(express.static(__dirname + '/public'))
 app.use(express.cookieParser('test_secret'))
-#app.use express.session store: new RedisStore
-app.use(express.session())
+if process.env.ENV is 'PROD'
+  RedisStore = require('connect-redis')(express)
+  redisOpts =
+    port: process.env.REDIS_PORT
+    pass: process.env.REDIS_PASSWORD
+  app.use(express.session(store: new RedisStore(redisOpts)))
+else
+  app.use(express.session())
 
 ## user_ctx
 # Login
