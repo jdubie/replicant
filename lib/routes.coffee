@@ -276,7 +276,7 @@ exports.deleteUser = (req, res) ->
         (_next) ->
           debug 'get user document'
           db = config.db.main()
-          db.get(userId, h.nanoCallback(_next))
+          db.get(userId, _next)
         (userDoc, _headers, _next) ->
           userRev = userDoc._rev
           userName = userDoc.name
@@ -290,10 +290,10 @@ exports.deleteUser = (req, res) ->
               async.waterfall [
                 (done) ->
                   debug 'getting _user', _username
-                  db.get(_username, h.nanoCallback(done))
+                  db.get(_username, done)
                 (_userDoc, hdr, done) ->
                   debug 'destroying _user'
-                  db.destroy(_username, _userDoc._rev, h.nanoCallback(done))
+                  db.destroy(_username, _userDoc._rev, done)
               ], cb
 
             ## delete user type document
@@ -307,7 +307,7 @@ exports.deleteUser = (req, res) ->
               debug 'delete user db'
               userDbName = h.getUserDbName({userId})
               debug 'userDbName', userDbName
-              config.couch().db.destroy(userDbName, h.nanoCallback(cb))
+              config.couch().db.destroy(userDbName, cb)
           ], _next
       ], next
   ], (err, _res) ->
@@ -323,22 +323,10 @@ exports.deletePublic = (req, res) ->
   debug "   req.body", doc
   return if h.verifyRequiredFields(req, res, ['_rev'])
 
-  async.series
-    _rev: (next) ->
-      opts =
-        method: 'DELETE'
-        url: "#{config.dbUrl}/lifeswap/#{id}"
-        headers: req.headers
-        qs: rev: req.body._rev
-        json: req.body
-      h.request opts, (err, body, headers) ->
-        h.setCookie(res, headers)
-        return next(err) if err
-        next(null, body.rev)
-  , (err, resp) ->
-    return h.sendError(res, err) if err
-    _rev = resp._rev
-    res.json(200, {_rev})
+  db = config.db.main()
+  db.destroy doc._id, doc._rev, (err, resp) ->
+    return h.sendError(err, res) if err
+    res.json(200, _rev: resp.rev)
 
 
 # @name createEvent
