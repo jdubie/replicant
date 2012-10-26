@@ -327,7 +327,7 @@ h.validate = (req, res, next) ->
   doc     = req.body
   ## validate user doc
   Validator = validators[type]
-  return next() if not Validator?
+  #return next() if not Validator?
   validator = new Validator(userCtx)
   if req.route.method is 'delete'
     doc = _id: req.params.id, _deleted: true
