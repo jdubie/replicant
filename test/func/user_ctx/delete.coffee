@@ -28,10 +28,6 @@ describe 'DELETE /user_ctx', () ->
     request opts, (err, res, body) ->
       should.not.exist(err)
       res.should.have.property('statusCode', 200)
-      res.headers.should.have.property('set-cookie')
-      res.headers['set-cookie'].should.eql([
-        'AuthSession=; Version=1; Path=/; HttpOnly'
-      ])
       done()
 
   it 'should reset cookie even when not logged in', (done) ->
@@ -43,8 +39,4 @@ describe 'DELETE /user_ctx', () ->
     request opts, (err, res, body) ->
       should.not.exist(err)
       res.should.have.property('statusCode', 200)
-      res.headers.should.have.property('set-cookie')
-      res.headers['set-cookie'].should.eql([
-        'AuthSession=; Version=1; Path=/; HttpOnly'
-      ])
       done()

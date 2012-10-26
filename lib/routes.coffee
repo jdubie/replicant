@@ -11,22 +11,29 @@ validators = require('validation')
 
 exports.login = (req, res) ->
   return if h.verifyRequiredFields(req, res, ['username', 'password'])
-  username = h.hash(req.body.username.toLowerCase())
-  password = req.body.password
-  debug "POST /user_ctx"
-  debug "   username: #{username}"
-  rep.auth {username, password}, (err, cookie) ->
+  {username, password} = req.body
+  db = config.db._users()
+  username = h.hash(username.toLowerCase())
+
+  db.get h.getCouchUserName(username), (err, doc) ->
     return h.sendError(res, err) if err
-    res.set('Set-Cookie', cookie)
-    h.getUserId {cookie, userCtx: name: username}, (err, userCtx) ->
-      return h.sendError(res, err) if err
-      res.json(userCtx)
+
+    # look up user doc
+    {salt, password_sha, name, roles, user_id} = doc
+    userCtx = {name, roles, user_id}
+
+    # hash their password with salt
+    if h.hash(password + salt) isnt password_sha
+      return h.sendError(res, {statusCode: 401, error: '', reason: ''})
+
+    # start their session
+    req.session.userCtx = userCtx
+    res.json(userCtx)
+
 
 exports.logout = (req, res) ->
-  opts =
-    url: "#{config.dbUrl}/_session"
-    method: 'DELETE'
-  request(opts).pipe(res)
+  req.session.userCtx = { name: null, roles: [], user_id: null }
+  res.send(200)
 
 # @name session
 #

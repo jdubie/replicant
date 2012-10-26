@@ -25,24 +25,11 @@ describe 'POST /user_ctx (login)', () ->
       json:
         username: user.email_address
         password: user.password
-      headers: cookie: user.cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
       res.should.have.property('statusCode', 200)
       res.headers.should.have.property('set-cookie')
       user.cookie = res.headers['set-cookie']
-      done()
-
-  it 'should get the correct userCtx from _session', (done) ->
-    opts =
-      url: "#{config.dbUrl}/_session"
-      method: 'GET'
-      json: true
-      headers: cookie: user.cookie
-    request opts, (err, res, body) ->
-      should.not.exist(err)
-      body.should.have.property('userCtx')
-      body.userCtx.should.eql(name: user.name, roles: user.roles)
       done()
 
   it 'should 400 on bad input', (done) ->
