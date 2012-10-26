@@ -11,7 +11,7 @@ app.use(express.static(__dirname + '/public'))
 # Login
 app.post('/user_ctx'  , express.bodyParser(), routes.login)
 # Logout
-app.delete('/user_ctx', express.bodyParser(), routes.logout)
+app.delete('/user_ctx', routes.logout)
 # Get user session
 app.get('/user_ctx'   , routes.session)
 # Change password
