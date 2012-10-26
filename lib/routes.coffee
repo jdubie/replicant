@@ -259,21 +259,12 @@ exports.forbidden = (req, res) ->
 exports.deleteUser = (req, res) ->
   userId = req.params?.id
   debug "DELETE /users/#{userId}"
-  headers = null
-  cookie = req.headers.cookie
-
-  updateCookie = (_headers) ->
-    if _headers?['set-cookie']?
-      debug 'set-cookie', _headers
-      headers = _headers
-      cookie = _headers['set-cookie']
 
   async.waterfall [
     ## get user ctx
     (next) ->
       h.getUserCtxFromSession(req, next)
     (userCtx, _headers, next) ->
-      updateCookie(_headers)
       if not ('constable' in userCtx.roles) then next(statusCode: 403)
       else next(null, userCtx)
     ## if a constable!
@@ -309,11 +300,7 @@ exports.deleteUser = (req, res) ->
             (cb) ->
               debug 'delete user'
               db = config.db.main()
-              updateCookieCallback = (err, _res, _headers) ->
-                updateCookie(_headers)
-                cb(err, _res, _headers)
-
-              db.destroy(userId, userRev, h.nanoCallback(updateCookieCallback))
+              db.destroy(userId, userRev, cb)
 
             ## delete user DB
             (cb) ->
@@ -325,7 +312,6 @@ exports.deleteUser = (req, res) ->
       ], next
   ], (err, _res) ->
     return h.sendError(res, err) if err?
-    h.setCookie(res, headers)
     res.send(200)
 
 

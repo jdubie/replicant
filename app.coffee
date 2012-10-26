@@ -23,7 +23,7 @@ app.get('/users', routes.allPublic)
 app.get('/users/:id', routes.onePublic)
 app.post('/users', express.bodyParser(), routes.createUser)
 app.put('/users/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.putPublic)
-app.delete('/users/:id', routes.deleteUser)
+app.delete('/users/:id', h.getUserCtx, routes.deleteUser)
 
 ## swaps
 app.get('/swaps', routes.allPublic)
