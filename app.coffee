@@ -13,7 +13,7 @@ app.post('/user_ctx'  , express.bodyParser(), routes.login)
 # Logout
 app.delete('/user_ctx', express.bodyParser(), routes.logout)
 # Get user session
-app.get('/user_ctx'   , express.bodyParser(), routes.session)
+app.get('/user_ctx'   , routes.session)
 # Change password
 app.put('/user_ctx'   , express.bodyParser(), routes.password)
 
