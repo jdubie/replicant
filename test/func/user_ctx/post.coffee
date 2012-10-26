@@ -5,7 +5,7 @@ request = require('request')
 config = require('config')
 {TestUser} = require('lib/test_models')
 
-describe 'POST /user_ctx (login)', () ->
+describe 'yyy POST /user_ctx (login)', () ->
 
   user = new TestUser('post_user_ctx')
 
@@ -28,6 +28,9 @@ describe 'POST /user_ctx (login)', () ->
       headers: cookie: user.cookie
     request opts, (err, res, body) ->
       should.not.exist(err)
+      body.should.eql(
+        name: user.name, roles: user.roles, user_id: user._id
+      )
       res.should.have.property('statusCode', 200)
       res.headers.should.have.property('set-cookie')
       user.cookie = res.headers['set-cookie']
