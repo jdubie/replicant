@@ -1,6 +1,6 @@
 should  = require('should')
 async   = require('async')
-request = require('request')
+request = require('request').defaults(jar: false)
 kue     = require('kue')
 debug   = require('debug')('replicant:/test/func/event/post')
 
@@ -30,7 +30,6 @@ describe 'POST /events', () ->
       (cb) -> async.parallel([guest.destroy, host.destroy], cb)
       (cb) -> config.jobs.client.flushall(cb)
     ], finished
-
 
   it 'should POST without failure', (done) ->
     opts =

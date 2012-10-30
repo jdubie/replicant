@@ -1,10 +1,10 @@
 should  = require('should')
 async   = require('async')
-request = require('request')
+request = require('request').defaults(jar: false)
+debug = require('debug')('replicant/test/func/card/post')
 
 config  = require('config')
 {TestUser, TestCard} = require('lib/test_models')
-
 
 describe 'POST /cards', () ->
 
@@ -40,6 +40,7 @@ describe 'POST /cards', () ->
 
 
   it 'should POST the card correctly', (done) ->
+    debug 'cookie', user.cookie
     opts =
       method: 'POST'
       url: "http://localhost:3001/cards"

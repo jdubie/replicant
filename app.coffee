@@ -6,14 +6,23 @@ routes  = require('lib/routes')
 
 app = express()
 app.use(express.static(__dirname + '/public'))
+app.use(express.cookieParser('test_secret'))
+if process.env.ENV is 'PROD'
+  RedisStore = require('connect-redis')(express)
+  redisOpts =
+    port: process.env.REDIS_PORT
+    pass: process.env.REDIS_PASSWORD
+  app.use(express.session(store: new RedisStore(redisOpts)))
+else
+  app.use(express.session())
 
 ## user_ctx
 # Login
 app.post('/user_ctx'  , express.bodyParser(), routes.login)
 # Logout
-app.delete('/user_ctx', express.bodyParser(), routes.logout)
+app.delete('/user_ctx', routes.logout)
 # Get user session
-app.get('/user_ctx'   , express.bodyParser(), routes.session)
+app.get('/user_ctx'   , routes.session)
 # Change password
 app.put('/user_ctx'   , express.bodyParser(), routes.password)
 
@@ -23,7 +32,7 @@ app.get('/users', routes.allPublic)
 app.get('/users/:id', routes.onePublic)
 app.post('/users', express.bodyParser(), routes.createUser)
 app.put('/users/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.putPublic)
-app.delete('/users/:id', routes.deleteUser)
+app.delete('/users/:id', h.getUserCtx, routes.deleteUser)
 
 ## swaps
 app.get('/swaps', routes.allPublic)

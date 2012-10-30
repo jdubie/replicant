@@ -1,7 +1,7 @@
 async   = require('async')
-request = require('request')
 _       = require('underscore')
 debug   = require('debug')('replicant:routes')
+request = require('request').defaults(jar: false)
 
 config  = require('config')
 rep     = require('lib/replicant')
@@ -11,53 +11,35 @@ validators = require('validation')
 
 exports.login = (req, res) ->
   return if h.verifyRequiredFields(req, res, ['username', 'password'])
-  username = h.hash(req.body.username.toLowerCase())
-  password = req.body.password
-  debug "POST /user_ctx"
-  debug "   username: #{username}"
-  rep.auth {username, password}, (err, cookie) ->
+  {username, password} = req.body
+  db = config.db._users()
+  username = h.hash(username.toLowerCase())
+
+  db.get h.getCouchUserName(username), (err, doc) ->
     return h.sendError(res, err) if err
-    res.set('Set-Cookie', cookie)
-    h.getUserId {cookie, userCtx: name: username}, (err, userCtx) ->
-      return h.sendError(res, err) if err
-      res.json(userCtx)
+
+    # look up user doc
+    {salt, password_sha, name, roles, user_id} = doc
+    userCtx = {name, roles, user_id}
+
+    # hash their password with salt
+    if h.hash(password + salt) isnt password_sha
+      return h.sendError(res, {statusCode: 401, error: '', reason: ''})
+
+    # start their session
+    h.setCtx(req, userCtx)
+    res.json(userCtx)
 
 
 exports.logout = (req, res) ->
-  opts =
-    url: "#{config.dbUrl}/_session"
-    method: 'DELETE'
-  request(opts).pipe(res)
+  delete req.session.userCtx
+  res.send(200)
 
 # @name session
 #
 # @description gets the session information for the current user
 exports.session = (req, res) ->
-  opts =
-    headers: req.headers
-    url: "#{config.dbUrl}/_session"
-    json: true
-  headers = null
-  cookie = req.headers.cookie
-
-  updateCookie = (_headers) ->
-    if _headers?['set-cookie']
-      debug 'set-cookie', _headers
-      headers = _headers
-      cookie  = _headers['set-cookie']
-      res.set('Set-Cookie', cookie)
-
-  h.request opts, (err, body, _headers) ->
-    updateCookie(_headers)
-    return h.sendError(res, err) if err
-    debug "GET /user_ctx"
-    debug '   body', body
-    userCtx = body.userCtx
-    return res.json(200, userCtx) unless userCtx.name?
-    h.getUserId {cookie, userCtx}, (err, userCtx, _headers) ->
-      updateCookie(_headers)
-      return h.sendError(res, err) if err
-      res.json(200, userCtx)
+  res.json(200, h.getCtx(req))
 
 # @name password
 #
@@ -66,18 +48,10 @@ exports.password = (req, res) ->
 
   return if h.verifyRequiredFields(req, res, ['name', 'oldPass', 'newPass'])
   {name, oldPass, newPass} = req.body
-  cookie = req.headers.cookie
   debug "PUT /user_ctx"
   debug "   username: #{name}"
-  newCookie = null
-  async.waterfall [
-    (next) ->
-      rep.changePassword({name, oldPass, newPass, cookie}, next)
-    (next) ->
-      rep.auth({username: name, password: newPass}, next)
-  ], (err, newCookie) ->
+  rep.changePassword {name, oldPass, newPass}, (err) ->
     return h.sendError(res, err) if err
-    res.set('Set-Cookie', newCookie)
     res.send(201)
 
 
@@ -106,6 +80,7 @@ exports.createUser = (req, res) ->
   return if h.verifyRequiredFields req, res, [
     'email_address', 'password', '_id'
   ]
+
   user = req.body
   {email_address, password, _id} = user   # extract email and password
   user_id = _id
@@ -128,11 +103,7 @@ exports.createUser = (req, res) ->
     user_id: user_id
     ctime: ctime
     mtime: mtime
-  cookie = null
-
-  updateCookie = (_headers) ->
-    if _headers?['set-cookie']?
-      cookie = _headers['set-cookie']
+  userCtx = {name, roles: [], user_id}
 
   async.waterfall [
     (next) ->
@@ -141,22 +112,11 @@ exports.createUser = (req, res) ->
       rep.createUnderscoreUser({email, password, user_id}, next)
 
     (_res, _headers, next) ->
-      ## auth to get cookie
-      debug '   auth to get cookie'
-      rep.auth({username: name, password: password}, next)
-
-    (_cookie, next) ->
-      cookie = _cookie
       ## create user database
       debug '   create user database'
       rep.createUserDb({userId: user_id, name: name}, next)
 
     (_res, next) ->
-      ## get userCtx
-      h.getUserCtxFromSession({headers: {cookie}}, next)
-
-    (userCtx, headers, next) ->
-      updateCookie(headers)
       ## validate user doc
       Validator = validators.user
       return next() if not Validator?
@@ -166,15 +126,14 @@ exports.createUser = (req, res) ->
     (next) ->
       ## create 'user' type document
       debug "   create 'user' type document"
-      userNano = config.db.main(cookie)
+      userNano = config.db.main()
       userNano.insert(user, user_id, next)
 
     (_res, headers, next) ->
-      updateCookie(headers)
       response._rev = _res?.rev    # add _rev to response
       ## create 'email_address' type private document
       debug "   create 'email_address' type private document"
-      userPrivateNano = config.db.user(user_id, cookie)
+      userPrivateNano = config.db.user(user_id)
       emailDoc =
         type: 'email_address'
         name: name
@@ -185,13 +144,12 @@ exports.createUser = (req, res) ->
       userPrivateNano.insert(emailDoc, next)
 
     (_res, headers, next) ->
-      updateCookie(headers)
       data = {user, emailAddress: email}
       h.createNotification('user.create', data, next)
 
   ], (err, body, headers) ->    # w/ createNotification, will be (err?)
     return h.sendError(res, err) if err
-    res.set('Set-Cookie', cookie)
+    h.setCtx(req, userCtx)
     res.json(201, response)       # {name, roles, id}
 
 
@@ -207,13 +165,8 @@ exports.postPublic = (req, res) ->
 
   async.series
     _rev: (next) ->
-      opts =
-        method: 'POST'
-        url: "#{config.dbUrl}/lifeswap"
-        headers: req.headers
-        json: doc
-      h.request opts, (err, body, headers) ->
-        h.setCookie(res, headers)
+      db = config.db.main()
+      db.insert doc, doc._id, (err, body) ->
         return next(err) if err
         next(null, body.rev)
     notify: (next) ->
@@ -231,7 +184,6 @@ exports.allPublic = (req, res) ->
     return h.sendError(res, err) if err?
     res.json(200, docs)
 
-
 exports.onePublic = (req, res) ->
   debug "#onePublic #{req.url}"
   id = req.params.id
@@ -247,21 +199,10 @@ exports.putPublic = (req, res) ->
   mtime     = Date.now()
   doc.mtime = mtime
 
-  async.series
-    _rev: (next) ->
-      opts =
-        method: 'PUT'
-        url: "#{config.dbUrl}/lifeswap/#{id}"
-        headers: req.headers
-        json: doc
-      h.request opts, (err, body, headers) ->
-        h.setCookie(res, headers)
-        return next(err) if err
-        next(null, body.rev)
-  , (err, resp) ->
+  db = config.db.main()
+  db.insert doc, id, (err, resp) ->
     return h.sendError(res, err) if err
-    _rev = resp._rev
-    res.json(200, {_rev, mtime})
+    res.json(200, {_rev: resp.rev, mtime})
 
 
 exports.forbidden = (req, res) ->
@@ -272,73 +213,52 @@ exports.forbidden = (req, res) ->
 exports.deleteUser = (req, res) ->
   userId = req.params?.id
   debug "DELETE /users/#{userId}"
-  headers = null
-  cookie = req.headers.cookie
 
-  updateCookie = (_headers) ->
-    if _headers?['set-cookie']?
-      debug 'set-cookie', _headers
-      headers = _headers
-      cookie = _headers['set-cookie']
+  userCtx = h.getCtx(req)
+  return h.sendError(res, statusCode: 403) if 'constable' not in userCtx.roles
+
+  userName = userRev = null
+  userRev = null
 
   async.waterfall [
-    ## get user ctx
-    (next) ->
-      h.getUserCtxFromSession(req, next)
-    (userCtx, _headers, next) ->
-      updateCookie(_headers)
-      if not ('constable' in userCtx.roles) then next(statusCode: 403)
-      else next(null, userCtx)
-    ## if a constable!
-    (userCtx, next) ->
-      userName = userRev = null
-      userRev = null
+    (_next) ->
+      debug 'get user document'
+      db = config.db.main()
+      db.get(userId, _next)
+    (userDoc, _headers, _next) ->
+      userRev = userDoc._rev
+      userName = userDoc.name
 
-      async.waterfall [
-        (_next) ->
-          debug 'get user document'
-          db = config.db.main(cookie)
-          db.get(userId, h.nanoCallback(_next))
-        (userDoc, _headers, _next) ->
-          userRev = userDoc._rev
-          userName = userDoc.name
+      async.series [
+        ## delete _user document
+        (cb) ->
+          debug 'delete _user'
+          db = config.db._users()
+          _username = h.getCouchUserName(userName)
+          async.waterfall [
+            (done) ->
+              debug 'getting _user', _username
+              db.get(_username, done)
+            (_userDoc, hdr, done) ->
+              debug 'destroying _user'
+              db.destroy(_username, _userDoc._rev, done)
+          ], cb
 
-          async.series [
-            ## delete _user document
-            (cb) ->
-              debug 'delete _user'
-              db = config.db._users()
-              _username = h.getCouchUserName(userName)
-              async.waterfall [
-                (done) ->
-                  debug 'getting _user', _username
-                  db.get(_username, h.nanoCallback(done))
-                (_userDoc, hdr, done) ->
-                  debug 'destroying _user'
-                  db.destroy(_username, _userDoc._rev, h.nanoCallback(done))
-              ], cb
+        ## delete user type document
+        (cb) ->
+          debug 'delete user'
+          db = config.db.main()
+          db.destroy(userId, userRev, cb)
 
-            ## delete user type document
-            (cb) ->
-              debug 'delete user'
-              db = config.db.main(cookie)
-              updateCookieCallback = (err, _res, _headers) ->
-                updateCookie(_headers)
-                cb(err, _res, _headers)
-
-              db.destroy(userId, userRev, h.nanoCallback(updateCookieCallback))
-
-            ## delete user DB
-            (cb) ->
-              debug 'delete user db'
-              userDbName = h.getUserDbName({userId})
-              debug 'userDbName', userDbName
-              config.couch().db.destroy(userDbName, h.nanoCallback(cb))
-          ], _next
-      ], next
+        ## delete user DB
+        (cb) ->
+          debug 'delete user db'
+          userDbName = h.getUserDbName({userId})
+          debug 'userDbName', userDbName
+          config.couch().db.destroy(userDbName, cb)
+      ], _next
   ], (err, _res) ->
     return h.sendError(res, err) if err?
-    h.setCookie(res, headers)
     res.send(200)
 
 
@@ -350,29 +270,16 @@ exports.deletePublic = (req, res) ->
   debug "   req.body", doc
   return if h.verifyRequiredFields(req, res, ['_rev'])
 
-  async.series
-    _rev: (next) ->
-      opts =
-        method: 'DELETE'
-        url: "#{config.dbUrl}/lifeswap/#{id}"
-        headers: req.headers
-        qs: rev: req.body._rev
-        json: req.body
-      h.request opts, (err, body, headers) ->
-        h.setCookie(res, headers)
-        return next(err) if err
-        next(null, body.rev)
-  , (err, resp) ->
-    return h.sendError(res, err) if err
-    _rev = resp._rev
-    res.json(200, {_rev})
+  db = config.db.main()
+  db.destroy doc._id, doc._rev, (err, resp) ->
+    return h.sendError(err, res) if err
+    res.json(200, _rev: resp.rev)
 
 
 # @name createEvent
 #
 # @description creates a swap event and initializes involved users
 # @body event {object} event to create
-# @headers cookie {cookie} authenticates user
 # 
 # @return {_rev, ctime, mtime, hosts, guests}
 exports.createEvent = (req, res) ->
@@ -432,7 +339,6 @@ exports.createEvent = (req, res) ->
 exports.getEvents = (req, res) ->
   debug "GET /events"
   userCtx = req.userCtx   # from the app.all route
-  cookie = req.headers.cookie
   debug 'userCtx', userCtx
   headers = null
   async.waterfall [
@@ -440,7 +346,6 @@ exports.getEvents = (req, res) ->
       rep.getTypeUserDb {
         type: 'event'
         userId: userCtx.user_id
-        cookie
         roles: userCtx.roles
       }, next
     (events, _headers, next) ->
@@ -455,8 +360,7 @@ exports.getEvent = (req, res) ->
   id = req.params?.id
   debug "GET /events/#{id}"
   userCtx = req.userCtx   # from the app.all route
-  cookie = req.headers.cookie
-  userPrivateNano = config.db.user(userCtx.user_id, cookie)
+  userPrivateNano = config.db.user(userCtx.user_id)
   headers = null
   async.waterfall [
     (next) -> userPrivateNano.get(id, h.nanoCallback(next))
@@ -512,12 +416,10 @@ exports.putEvent = (req, res) ->
           stateChange = true
           event["#{event.state}_time"] = mtime
       debug 'put event', event
-      opts =
-        method: 'PUT'
-        url: "#{config.dbUrl}/#{userDbName}/#{id}"
-        headers: req.headers
-        json: event
-      h.request(opts, next) # (err, resp, body)
+
+      userId = if isConstable then 'drunk_tank' else userCtx.user_id
+      db = config.db.user(userId)
+      db.insert(event, event._id, next)
 
     (body, headers, next) ->
       debug 'replicate'
@@ -548,9 +450,8 @@ exports.putEvent = (req, res) ->
 exports.allPrivate = (req, res) ->
   type = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx
-  cookie  = req.headers.cookie
   debug 'userCtx', userCtx
-  rep.getTypeUserDb {type, userId: userCtx.user_id, cookie, roles: userCtx.roles}, (err, docs, headers) ->
+  rep.getTypeUserDb {type, userId: userCtx.user_id, roles: userCtx.roles}, (err, docs, headers) ->
     h.setCookie(res, headers)
     return h.sendError(res, err) if err
     res.json(200, docs)
@@ -561,17 +462,15 @@ exports.onePrivate = (req, res) ->
   debug "GET #{req.url}"
   userCtx = req.userCtx
   userDbName = h.getUserDbName(userId: userCtx.user_id)
-  endpoint =
-    url: "#{config.dbUrl}/#{userDbName}/#{id}"
-    headers: req.headers
-  request(endpoint).pipe(res)
+
+  db = config.db.user(userCtx.user_id)
+  db.get(id).pipe(res)
 
 
 exports.deletePrivate = (req, res) ->
   id      = req.params?.id
   userCtx = req.userCtx   # from the app.all route
-  cookie  = req.headers.cookie
-  debug "DELETE #{req.url}: userCtx, cookie", userCtx, cookie
+  debug "DELETE #{req.url}: userCtx", userCtx
 
   isConstable = 'constable' in userCtx.roles
   constableDb = config.db.constable()
@@ -592,7 +491,7 @@ exports.deletePrivate = (req, res) ->
       if isConstable
         userDb = config.db.user(userId)
       else
-        userDb = config.db.user(userId, cookie)
+        userDb = config.db.user(userId)
 
       userDb.destroy(doc._id, doc._rev, h.nanoCallback(next))
 
@@ -619,14 +518,8 @@ exports.postPrivate = (req, res) ->
 
   async.series
     _rev: (next) ->
-      userDbName = h.getUserDbName(userId: userCtx.user_id)
-      opts =
-        method: 'POST'
-        url: "#{config.dbUrl}/#{userDbName}"
-        headers: req.headers
-        json: doc
-      h.request opts, (err, body, headers) ->
-        h.setCookie(res, headers)
+      db = config.db.user(userCtx.user_id)
+      db.insert doc, doc._id, (err, body) ->
         return next(err) if err
         next(null, body.rev)
     replicate: (next) ->
@@ -650,14 +543,8 @@ exports.putPrivate = (req, res) ->
 
   async.series
     _rev: (next) ->
-      userDbName = h.getUserDbName(userId: userCtx.user_id)
-      opts =
-        method: 'PUT'
-        url: "#{config.dbUrl}/#{userDbName}/#{id}"
-        headers: req.headers
-        json: doc
-      h.request opts, (err, body, headers) ->
-        h.setCookie(res, headers)
+      db = config.db.user(userCtx.user_id)
+      db.insert doc, doc._id, (err, body) ->
         return next(err) if err
         next(null, body.rev)
     replicate: (next) ->
@@ -675,11 +562,9 @@ exports.changeReadStatus = (req, res) ->
   return if h.verifyRequiredFields(req, res, ['_id', 'read'])
 
   userCtx = req.userCtx
-  cookie  = req.headers.cookie
   message = req.body
-  rep.markReadStatus message, userCtx.user_id, cookie, (err, _res, headers) ->
+  rep.markReadStatus message, userCtx.user_id, (err, _res) ->
     return h.sendError(res, err) if err
-    h.setCookie(res, headers)
     res.send(201)
 
 
@@ -687,15 +572,12 @@ exports.getMessages = (req, res) ->
   debug "GET #{req.url}"
   type = h.getTypeFromUrl(req.url)
   userCtx =  req.userCtx
-  cookie = req.headers.cookie
   rep.getMessages {
     userId: userCtx.user_id
-    cookie
     roles: userCtx.roles
     type
-  }, (err, messages, headers) ->
+  }, (err, messages) ->
     return h.sendError(res, err) if err
-    h.setCookie(res, headers)
     res.json(200, messages)
 
 
@@ -703,12 +585,10 @@ exports.getMessage = (req, res) ->
   id = req.params?.id
   debug "GET #{req.url}"
   userCtx =  req.userCtx
-  cookie = req.headers.cookie
   rep.getMessage {
-    id, userId: userCtx.user_id, cookie, roles: userCtx.roles
-  }, (err, message, headers) ->
+    id, userId: userCtx.user_id, roles: userCtx.roles
+  }, (err, message) ->
     return h.sendError(res, err) if err
-    h.setCookie(res, headers)
     res.json(200, message)
 
 
@@ -740,17 +620,13 @@ exports.sendMessage = (req, res) ->
 
     markRead: (done) ->
       debug 'mark message read'
-      opts =
-        method: 'POST'
-        url: "#{config.dbUrl}/#{userDbName}"
-        headers: req.headers
-        json:
-          type: 'read'
-          message_id: message._id
-          event_id: message.event_id
-          ctime: ctime
-      h.request opts, (err, _res, headers) ->
-        h.setCookie(res, headers)
+      db = config.db.user(message.user_id)
+      doc =
+        type: 'read'
+        message_id: message._id
+        event_id: message.event_id
+        ctime: ctime
+      db.insert doc, (err) ->
         done(err)
 
     # replicate message

@@ -3,6 +3,7 @@ h       = require('lib/helpers')
 config  = require('config')
 async   = require('async')
 debug   = require('debug')('replicant/lib/test_models')
+request = require('request').defaults(jar: false)
 
 class TestType
   @attributes: => [
@@ -198,12 +199,18 @@ m.TestUser = class TestUser
     authUser = (res, callback) =>
       {_rev} = res
       @_rev = _rev
-      config.nano.auth @name, @password, (err, body, hdr) =>
+      opts =
+        url: 'http://localhost:3001/user_ctx'
+        method: 'POST'
+        json:
+          username: @email_address
+          password: @password
+      request opts, (err, res, body) =>
+        hdr = res.headers
         debug '#createUser err, body, hdr', err, body, hdr
-        return callback(err) if err
         cookie = hdr['set-cookie'][0] if hdr['set-cookie']
         return callback('no cookie') unless cookie
-        debug '#createUser cookie, _rev', cookie, _rev
+        debug "#createUser cooke, _rev", cookie, _rev
         @cookie = cookie
         callback()
 

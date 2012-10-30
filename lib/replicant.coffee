@@ -1,4 +1,4 @@
-request = require('request')
+request = require('request').defaults(jar: false)
 async   = require('async')
 debug   = require('debug')('replicant:lib')
 
@@ -80,14 +80,15 @@ replicant.createUserDb = ({userId, name}, callback) ->
   ], callback
 
 
-replicant.changePassword = ({name, oldPass, newPass, cookie}, callback) ->
-  db = config.db._users(cookie)
+replicant.changePassword = ({name, oldPass, newPass}, callback) ->
+  db = config.db._users()
   ## no need to watch for set-cookie header b/c will re-auth after
   ##    changing password
   async.waterfall [
     ## get _user document
     (next) ->
-      db.get("org.couchdb.user:#{name}", next)
+      db.get(h.getCouchUserName(name), next)
+
     ## check that old password was correct
     (_user, hdrs, next) ->
       if _user.password_sha isnt h.hash(oldPass + _user.salt)
@@ -200,13 +201,13 @@ replicant.getType = (type, callback) ->
       callback(err, docs)
 
 ## gets all of a type from a user DB
-replicant.getTypeUserDb = ({type, userId, cookie, roles}, callback) ->
+replicant.getTypeUserDb = ({type, userId, roles}, callback) ->
   debug "#getTypeUserDb type: #{type}"
   roles ?= []
 
   # constables should fetch from drunk tank
   dbUserId = if 'constable' in roles then 'drunk_tank' else userId
-  db = config.db.user(dbUserId, cookie)
+  db = config.db.user(dbUserId)
 
   opts =
     key: type
@@ -225,7 +226,7 @@ replicant.getTypeUserDb = ({type, userId, cookie, roles}, callback) ->
 ## marks a message read/unread if specified
 # TODO: don't get read status with view anymore!!
 #       (differences when using constable)
-replicant.markReadStatus = (message, userId, cookie, callback) ->
+replicant.markReadStatus = (message, userId, callback) ->
   markRead = message.read   # true/false
   debug '#markReadStatus markRead', markRead
   if not markRead?
@@ -236,16 +237,7 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
     }
 
   delete message.read
-  db = config.db.user(userId, cookie)
-  headers = null    # in case a set-cookie header is sent in response
-
-  ## ensure that we have the right cookie set on the database
-  resetDbWithHeaders = (_headers) ->
-    if _headers?['set-cookie']?
-      headers = _headers                # update headers
-      cookie = _headers['set-cookie']   # update cookie
-      db = config.db.user(userId, cookie)
-    db
+  db = config.db.user(userId)
 
   ## mark a message read
   markMessageRead = (callback) ->
@@ -254,30 +246,13 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
       message_id: message._id
       ctime: Date.now()
     readDoc.event_id = message.event_id if message.event_id?
-    errorOpts =
-      error : "Error marking message read"
-      reason: "Error marking message #{message._id} read for #{userId}"
-
-    getHeaders = (err, _headers, res) ->
-      db = resetDbWithHeaders(_headers)
-      callback(err, _headers, res)
-
-    db.insert(readDoc, h.nanoCallback(getHeaders, errorOpts))
+    db.insert(readDoc, callback)
 
   ## destroy 'read' document
   destroyReadDoc = (row, callback) ->
     doc = row.doc
     return callback() if doc.type isnt 'read'
-
-    errorOpts =
-      error : "Error marking message unread"
-      reason: "Error removing 'read' doc read for #{userId} (#{message._id})"
-
-    getHeaders = (err, _headers, res) ->
-      db = resetDbWithHeaders(_headers)
-      callback(err, _headers, res)
-
-    db.destroy(doc._id, doc._rev, h.nanoCallback(getHeaders, errorOpts))
+    db.destroy(doc._id, doc._rev, callback)
 
   ## mark a message unread
   markMessageUnread = (callback) ->
@@ -289,7 +264,6 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
           error     : err.error ? "Error getting message status"
           reason    : err.reason ? "message #{message._id} for #{userId}"
         return callback(error)
-      db = resetDbWithHeaders(_headers)
       async.map(res.rows, destroyReadDoc, callback)
 
   async.waterfall [
@@ -300,7 +274,6 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
         reason: "For message #{message._id}, user #{userId}, event #{message.event_id ? 'none'}"
       db.view('userddoc', 'read', opts, h.nanoCallback(next, errorOpts)) # (err, res, headers)
     (res, _headers, next) ->
-      db = resetDbWithHeaders(_headers)
       isRead = res.rows.length > 0
       if markRead isnt isRead then next()
       else
@@ -308,65 +281,47 @@ replicant.markReadStatus = (message, userId, cookie, callback) ->
     (next) ->
       if markRead then markMessageRead(next)
       else markMessageUnread(next)
-  ], (err, res) ->
-    callback(err, res, headers)
+  ], callback
 
 
 ## gets all messages and tacks on 'read' status (true/false)
-replicant.getMessages = ({userId, cookie, roles, type}, callback) ->
+replicant.getMessages = ({userId, roles, type}, callback) ->
   type ?= 'message'
-  headers = null
-  updateCookie = (_headers) ->
-    headers = _headers if _headers?['set-cookie']?
 
   async.parallel
     messages: (callback) ->
-      replicant.getTypeUserDb {type, userId, cookie, roles}, (err, messages, _headers) ->
-        updateCookie(_headers)
+      replicant.getTypeUserDb {type, userId, roles}, (err, messages, _headers) ->
         callback(err, messages)
     reads: (callback) ->
-      replicant.getTypeUserDb {type: 'read', userId, cookie}, (err, reads, _headers) ->
-        updateCookie(_headers)
+      replicant.getTypeUserDb {type: 'read', userId}, (err, reads, _headers) ->
         callback(err, reads) # not constable
   , (err, body) ->
     return callback(err) if err
     {reads, messages} = body
     reads = (read.message_id for read in reads)
     message.read = message._id in reads for message in messages
-    callback(null, messages, headers)
+    callback(null, messages)
 
 
 ## gets a message and tacks on its 'read' status (true/false)
-replicant.getMessage = ({id, userId, cookie, roles}, callback) ->
+replicant.getMessage = ({id, userId, roles}, callback) ->
 
   dbUserId = if 'constable' in roles then 'drunk_tank' else userId
-  dbRead   = config.db.user(userId, cookie)
-  db       = config.db.user(dbUserId, cookie)
-  headers  = null
-
-  ## ensure that we have the right cookie set on the databases
-  resetDbs = (_headers) ->
-    if _headers?['set-cookie']?
-      headers = _headers                        # update headers
-      cookie = _headers['set-cookie']           # update cookie
-      # reset DBs
-      db     = config.db.user(dbUserId, cookie)
-      dbRead = config.db.user(userId, cookie)
+  dbRead   = config.db.user(userId)
+  db       = config.db.user(dbUserId)
 
   message = null
   async.waterfall [
     (next) -> db.get(id, next)
     (_message, _headers, next) ->
-      resetDbs(_headers)
       message = _message
       errorOpts =
         error : "Error getting message"
         reason: "Error getting message #{id}"
       dbRead.view('userddoc', 'read', {key: message._id}, h.nanoCallback(next, errorOpts))
     (res, _headers, next) ->
-      resetDbs(_headers)
       message.read = res.rows.length > 0
-      next(null, message, headers)
+      next(null, message)
   ], callback
 
 

@@ -19,6 +19,7 @@
     "mustache": "*",
     "kue": "*",
     "redis": "*",
-    "forever": "*"
+    "forever": "*",
+    "connect-redis": "*"
   }
 }

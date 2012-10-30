@@ -1,6 +1,6 @@
 should  = require('should')
 async   = require('async')
-request = require('request')
+request = require('request').defaults(jar: false)
 
 {TestUser, TestCard} = require('lib/test_models')
 
