@@ -340,7 +340,6 @@ exports.getEvents = (req, res) ->
   debug "GET /events"
   userCtx = req.userCtx   # from the app.all route
   debug 'userCtx', userCtx
-  headers = null
   async.waterfall [
     (next) ->
       rep.getTypeUserDb {
@@ -348,10 +347,9 @@ exports.getEvents = (req, res) ->
         userId: userCtx.user_id
         roles: userCtx.roles
       }, next
-    (events, _headers, next) ->
+    (events, next) ->
       if 'constable' not in userCtx.roles
         events = (ev for ev in events when ev.state isnt 'prefilter')
-      headers = _headers
       async.map(events, rep.addEventHostsAndGuests, next)
   ], (err, events) ->
     return h.sendError(res, err) if err
@@ -457,8 +455,7 @@ exports.allPrivate = (req, res) ->
   type = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx
   debug 'userCtx', userCtx
-  rep.getTypeUserDb {type, userId: userCtx.user_id, roles: userCtx.roles}, (err, docs, headers) ->
-    h.setCookie(res, headers)
+  rep.getTypeUserDb {type, userId: userCtx.user_id, roles: userCtx.roles}, (err, docs) ->
     return h.sendError(res, err) if err
     res.json(200, docs)
 

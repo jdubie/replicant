@@ -220,7 +220,7 @@ replicant.getTypeUserDb = ({type, userId, roles}, callback) ->
         reason    : err.reason ? "Error getting '#{type}' docs from #{dbUserId}'s DB"
       return callback(error)
     docs = (row.doc for row in res.rows)
-    callback(err, docs, headers)
+    callback(err, docs)
 
 
 ## marks a message read/unread if specified
@@ -290,11 +290,9 @@ replicant.getMessages = ({userId, roles, type}, callback) ->
 
   async.parallel
     messages: (callback) ->
-      replicant.getTypeUserDb {type, userId, roles}, (err, messages, _headers) ->
-        callback(err, messages)
+      replicant.getTypeUserDb({type, userId, roles}, callback)
     reads: (callback) ->
-      replicant.getTypeUserDb {type: 'read', userId}, (err, reads, _headers) ->
-        callback(err, reads) # not constable
+      replicant.getTypeUserDb({type: 'read', userId}, callback)
   , (err, body) ->
     return callback(err) if err
     {reads, messages} = body
