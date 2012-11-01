@@ -349,6 +349,8 @@ exports.getEvents = (req, res) ->
         roles: userCtx.roles
       }, next
     (events, _headers, next) ->
+      if 'constable' not in userCtx.roles
+        events = (ev for ev in events when ev.state isnt 'prefilter')
       headers = _headers
       async.map(events, rep.addEventHostsAndGuests, next)
   ], (err, events) ->
@@ -363,7 +365,7 @@ exports.getEvent = (req, res) ->
   userPrivateNano = config.db.user(userCtx.user_id)
   headers = null
   async.waterfall [
-    (next) -> userPrivateNano.get(id, h.nanoCallback(next))
+    (next) -> userPrivateNano.get(id, next)
     (event, _headers, next) ->
       headers = _headers
       rep.addEventHostsAndGuests(event, next)
