@@ -355,14 +355,17 @@ exports.getEvents = (req, res) ->
       async.map(events, rep.addEventHostsAndGuests, next)
   ], (err, events) ->
     return h.sendError(res, err) if err
-    h.setCookie(res, headers)
     res.json(200, events)
 
 exports.getEvent = (req, res) ->
   id = req.params?.id
   debug "GET /events/#{id}"
   userCtx = req.userCtx   # from the app.all route
-  userPrivateNano = config.db.user(userCtx.user_id)
+  isConstable = 'constable' in userCtx.roles
+  if isConstable
+    userPrivateNano = config.db.user('drunk_tank')
+  else
+    userPrivateNano = config.db.user(userCtx.user_id)
   headers = null
   async.waterfall [
     (next) -> userPrivateNano.get(id, next)
@@ -371,7 +374,8 @@ exports.getEvent = (req, res) ->
       rep.addEventHostsAndGuests(event, next)
   ], (err, event) ->
     return h.sendError(res, err) if err
-    h.setCookie(res, headers)
+    if event.state is 'prefilter' and userCtx.user_id in event.hosts
+      return h.sendError(res, statusCode: 404, error: "Event in filter state")
     res.json(200, event)
 
 
