@@ -294,6 +294,7 @@ exports.createEvent = (req, res) ->
   mtime = ctime = Date.now()
   event.ctime = ctime
   event.mtime = mtime
+
   event["#{event.state}_time"] = ctime
 
   # global boy

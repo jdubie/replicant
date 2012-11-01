@@ -122,18 +122,6 @@ h.pluralizeType = (type) ->
 h.getModelFromUrl = (url) -> url.split('/')[1]
 h.getTypeFromUrl  = (url) -> h.singularizeModel(h.getModelFromUrl(url))
 
-###
-  @param error {string}
-  @return {number}
-###
-## TODO: stoopid - just get err.status_code from (err, res) ->
-h.getStatusFromCouchError = (error) ->
-  switch error
-    when "unauthorized" then return 401
-    when "forbidden" then return 403
-    when "conflict" then return 409
-    when "file_exists" then return 409      # database already exists
-    else return 500
 
 #
 # @name createNotification

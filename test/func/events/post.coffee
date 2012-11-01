@@ -31,6 +31,18 @@ describe 'POST /events', () ->
       (cb) -> config.jobs.client.flushall(cb)
     ], finished
 
+  it 'should POST with failure on \'requested\' event', (done) ->
+    opts =
+      method: 'POST'
+      url: "http://localhost:3001/events"
+      json: event.attributes()
+      headers: cookie: guest.cookie
+    request opts, (err, res, body) ->
+      should.not.exist(err)
+      res.should.have.property('statusCode', 403)
+      event.state = 'prefilter'
+      done()
+
   it 'should POST without failure', (done) ->
     opts =
       method: 'POST'
@@ -40,7 +52,7 @@ describe 'POST /events', () ->
     request opts, (err, res, body) ->
       should.not.exist(err)
       res.should.have.property('statusCode', 201)
-      returnedFields = ['_rev', 'mtime', 'ctime', 'guests', 'hosts', 'requested_time']
+      returnedFields = ['_rev', 'mtime', 'ctime', 'guests', 'hosts', 'prefilter_time']
       body.should.have.keys(returnedFields)
       for key, val of body when key not in ['guests', 'hosts']
         event[key] = val

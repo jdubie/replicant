@@ -328,9 +328,10 @@ replicant.getMessages = ({userId, roles, type}, callback) ->
 ## gets a message and tacks on its 'read' status (true/false)
 replicant.getMessage = ({id, userId, roles}, callback) ->
 
-  dbUserId = if 'constable' in roles then 'drunk_tank' else userId
-  dbRead   = config.db.user(userId)
-  db       = config.db.user(dbUserId)
+  isConstable = 'constable' in roles
+  dbUserId    = if isConstable then 'drunk_tank' else userId
+  dbRead      = config.db.user(userId)
+  db          = config.db.user(dbUserId)
 
   message = null
   async.waterfall [
