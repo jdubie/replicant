@@ -46,12 +46,36 @@ describe 'GET /events', () ->
     ], finished
 
 
-  it 'should GET all non-prefilter events for user', (done) ->
+  it 'should GET all non-prefilter events for user1', (done) ->
     opts =
       method: 'GET'
       url: "http://localhost:3001/events"
       json: true
       headers: cookie: user1.cookie
+    request opts, (err, res, events) ->
+      should.not.exist(err)
+      res.should.have.property('statusCode', 200)
+      ## TODO: should probably make sure these are correct!
+      #         but for now just delete them
+      eventsNano = [
+        event1.attributes()
+        event2.attributes()
+        eventPrefilter.attributes()
+      ]
+      for _event in events
+        _event.should.have.property('hosts')
+        delete _event.hosts
+        _event.should.have.property('guests')
+        delete _event.guests
+      events.should.eql(eventsNano)
+      done()
+
+  it 'should GET all non-prefilter events for user2', (done) ->
+    opts =
+      method: 'GET'
+      url: "http://localhost:3001/events"
+      json: true
+      headers: cookie: user2.cookie
     request opts, (err, res, events) ->
       should.not.exist(err)
       res.should.have.property('statusCode', 200)

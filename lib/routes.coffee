@@ -341,6 +341,7 @@ exports.getEvents = (req, res) ->
   debug "GET /events"
   userCtx = req.userCtx   # from the app.all route
   debug 'userCtx', userCtx
+  isConstable = 'constable' in userCtx.roles
   async.waterfall [
     (next) ->
       rep.getTypeUserDb {
@@ -349,11 +350,16 @@ exports.getEvents = (req, res) ->
         roles: userCtx.roles
       }, next
     (events, next) ->
-      if 'constable' not in userCtx.roles
-        events = (ev for ev in events when ev.state not in ['prefilter', 'predenied'])
       async.map(events, rep.addEventHostsAndGuests, next)
   ], (err, events) ->
     return h.sendError(res, err) if err
+
+    if not isConstable
+      filterFunc = (event) ->
+        return true if event.state not in ['prefilter', 'predenied']
+        return userCtx.user_id not in event.hosts
+      events = (ev for ev in events when filterFunc(ev))
+
     res.json(200, events)
 
 exports.getEvent = (req, res) ->
