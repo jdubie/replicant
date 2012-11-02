@@ -294,6 +294,7 @@ exports.createEvent = (req, res) ->
   mtime = ctime = Date.now()
   event.ctime = ctime
   event.mtime = mtime
+
   event["#{event.state}_time"] = ctime
 
   # global boy
@@ -340,7 +341,7 @@ exports.getEvents = (req, res) ->
   debug "GET /events"
   userCtx = req.userCtx   # from the app.all route
   debug 'userCtx', userCtx
-  headers = null
+  isConstable = 'constable' in userCtx.roles
   async.waterfall [
     (next) ->
       rep.getTypeUserDb {
@@ -348,28 +349,38 @@ exports.getEvents = (req, res) ->
         userId: userCtx.user_id
         roles: userCtx.roles
       }, next
-    (events, _headers, next) ->
-      headers = _headers
+    (events, next) ->
       async.map(events, rep.addEventHostsAndGuests, next)
   ], (err, events) ->
     return h.sendError(res, err) if err
-    h.setCookie(res, headers)
+
+    if not isConstable
+      filterFunc = (event) ->
+        return true if event.state not in ['prefilter', 'predenied']
+        return userCtx.user_id not in event.hosts
+      events = (ev for ev in events when filterFunc(ev))
+
     res.json(200, events)
 
 exports.getEvent = (req, res) ->
   id = req.params?.id
   debug "GET /events/#{id}"
   userCtx = req.userCtx   # from the app.all route
-  userPrivateNano = config.db.user(userCtx.user_id)
+  isConstable = 'constable' in userCtx.roles
+  if isConstable
+    userPrivateNano = config.db.user('drunk_tank')
+  else
+    userPrivateNano = config.db.user(userCtx.user_id)
   headers = null
   async.waterfall [
-    (next) -> userPrivateNano.get(id, h.nanoCallback(next))
+    (next) -> userPrivateNano.get(id, next)
     (event, _headers, next) ->
       headers = _headers
       rep.addEventHostsAndGuests(event, next)
   ], (err, event) ->
     return h.sendError(res, err) if err
-    h.setCookie(res, headers)
+    if event.state in ['prefilter', 'predenied'] and userCtx.user_id in event.hosts
+      return h.sendError(res, statusCode: 404, error: "Event in admin state")
     res.json(200, event)
 
 
@@ -379,13 +390,14 @@ exports.putEvent = (req, res) ->
   return if h.verifyRequiredFields(req, res, ['_rev'])
 
   userCtx     = req.userCtx   # from the app.all route
-  userDbName  = h.getUserDbName(userId: userCtx.user_id)
+  isConstable = 'constable' in userCtx.roles
+  userId      = if isConstable then 'drunk_tank' else userCtx.user_id
   event       = req.body
   mtime       = Date.now()
   event.mtime = mtime
 
   _rev = _users = null
-  isConstable = stateChange = false
+  stateChange = false
   
   async.waterfall [
 
@@ -396,17 +408,13 @@ exports.putEvent = (req, res) ->
     (users, next) ->
       debug 'got users'
       if userCtx.user_id not in users
-        isConstable = 'constable' in userCtx.roles
         if not isConstable
           error =
             statusCode: 403
             reason: "Not authorized to modify this event"
           return next(error)
       _users = users
-      userDbName = 'drunk_tank' if isConstable
-
       debug 'get old event'
-      userId = if isConstable then 'drunk_tank' else userCtx.user_id
       db = config.db.user(userId)
       db.get(id, h.nanoCallback(next))
 
@@ -416,8 +424,6 @@ exports.putEvent = (req, res) ->
           stateChange = true
           event["#{event.state}_time"] = mtime
       debug 'put event', event
-
-      userId = if isConstable then 'drunk_tank' else userCtx.user_id
       db = config.db.user(userId)
       db.insert(event, event._id, next)
 
@@ -437,7 +443,7 @@ exports.putEvent = (req, res) ->
       rep.replicate({src, dsts, eventId}, next)   # (err)
 
     (next) ->
-      data = {event, rev: event._rev, userId: userCtx.user_id}
+      data = {event, rev: event._rev, userId}
       h.createNotification('event.update', data, next)
 
   ], (err, resp) ->
@@ -451,8 +457,7 @@ exports.allPrivate = (req, res) ->
   type = h.getTypeFromUrl(req.url)
   userCtx = req.userCtx
   debug 'userCtx', userCtx
-  rep.getTypeUserDb {type, userId: userCtx.user_id, roles: userCtx.roles}, (err, docs, headers) ->
-    h.setCookie(res, headers)
+  rep.getTypeUserDb {type, userId: userCtx.user_id, roles: userCtx.roles}, (err, docs) ->
     return h.sendError(res, err) if err
     res.json(200, docs)
 

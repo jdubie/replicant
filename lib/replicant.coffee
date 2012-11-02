@@ -220,7 +220,7 @@ replicant.getTypeUserDb = ({type, userId, roles}, callback) ->
         reason    : err.reason ? "Error getting '#{type}' docs from #{dbUserId}'s DB"
       return callback(error)
     docs = (row.doc for row in res.rows)
-    callback(err, docs, headers)
+    callback(err, docs)
 
 
 ## marks a message read/unread if specified
@@ -287,38 +287,58 @@ replicant.markReadStatus = (message, userId, callback) ->
 ## gets all messages and tacks on 'read' status (true/false)
 replicant.getMessages = ({userId, roles, type}, callback) ->
   type ?= 'message'
+  isConstable = 'constable' in roles
 
   async.parallel
     messages: (callback) ->
-      replicant.getTypeUserDb {type, userId, roles}, (err, messages, _headers) ->
-        callback(err, messages)
+      replicant.getTypeUserDb({type, userId, roles}, callback)
     reads: (callback) ->
-      replicant.getTypeUserDb {type: 'read', userId}, (err, reads, _headers) ->
-        callback(err, reads) # not constable
+      replicant.getTypeUserDb({type: 'read', userId}, callback)
+    events: (callback) ->
+      return callback() if isConstable
+      async.waterfall [
+        (next) ->
+          replicant.getTypeUserDb({type: 'event', userId}, next)
+        (events, next) ->
+          async.map(events, replicant.addEventHostsAndGuests, next)
+      ], callback
   , (err, body) ->
     return callback(err) if err
     {reads, messages} = body
     reads = (read.message_id for read in reads)
     message.read = message._id in reads for message in messages
+    if not isConstable
+      {events} = body
+      preEvents = {}
+      preEvents[ev._id] = ev for ev in events when ev.state in ['prefilter', 'predenied']
+
+      filterOut = (message) ->
+        if type is 'notification'
+          return false if message.object_type isnt 'event'
+          eventId = message.object_id
+        else if type is 'message'
+          eventId = message.event_id
+        return false if not preEvents[eventId]?
+        return userId in preEvents[eventId].hosts
+
+      messages = (msg for msg in messages when not filterOut(msg))
     callback(null, messages)
 
 
 ## gets a message and tacks on its 'read' status (true/false)
 replicant.getMessage = ({id, userId, roles}, callback) ->
 
-  dbUserId = if 'constable' in roles then 'drunk_tank' else userId
-  dbRead   = config.db.user(userId)
-  db       = config.db.user(dbUserId)
+  isConstable = 'constable' in roles
+  dbUserId    = if isConstable then 'drunk_tank' else userId
+  dbRead      = config.db.user(userId)
+  db          = config.db.user(dbUserId)
 
   message = null
   async.waterfall [
     (next) -> db.get(id, next)
     (_message, _headers, next) ->
       message = _message
-      errorOpts =
-        error : "Error getting message"
-        reason: "Error getting message #{id}"
-      dbRead.view('userddoc', 'read', {key: message._id}, h.nanoCallback(next, errorOpts))
+      dbRead.view('userddoc', 'read', {key: message._id}, next)
     (res, _headers, next) ->
       message.read = res.rows.length > 0
       next(null, message)

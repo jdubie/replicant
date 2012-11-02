@@ -517,6 +517,8 @@ m.TestEvent = class TestEvent
     # use crossing-guard!
     attrs.push("#{state}_time") for state in [
       'preevent'
+      'prefilter'
+      'predenied'
       'requested'
       'declined'
       'pending'

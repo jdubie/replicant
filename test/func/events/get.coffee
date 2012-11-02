@@ -17,6 +17,9 @@ describe 'GET /events', () ->
   event1 = new TestEvent('get_events1', [user2], [user1], swap1)
   swap2  = new TestSwap('get_events_swap2', user2)
   event2 = new TestEvent('get_events2', [user1], [user2], swap2)
+  eventPrefilter = new TestEvent(
+    'get_events_prefilter', [user1], [user2], swap1, state: 'prefilter'
+  )
 
   userDb = config.db.user(user1._id)
 
@@ -25,7 +28,9 @@ describe 'GET /events', () ->
     async.series [
       (cb) -> async.parallel([user1.create, user2.create, constable.create], cb)
       (cb) -> async.parallel([swap1.create, swap2.create], cb)
-      (cb) -> async.parallel([event1.create, event2.create], cb)
+      (cb) -> async.parallel [
+        event1.create, event2.create, eventPrefilter.create
+      ], cb
     ], ready
 
   after (finished) ->
@@ -33,6 +38,7 @@ describe 'GET /events', () ->
       (cb) -> async.parallel [
         event1.destroy
         event2.destroy
+        eventPrefilter.destroy
         swap1.destroy
         swap2.destroy
         ], cb
@@ -40,12 +46,36 @@ describe 'GET /events', () ->
     ], finished
 
 
-  it 'should GET all events', (done) ->
+  it 'should GET all non-prefilter events for user1', (done) ->
     opts =
       method: 'GET'
       url: "http://localhost:3001/events"
       json: true
       headers: cookie: user1.cookie
+    request opts, (err, res, events) ->
+      should.not.exist(err)
+      res.should.have.property('statusCode', 200)
+      ## TODO: should probably make sure these are correct!
+      #         but for now just delete them
+      eventsNano = [
+        event1.attributes()
+        event2.attributes()
+        eventPrefilter.attributes()
+      ]
+      for _event in events
+        _event.should.have.property('hosts')
+        delete _event.hosts
+        _event.should.have.property('guests')
+        delete _event.guests
+      events.should.eql(eventsNano)
+      done()
+
+  it 'should GET all non-prefilter events for user2', (done) ->
+    opts =
+      method: 'GET'
+      url: "http://localhost:3001/events"
+      json: true
+      headers: cookie: user2.cookie
     request opts, (err, res, events) ->
       should.not.exist(err)
       res.should.have.property('statusCode', 200)
@@ -61,13 +91,14 @@ describe 'GET /events', () ->
       done()
 
   it 'should put events in the constable db', (done) ->
-    ids = (pn._id for pn in [event1, event2])
+    ids = (pn._id for pn in [event1, event2, eventPrefilter])
     getEvent = (id, cb) -> config.db.constable().get(id, h.nanoCallback2(cb))
     async.map ids, getEvent, (err, res) ->
       should.not.exist(err)
       _events = [
         event1.attributes()
         event2.attributes()
+        eventPrefilter.attributes()
       ]
       res.should.eql(_events)
       done()
@@ -83,7 +114,11 @@ describe 'GET /events', () ->
       res.should.have.property('statusCode', 200)
       ## TODO: should probably make sure these are correct!
       #         but for now just delete them
-      eventsNano = [event1.attributes(), event2.attributes()]
+      eventsNano = [
+        event1.attributes()
+        event2.attributes()
+        eventPrefilter.attributes()
+      ]
       for _event in events
         _event.should.have.property('hosts')
         delete _event.hosts
