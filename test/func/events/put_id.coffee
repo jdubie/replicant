@@ -150,6 +150,6 @@ describe 'PUT /events/:id', () ->
         console.error err if err?
         res.should.have.property('data')
         res.data.should.have.property('event')
-        res.data.should.have.property('userId', constable._id)
+        res.data.should.have.property('userId', 'drunk_tank')
         res.data.should.have.property('rev')
         done()

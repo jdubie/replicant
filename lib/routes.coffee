@@ -384,13 +384,14 @@ exports.putEvent = (req, res) ->
   return if h.verifyRequiredFields(req, res, ['_rev'])
 
   userCtx     = req.userCtx   # from the app.all route
-  userDbName  = h.getUserDbName(userId: userCtx.user_id)
+  isConstable = 'constable' in userCtx.roles
+  userId      = if isConstable then 'drunk_tank' else userCtx.user_id
   event       = req.body
   mtime       = Date.now()
   event.mtime = mtime
 
   _rev = _users = null
-  isConstable = stateChange = false
+  stateChange = false
   
   async.waterfall [
 
@@ -401,17 +402,13 @@ exports.putEvent = (req, res) ->
     (users, next) ->
       debug 'got users'
       if userCtx.user_id not in users
-        isConstable = 'constable' in userCtx.roles
         if not isConstable
           error =
             statusCode: 403
             reason: "Not authorized to modify this event"
           return next(error)
       _users = users
-      userDbName = 'drunk_tank' if isConstable
-
       debug 'get old event'
-      userId = if isConstable then 'drunk_tank' else userCtx.user_id
       db = config.db.user(userId)
       db.get(id, h.nanoCallback(next))
 
@@ -421,8 +418,6 @@ exports.putEvent = (req, res) ->
           stateChange = true
           event["#{event.state}_time"] = mtime
       debug 'put event', event
-
-      userId = if isConstable then 'drunk_tank' else userCtx.user_id
       db = config.db.user(userId)
       db.insert(event, event._id, next)
 
@@ -442,7 +437,7 @@ exports.putEvent = (req, res) ->
       rep.replicate({src, dsts, eventId}, next)   # (err)
 
     (next) ->
-      data = {event, rev: event._rev, userId: userCtx.user_id}
+      data = {event, rev: event._rev, userId}
       h.createNotification('event.update', data, next)
 
   ], (err, resp) ->

@@ -518,6 +518,7 @@ m.TestEvent = class TestEvent
     attrs.push("#{state}_time") for state in [
       'preevent'
       'prefilter'
+      'predenied'
       'requested'
       'declined'
       'pending'
