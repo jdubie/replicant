@@ -310,7 +310,7 @@ replicant.getMessages = ({userId, roles, type}, callback) ->
     if not isConstable
       {events} = body
       preEvents = {}
-      preEvents[ev._id] = ev for ev in events when ev.state is 'prefilter'
+      preEvents[ev._id] = ev for ev in events when ev.state in ['prefilter', 'predenied']
 
       filterOut = (message) ->
         if type is 'notification'

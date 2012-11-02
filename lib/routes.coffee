@@ -350,7 +350,7 @@ exports.getEvents = (req, res) ->
       }, next
     (events, next) ->
       if 'constable' not in userCtx.roles
-        events = (ev for ev in events when ev.state isnt 'prefilter')
+        events = (ev for ev in events when ev.state not in ['prefilter', 'predenied'])
       async.map(events, rep.addEventHostsAndGuests, next)
   ], (err, events) ->
     return h.sendError(res, err) if err
@@ -373,8 +373,8 @@ exports.getEvent = (req, res) ->
       rep.addEventHostsAndGuests(event, next)
   ], (err, event) ->
     return h.sendError(res, err) if err
-    if event.state is 'prefilter' and userCtx.user_id in event.hosts
-      return h.sendError(res, statusCode: 404, error: "Event in filter state")
+    if event.state in ['prefilter', 'predenied'] and userCtx.user_id in event.hosts
+      return h.sendError(res, statusCode: 404, error: "Event in admin state")
     res.json(200, event)
 
 
