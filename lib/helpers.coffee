@@ -298,8 +298,8 @@ h.replicateEvent = (userIds, eventId, callback) ->
 
 h.getUserCtx = (req, res, next) ->
   debug 'req.headers.cookie', req.headers.cookie
-  debug 'here', h.getCtx(req)
-  debug 'here', req.session
+  debug 'req.session', req.session
+  debug 'userCtx', h.getCtx(req)
   req.userCtx = h.getCtx(req)
   next()
 # h.getUserCtxFromSession req, (err, userCtx, headers) ->
