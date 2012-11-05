@@ -298,7 +298,7 @@ h.replicateEvent = (userIds, eventId, callback) ->
 
 h.getUserCtx = (req, res, next) ->
   #debug 'req.headers.cookie', req.headers.cookie
-  #debug 'req.session', req.session
+  debug 'req.session', req.session
   debug 'userCtx', h.getCtx(req)
   debug 'linkedin oauth cookie', req.cookies["linkedin_oauth_#{process.env.LINKEDIN_API_KEY}"]
   req.userCtx = h.getCtx(req)
