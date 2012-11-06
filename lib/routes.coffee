@@ -12,6 +12,7 @@ validators = require('validation')
 exports.login = (req, res) ->
   return if h.verifyRequiredFields(req, res, ['username', 'password'])
   {username, password} = req.body
+  return if password is ''    # LinkedIn connected user -- don't allow
   db = config.db._users()
   username = h.hash(username.toLowerCase())
 
@@ -96,11 +97,17 @@ exports.zipcode = (req, res) ->
 exports.createUser = (req, res) ->
   debug "POST /users"
   return if h.verifyRequiredFields req, res, [
-    'email_address', 'password', '_id'
+    'email_address', '_id'
   ]
 
   user = req.body
   {email_address, password, _id} = user   # extract email and password
+
+  # connect via LinkedIn?
+  if not password? or password is ''
+    password = ''
+    return if not user.linkedin_id? or not hasValidLinkedInCookie(req)
+
   user_id = _id
   user.user_id = _id
   # delete private data
