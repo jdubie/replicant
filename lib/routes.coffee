@@ -39,7 +39,15 @@ exports.logout = (req, res) ->
 #
 # @description gets the session information for the current user
 exports.session = (req, res) ->
-  res.json(200, h.getCtx(req))
+  userCtx = h.getCtx(req)
+  if h.hasValidLinkedInCookie(req)
+    rep.getUserCtxFromLinkedIn h.getLinkedInId(req), (err, ctx) ->
+      if ctx?
+        userCtx = ctx
+        h.setCtx(req, userCtx)
+      res.json(200, userCtx)
+  else
+    res.json(200, userCtx)
 
 # @name password
 #
