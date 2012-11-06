@@ -10,26 +10,42 @@ validators = require('validation')
 
 
 exports.login = (req, res) ->
-  return if h.verifyRequiredFields(req, res, ['username', 'password'])
   {username, password} = req.body
-  return if password is ''    # LinkedIn connected user -- don't allow
-  db = config.db._users()
-  username = h.hash(username.toLowerCase())
 
-  db.get h.getCouchUserName(username), (err, doc) ->
-    return h.sendError(res, err) if err
+  # try login w/ LinkedIn
+  if not (username? or password?) and h.hasValidLinkedInCookie(req)
+    debug "#login try log in w/ linkedin"
+    debug "Valid LinkedIn Cookie id:", h.getLinkedInId(req)
+    rep.getUserCtxFromLinkedIn h.getLinkedInId(req), (err, userCtx) ->
+      if userCtx?
+        debug "LinkedIn userCtx", userCtx
+        h.setCtx(req, userCtx)
+        res.json(200, userCtx)
+      else
+        debug "No LinkedIn userCtx -- err:", err
+        h.sendError(res, statusCode: 401, error: '', reason: '')
+  else
+    return if h.verifyRequiredFields(req, res, ['username','password'])
+    if password is ''   # LinkedIn connected user -- don't allow
+      return h.sendError(res, statusCode: 401, error: '', reason: '')
 
-    # look up user doc
-    {salt, password_sha, name, roles, user_id} = doc
-    userCtx = {name, roles, user_id}
+    db = config.db._users()
+    username = h.hash(username.toLowerCase())
 
-    # hash their password with salt
-    if h.hash(password + salt) isnt password_sha
-      return h.sendError(res, {statusCode: 401, error: '', reason: ''})
+    db.get h.getCouchUserName(username), (err, doc) ->
+      return h.sendError(res, err) if err
 
-    # start their session
-    h.setCtx(req, userCtx)
-    res.json(userCtx)
+      # look up user doc
+      {salt, password_sha, name, roles, user_id} = doc
+      userCtx = {name, roles, user_id}
+
+      # hash their password with salt
+      if h.hash(password + salt) isnt password_sha
+        return h.sendError(res, statusCode: 401, error: '', reason: '')
+
+      # start their session
+      h.setCtx(req, userCtx)
+      res.json(userCtx)
 
 
 exports.logout = (req, res) ->
