@@ -17,7 +17,7 @@ exports.login = (req, res) ->
     debug "#login try log in w/ linkedin"
     debug "Valid LinkedIn Cookie id:", h.getLinkedInId(req)
     rep.getUserCtxFromLinkedIn h.getLinkedInId(req), (err, userCtx) ->
-      if ctx?
+      if userCtx?
         debug "LinkedIn userCtx", userCtx
         h.setCtx(req, userCtx)
         res.json(200, userCtx)
