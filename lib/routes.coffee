@@ -12,6 +12,7 @@ validators = require('validation')
 exports.login = (req, res) ->
   return if h.verifyRequiredFields(req, res, ['username', 'password'])
   {username, password} = req.body
+  return if password is ''    # LinkedIn connected user -- don't allow
   db = config.db._users()
   username = h.hash(username.toLowerCase())
 
@@ -39,7 +40,25 @@ exports.logout = (req, res) ->
 #
 # @description gets the session information for the current user
 exports.session = (req, res) ->
-  res.json(200, h.getCtx(req))
+  debug "GET /user_ctx (session)"
+  userCtx = h.getCtx(req)
+  if userCtx.name                         # already logged in by us
+    debug "#session already logged in"
+    res.json(200, userCtx)
+  else if h.hasValidLinkedInCookie(req)   # log them in w/ LinkedIn
+    debug "#session try log in w/ linkedin"
+    debug "Valid LinkedIn Cookie id:", h.getLinkedInId(req)
+    rep.getUserCtxFromLinkedIn h.getLinkedInId(req), (err, ctx) ->
+      if ctx?
+        debug "LinkedIn userCtx", ctx
+        userCtx = ctx
+        h.setCtx(req, userCtx)
+      else
+        debug "No LinkedIn userCtx -- err:", err
+      res.json(200, userCtx)
+  else
+    debug "#session not logged in"
+    res.json(200, userCtx)                # just return userCtx
 
 # @name password
 #
@@ -78,11 +97,17 @@ exports.zipcode = (req, res) ->
 exports.createUser = (req, res) ->
   debug "POST /users"
   return if h.verifyRequiredFields req, res, [
-    'email_address', 'password', '_id'
+    'email_address', '_id'
   ]
 
   user = req.body
   {email_address, password, _id} = user   # extract email and password
+
+  # connect via LinkedIn?
+  if not password? or password is ''
+    password = ''
+    return if not user.linkedin_id? or not h.hasValidLinkedInCookie(req)
+
   user_id = _id
   user.user_id = _id
   # delete private data

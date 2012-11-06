@@ -345,4 +345,20 @@ replicant.getMessage = ({id, userId, roles}, callback) ->
   ], callback
 
 
+replicant.getUserCtxFromLinkedIn = (linkedinId, callback) ->
+  async.waterfall [
+    (next) ->
+      db = config.db.main()
+      options = key: linkedinId
+      db.view('lifeswap', 'linkedin', options, next)
+    (res, headers, next) ->
+      return next(statusCode: 404) if res.rows.length is 0
+      _userdb = config.db._users()
+      couchUser = h.getCouchUserName(res.rows[0].value)
+      _userdb.get(couchUser, next)
+  ], (err, _user) ->
+    return callback(null, null) if err     # userCtx null
+    {name, user_id, roles} = _user
+    callback(null, {name, user_id, roles})
+
 module.exports = replicant

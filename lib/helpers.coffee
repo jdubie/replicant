@@ -77,6 +77,30 @@ h.hash = (message) ->
   shasum.update(message)
   return shasum.digest('hex')
 
+## for LinkedIn signature checking
+h.hmacSha = (key, message) ->
+  hmacsha = crypto.createHmac('sha1', key)
+  hmacsha.update(message)
+  hmacsha.digest('base64')
+
+
+## verify the linkedin cookie w/ our API secret
+h.hasValidLinkedInCookie = (req) ->
+  apiKey = process.env.LINKEDIN_API_KEY
+  cookie = req.cookies?["linkedin_oauth_#{apiKey}"]
+  return false if not cookie  # cookie doesn't exist
+  cookie = JSON.parse(cookie)
+  return false if not cookie  # cookie can be null
+  debug '#hasValidLinkedInCookie LinkedIn cookie:', cookie
+  key = process.env.LINKEDIN_API_SECRET
+  message = (cookie[kk] for kk in cookie.signature_order).join('')
+  h.hmacSha(key, message) is cookie.signature
+
+h.getLinkedInId = (req) ->
+  apiKey = process.env.LINKEDIN_API_KEY
+  cookie = req.cookies["linkedin_oauth_#{apiKey}"]
+  cookie = JSON.parse(cookie) if cookie?
+  cookie?.member_id
 
 h.singularizeModel = (model) ->
   mapping =
@@ -297,10 +321,10 @@ h.replicateEvent = (userIds, eventId, callback) ->
 
 
 h.getUserCtx = (req, res, next) ->
-  debug 'req.headers.cookie', req.headers.cookie
+  #debug 'req.headers.cookie', req.headers.cookie
   debug 'req.session', req.session
   debug 'userCtx', h.getCtx(req)
-  debug 'linkedin oauth cookie', req.cookie["linkedin_oauth_#{process.env.LINKEDIN_API_KEY}"]
+  debug 'linkedin oauth cookie', req.cookies["linkedin_oauth_#{process.env.LINKEDIN_API_KEY}"]
   req.userCtx = h.getCtx(req)
   next()
 # h.getUserCtxFromSession req, (err, userCtx, headers) ->
