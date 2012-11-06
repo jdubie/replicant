@@ -106,7 +106,7 @@ exports.createUser = (req, res) ->
   # connect via LinkedIn?
   if not password? or password is ''
     password = ''
-    return if not user.linkedin_id? or not hasValidLinkedInCookie(req)
+    return if not user.linkedin_id? or not h.hasValidLinkedInCookie(req)
 
   user_id = _id
   user.user_id = _id
