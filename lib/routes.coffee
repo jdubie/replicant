@@ -42,8 +42,10 @@ exports.session = (req, res) ->
   debug "GET /user_ctx (session)"
   userCtx = h.getCtx(req)
   if userCtx.name                         # already logged in by us
+    debug "#session already logged in"
     res.json(200, userCtx)
   else if h.hasValidLinkedInCookie(req)   # log them in w/ LinkedIn
+    debug "#session try log in w/ linkedin"
     debug "Valid LinkedIn Cookie id:", h.getLinkedInId(req)
     rep.getUserCtxFromLinkedIn h.getLinkedInId(req), (err, ctx) ->
       if ctx?
@@ -54,6 +56,7 @@ exports.session = (req, res) ->
         debug "No LinkedIn userCtx -- err:", err
       res.json(200, userCtx)
   else
+    debug "#session not logged in"
     res.json(200, userCtx)                # just return userCtx
 
 # @name password
