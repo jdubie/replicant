@@ -89,6 +89,7 @@ h.hasValidLinkedInCookie = (req) ->
   apiKey = process.env.LINKEDIN_API_KEY
   cookie = req.cookies?["linkedin_oauth_#{apiKey}"]
   return false if not cookie
+  cookie = JSON.parse(cookie)
   debug '#hasValidLinkedInCookie LinkedIn cookie:', cookie
   key = process.env.LINKEDIN_API_SECRET
   message = (cookie[kk] for kk in cookie.signature_order).join('')
@@ -96,7 +97,9 @@ h.hasValidLinkedInCookie = (req) ->
 
 h.getLinkedInId = (req) ->
   apiKey = process.env.LINKEDIN_API_KEY
-  req.cookies["linkedin_oauth_#{apiKey}"]?.member_id
+  cookie = req.cookies["linkedin_oauth_#{apiKey}"]
+  cookie = JSON.parse(cookie) if cookie?
+  cookie?.member_id
 
 h.singularizeModel = (model) ->
   mapping =
