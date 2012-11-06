@@ -89,6 +89,7 @@ h.hasValidLinkedInCookie = (req) ->
   apiKey = process.env.LINKEDIN_API_KEY
   cookie = req.cookies?["linkedin_oauth_#{apiKey}"]
   return false if not cookie
+  d '#hasValidLinkedInCookie LinkedIn cookie:', cookie
   key = process.env.LINKEDIN_API_SECRET
   message = (cookie[kk] for kk in cookie.signature_order).join('')
   h.hmacSha(key, message) is cookie.signature
