@@ -39,12 +39,17 @@ exports.logout = (req, res) ->
 #
 # @description gets the session information for the current user
 exports.session = (req, res) ->
+  debug "GET /user_ctx (session)"
   userCtx = h.getCtx(req)
   if h.hasValidLinkedInCookie(req)
+    debug "Valid LinkedIn Cookie id:", h.getLinkedInId(req)
     rep.getUserCtxFromLinkedIn h.getLinkedInId(req), (err, ctx) ->
       if ctx?
+        debug "LinkedIn userCtx", ctx
         userCtx = ctx
         h.setCtx(req, userCtx)
+      else
+        debug "No LinkedIn userCtx -- err:", err
       res.json(200, userCtx)
   else
     res.json(200, userCtx)
