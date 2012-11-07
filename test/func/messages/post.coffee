@@ -16,24 +16,29 @@ describe 'POST /messages', () ->
   message   = new TestMessage('post_messages', guest, event)
   messageC  = new TestMessage('post_messagesC', constable, event)
 
+  # application message for event in `prefilter` state
+  appEvent   = new TestEvent('post_messages_event_app', [guest], [host], swap, state: 'prefilter')
+  appMessage = new TestMessage('post_messages_app', guest, appEvent)
+
   before (ready) ->
     app = require('app')
     async.series [
       (cb) -> async.parallel([constable.create, guest.create, host.create, swap.create], cb)
-      event.create
+      (cb) -> async.parallel([event.create, appEvent.create], cb)
       (cb) -> config.jobs.client.flushall(cb)
     ], ready
 
   after (finished) ->
     async.series [
-      message.destroy
-      messageC.destroy
-      event.destroy
+      (cb) -> async.parallel([message.destroy, messageC.destroy, appMessage.destroy], cb)
+      (cb) -> async.parallel([event.destroy, appEvent.destroy], cb)
       (cb) -> async.parallel([constable.destroy, guest.destroy, host.destroy, swap.destroy], cb)
       (cb) -> config.jobs.client.flushall(cb)
     ], finished
 
   describe 'normal user', () ->
+    after (finished) ->
+      config.jobs.client.flushall(finished)
 
     it 'should 403 on bad input', (done) ->
       verifyField = (field, callback) ->
@@ -106,6 +111,8 @@ describe 'POST /messages', () ->
         done()
 
   describe 'constable user', () ->
+    after (finished) ->
+      config.jobs.client.flushall(finished)
 
     it 'should 403 on bad input', (done) ->
       verifyField = (field, callback) ->
@@ -155,3 +162,55 @@ describe 'POST /messages', () ->
         job.data.message.message.should.equal(messageC.message)
         done()
 
+  describe 'application message', () ->
+    after (finished) ->
+      config.jobs.client.flushall(finished)
+
+    it 'should POST without failure', (done) ->
+      opts =
+        method: 'POST'
+        url: "http://localhost:3001/messages"
+        json: appMessage.attributes()
+        headers: cookie: guest.cookie
+      request opts, (err, res, body) ->
+        should.not.exist(err)
+        res.should.have.property('statusCode', 201)
+        body.should.have.keys(['_rev', 'ctime', 'mtime'])
+        appMessage[key] = val for key, val of body
+        done()
+
+    it 'should replicate the message to all involved users', (done) ->
+      checkMessageDoc = (user, cb) ->
+        userDb = config.db.user(user._id)
+        userDb.get appMessage._id, (err, messageDoc) ->
+          should.not.exist(err)
+          _message = appMessage.attributes()
+          delete _message.read
+          messageDoc.should.eql(_message)
+          cb()
+      async.parallel [
+        (cb) -> checkMessageDoc(guest, cb)
+        (cb) -> checkMessageDoc(host, cb)
+      ], done
+
+    it 'should mark the message as read for the author', (done) ->
+      checkMessageReadStatus = (user, cb) ->
+        userDb = config.db.user(user._id)
+        opts = key: appMessage._id
+        userDb.view 'userddoc', 'read', opts, (err, res) ->
+          should.not.exist(err)
+          if user._id is guest._id     ## read
+            res.should.have.property('rows').with.lengthOf(1)
+          else                        ## unread
+            res.should.have.property('rows').with.lengthOf(0)
+          cb()
+      async.parallel [
+        (cb) -> checkMessageReadStatus(guest, cb)
+        (cb) -> checkMessageReadStatus(host, cb)
+      ], done
+
+    it 'should _not_ add notification to work queue', (done) ->
+      kue.Job.get 1, (err, job) ->
+        should.exist(err)
+        should.not.exist(job)
+        done()

@@ -685,13 +685,19 @@ exports.sendMessage = (req, res) ->
         if src not in users and not isConstable
           return next(statusCode: 403, reason: "Not authorized to write messages to this event")
         dsts = _.without(users, src)
-        async.series [
+        async.waterfall [
           (cb) ->
             debug 'actually replicating...'
             h.replicateEvent(users, eventId, cb)
+          ## get the event (to check its state)
+          (resp, cb) ->
+            userId = if isConstable then 'drunk_tank' else src
+            db = config.db.user(userId)
+            db.get(eventId, cb)
           ## add email jobs to messaging queue
-          (cb) ->
+          (event, headers, cb) ->
             debug 'adding message email to email jobs queue'
+            return cb() if event.state is 'prefilter'
             data = {title: "event #{eventId}: message from #{src}", src, dsts, message, eventId}
             h.createNotification('message', data, cb)
         ], done

@@ -316,7 +316,7 @@ h.replicateEvent = (userIds, eventId, callback) ->
   debug 'replicating event to', userIds
   replicateOne = (userId, cb) ->
     userDbName = h.getUserDbName({userId})
-    config.couch().db.replicate('drunk_tank', userDbName, opts, h.nanoCallback(cb))
+    config.couch().db.replicate('drunk_tank', userDbName, opts, cb)
   async.map(userIds, replicateOne, callback)
 
 
