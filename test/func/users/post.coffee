@@ -103,8 +103,9 @@ describe 'POST /users', () ->
 
 
     it 'should 400 on bad input', (done) ->
-      json = _userDoc
       verifyField = (field, callback) ->
+        json = {}
+        json[kk] = vv for kk, vv of _userDoc
         value = json[field]
         delete json[field]
         opts =
@@ -117,10 +118,8 @@ describe 'POST /users', () ->
           res.should.have.property('statusCode', 400)
           body.should.have.keys(['error', 'reason'])
           body.reason.should.have.property(field)
-
-          json[field] = value
           callback()
-      async.map(['email_address', 'password', '_id'], verifyField, done)
+      async.map(['email_address', '_id'], verifyField, done)
 
 
 #  it 'should 403 when user is unauthenticated', (done) ->

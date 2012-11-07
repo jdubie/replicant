@@ -1,6 +1,7 @@
 should  = require('should')
 async   = require('async')
 request = require('request').defaults(jar: false)
+kue     = require('kue')
 
 config = require('config')
 {TestUser, TestSwap, TestEvent, TestMessage} = require('lib/test_models')
@@ -95,7 +96,7 @@ describe 'POST /messages', () ->
       ], done
 
     it 'should add notification to work queue', (done) ->
-      require('kue').Job.get 1, (err, job) ->
+      kue.Job.get 1, (err, job) ->
         should.not.exist(err)
         job.should.have.property('type', 'notification.message')
         job.should.have.property('data')
@@ -143,3 +144,14 @@ describe 'POST /messages', () ->
         should.not.exist(err)
         res.should.have.property('rows').with.lengthOf(1)
         done()
+
+    it 'should add notification to work queue', (done) ->
+      kue.Job.get 1, (err, job) ->
+        should.not.exist(err)
+        job.should.have.property('type', 'notification.message')
+        job.should.have.property('data')
+        job.data.should.have.property('message')
+        job.data.message.should.have.property('message')
+        job.data.message.message.should.equal(messageC.message)
+        done()
+

@@ -644,8 +644,9 @@ exports.sendMessage = (req, res) ->
   userCtx = req.userCtx
   message = req.body
 
+  isConstable = 'constable' in userCtx.roles
   # should be fixed by Validator call
-  if (message.name isnt userCtx.name or message.user_id isnt userCtx.user_id) and 'constable' not in userCtx.roles
+  if (message.name isnt userCtx.name or message.user_id isnt userCtx.user_id) and not isConstable
     return res.send(403)
 
   delete message.read # don't delete this line
@@ -681,7 +682,7 @@ exports.sendMessage = (req, res) ->
       rep.getEventUsers {eventId}, (err, users) ->
         debug 'replicate'
         src = userCtx.user_id
-        if not (src in users) and not ('constable' in userCtx.roles)
+        if src not in users and not isConstable
           return next(statusCode: 403, reason: "Not authorized to write messages to this event")
         dsts = _.without(users, src)
         async.series [
