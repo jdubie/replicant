@@ -112,6 +112,7 @@ h.singularizeModel = (model) ->
     requests  : 'request'
     entities  : 'entity'
     shortlinks: 'shortlink'
+    applications: 'application'
     # user db
     events         : 'event'
     messages       : 'message'
@@ -133,6 +134,7 @@ h.pluralizeType = (type) ->
     request  : 'requests'
     entity   : 'entities'
     shortlink: 'shortlinks'
+    application: 'applications'
     # user db
     event        : 'events'
     message      : 'messages'
