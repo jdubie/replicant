@@ -127,6 +127,14 @@ app.post('/shortlinks', express.bodyParser(), h.getUserCtx, h.validate, routes.p
 app.put('/shortlinks/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.putPublic)
 app.delete('/shortlinks/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.deletePublic)
 
+
+## applications
+app.get('/applications', routes.allPublic)
+app.get('/applications/:id', routes.onePublic)
+app.post('/applications', express.bodyParser(), h.getUserCtx, h.validate, routes.postPublic)
+app.put('/applications/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.putPublic)
+app.delete('/applications/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.deletePublic)
+
 ## other endpoints
 
 ## zipcodes

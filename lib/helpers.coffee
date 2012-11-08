@@ -112,6 +112,7 @@ h.singularizeModel = (model) ->
     requests  : 'request'
     entities  : 'entity'
     shortlinks: 'shortlink'
+    applications: 'application'
     # user db
     events         : 'event'
     messages       : 'message'
@@ -133,6 +134,7 @@ h.pluralizeType = (type) ->
     request  : 'requests'
     entity   : 'entities'
     shortlink: 'shortlinks'
+    application: 'applications'
     # user db
     event        : 'events'
     message      : 'messages'
@@ -193,7 +195,7 @@ h.nanoCallback2 = (next, opts) ->
   @param callback {function}
 ###
 h.createSimpleCreateNotification = (model, doc, callback) ->
-  notableEvents = [ 'swap', 'like', 'refer_email' ]
+  notableEvents = [ 'swap', 'like', 'refer_email', 'application']
   model = h.singularizeModel(model)
   debug 'helpers#createNotification', model
   return callback() unless model in notableEvents

@@ -7,6 +7,7 @@ module.exports =
   request       : require './request'
   entity        : require './entity'
   shortlink     : require './shortlink'
+  application   : require './application'
   # private
   email_address : require './email_address'
   phone_number  : require './phone_number'
