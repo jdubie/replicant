@@ -329,6 +329,25 @@ m.TestLike = class TestLike extends TestTypePublic
     }
 
 
+m.TestApplication = class TestApplication extends TestTypePublic
+  @attributes: =>
+    attrs = super
+    [].concat attrs, [
+      'swap_id'     # the liked swap id
+      'text'
+      'status'
+    ]
+
+  defaults: =>
+    def = super
+    _.extend def, {
+      type: 'application'
+      swap_id: "swap_id_#{@_id}"
+      status: 'pending'
+      text: "My Application"
+    }
+
+
 m.TestShortlink = class TestShortlink extends TestTypePublic
   @attributes: =>
     [].concat super, [

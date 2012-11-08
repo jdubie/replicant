@@ -195,7 +195,7 @@ h.nanoCallback2 = (next, opts) ->
   @param callback {function}
 ###
 h.createSimpleCreateNotification = (model, doc, callback) ->
-  notableEvents = [ 'swap', 'like', 'refer_email' ]
+  notableEvents = [ 'swap', 'like', 'refer_email', 'application']
   model = h.singularizeModel(model)
   debug 'helpers#createNotification', model
   return callback() unless model in notableEvents
