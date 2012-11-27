@@ -203,6 +203,11 @@ replicant.getType = (type, callback) ->
 ## gets all of a type from a user DB
 replicant.getTypeUserDb = ({type, userId, roles}, callback) ->
   debug "#getTypeUserDb type: #{type}"
+
+  if not userId?
+    debug "#getTypeUserDb not logged in"
+    return callback null, []
+
   roles ?= []
 
   # constables should fetch from drunk tank
@@ -214,7 +219,6 @@ replicant.getTypeUserDb = ({type, userId, roles}, callback) ->
     include_docs: true
   db.view 'userddoc', 'docs_by_type', opts, (err, res, headers) ->
     if err
-      return callback(null, []) if err.reason is 'no_db_file'
       error =
         statusCode: err.status_code ? 500
         error     : err.error ? "GET error"
