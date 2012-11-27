@@ -203,6 +203,11 @@ replicant.getType = (type, callback) ->
 ## gets all of a type from a user DB
 replicant.getTypeUserDb = ({type, userId, roles}, callback) ->
   debug "#getTypeUserDb type: #{type}"
+
+  if not userId?
+    debug "#getTypeUserDb not logged in"
+    return callback null, []
+
   roles ?= []
 
   # constables should fetch from drunk tank
