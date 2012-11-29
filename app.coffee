@@ -62,6 +62,24 @@ app.post('/requests', express.bodyParser(), h.getUserCtx, h.validate, routes.pos
 app.put('/requests/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.putPublic)
 app.delete('/requests/:id', routes.forbidden)
 
+## company_requests
+app.get '/company_requests',          # GET /company_requests
+  routes.allPublic
+app.get '/company_requests/:id',      # GET /company_requests/:id
+  routes.onePublic
+app.post '/company_requests',         # POST /company_requests
+  express.bodyParser(),
+  h.getUserCtx,
+  h.validate,
+  routes.postPublic
+app.put '/company_requests/:id',      # PUT /company_requests/:id
+  express.bodyParser(),
+  h.getUserCtx,
+  h.validate,
+  routes.putPublic
+app.delete '/company_requests/:id',   # DELETE /company_requests/:id
+  routes.forbidden
+
 ## entities
 app.get('/entities' , routes.allPublic)
 app.get('/entities/:id', routes.onePublic)
