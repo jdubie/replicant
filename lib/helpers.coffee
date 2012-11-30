@@ -113,6 +113,7 @@ h.singularizeModel = (model) ->
     entities  : 'entity'
     shortlinks: 'shortlink'
     applications: 'application'
+    company_requests: 'company_request'
     # user db
     events         : 'event'
     messages       : 'message'
@@ -122,7 +123,7 @@ h.singularizeModel = (model) ->
     phone_numbers  : 'phone_number'
     refer_emails   : 'refer_email'
     notifications  : 'notification'
-  return mapping[model]
+  mapping[model]
 
 h.pluralizeType = (type) ->
   mapping =
@@ -135,6 +136,7 @@ h.pluralizeType = (type) ->
     entity   : 'entities'
     shortlink: 'shortlinks'
     application: 'applications'
+    company_request: 'company_requests'
     # user db
     event        : 'events'
     message      : 'messages'
@@ -143,7 +145,7 @@ h.pluralizeType = (type) ->
     email_address: 'email_addresses'
     phone_number : 'phone_numbers'
     notifications: 'notification'
-  return mapping[type]
+  mapping[type]
 
 h.getModelFromUrl = (url) -> url.split('/')[1]
 h.getTypeFromUrl  = (url) -> h.singularizeModel(h.getModelFromUrl(url))
