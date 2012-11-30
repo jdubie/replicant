@@ -114,6 +114,7 @@ h.singularizeModel = (model) ->
     shortlinks: 'shortlink'
     applications: 'application'
     company_requests: 'company_request'
+    endorsements: 'endorsement'
     # user db
     events         : 'event'
     messages       : 'message'
@@ -137,6 +138,7 @@ h.pluralizeType = (type) ->
     shortlink: 'shortlinks'
     application: 'applications'
     company_request: 'company_requests'
+    endorsement: 'endorsements'
     # user db
     event        : 'events'
     message      : 'messages'

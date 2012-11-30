@@ -55,6 +55,27 @@ app.post('/likes', express.bodyParser(), h.getUserCtx, h.validate, routes.postPu
 app.put('/likes/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.putPublic)
 app.delete('/likes/:id', express.bodyParser(), h.getUserCtx, h.validate, routes.deletePublic)
 
+## endorsements
+app.get '/endorsements',          # GET /endorsements
+  routes.allPublic
+app.get '/endorsements/:id',      # GET /endorsements/:id
+  routes.onePublic
+app.post '/endorsements',         # POST /endorsements
+  express.bodyParser(),
+  h.getUserCtx,
+  h.validate,
+  routes.postPublic
+app.put '/endorsements/:id',      # PUT /endorsements/:id
+  express.bodyParser(),
+  h.getUserCtx,
+  h.validate,
+  routes.putPublic
+app.delete '/endorsements/:id',   # DELETE /endorsements/:id
+  express.bodyParser(),
+  h.getUserCtx,
+  h.validate,
+  routes.deletePublic
+
 ## requests
 app.get('/requests', routes.allPublic)
 app.get('/requests/:id', routes.onePublic)
