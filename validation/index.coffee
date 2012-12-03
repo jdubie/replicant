@@ -9,6 +9,7 @@ module.exports =
   shortlink     : require './shortlink'
   application   : require './application'
   company_request: require './company_request'
+  endorsement   : require './endorsement'
   # private
   email_address : require './email_address'
   phone_number  : require './phone_number'
