@@ -240,6 +240,12 @@ exports.putPublic = (req, res) ->
   mtime     = Date.now()
   doc.mtime = mtime
 
+  # hacky, but we need to make sure we do not save these fields!
+  if doc.type is 'user'
+    delete doc.email_address
+    delete doc.password
+    delete doc.confirm_password
+
   db = config.db.main()
   db.insert doc, id, (err, resp) ->
     return h.sendError(res, err) if err
